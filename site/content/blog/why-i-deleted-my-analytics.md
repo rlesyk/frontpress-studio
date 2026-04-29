@@ -4,7 +4,7 @@ date: 2026-03-05
 author: 'Marko Krstić'
 reading_time: 4
 excerpt: 'I removed analytics from this site last month. Six weeks later, here is what I miss and what I do not.'
-image: /uploads/media/deleted-analytics.jpg
+image: /uploads/blog/why-i-deleted-my-analytics/deleted-analytics.jpg
 cover_caption: 'Photo by Aaron Burden on Unsplash.'
 categories:
   - Essays

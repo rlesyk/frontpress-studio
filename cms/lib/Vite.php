@@ -7,8 +7,10 @@ namespace MD;
 /**
  * Renders Vite dev or production asset tags for the React admin shell.
  *
- * Dev mode is detected by the presence of `.vite-hot` in the cms root,
- * which the Vite dev server writes on `listening` and removes on shutdown.
+ * Dev mode is detected by the presence of `.vite-hot` in the JS source root
+ * (`app/src/`), which the Vite dev server writes on `listening` and removes
+ * on shutdown. Production mode reads the manifest from the build output dir
+ * under `app/public/cms/dist/`.
  */
 class Vite
 {
@@ -16,9 +18,9 @@ class Vite
     private string $manifestFile;
     private string $publicBase;
 
-    public function __construct(string $cmsRoot, string $publicCmsRoot, string $publicBase = '/cms/dist/')
+    public function __construct(string $srcRoot, string $publicCmsRoot, string $publicBase = '/cms/dist/')
     {
-        $this->hotFile      = $cmsRoot . '/.vite-hot';
+        $this->hotFile      = $srcRoot . '/.vite-hot';
         $this->manifestFile = $publicCmsRoot . '/dist/.vite/manifest.json';
         $this->publicBase   = rtrim($publicBase, '/') . '/';
     }

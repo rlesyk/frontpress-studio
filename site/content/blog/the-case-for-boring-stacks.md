@@ -4,7 +4,7 @@ date: '2026-04-22'
 author: 'Marko Krstić'
 reading_time: '6'
 excerpt: 'The most exciting tooling decision is usually the one nobody at the table wants to bring up. Here is why I keep choosing it anyway.'
-image: /uploads/media/boring-stacks.jpg
+image: /uploads/blog/the-case-for-boring-stacks/boring-stacks.jpg
 cover_caption: 'Photo by Mike Petrucci on Unsplash.'
 categories:
   - design

@@ -155,9 +155,17 @@ class PagesController
         }
 
         // Taxonomies — pass-through, repo persists everything in $meta.
+        //
+        // Skip keys that are owned by other top-level inputs (`title`, `draft`,
+        // `template`, `path`). The editor seeds `taxValues` from the loaded
+        // meta, which means a reserved key like `draft: true` would otherwise
+        // come back through this loop and clobber the change the dedicated
+        // `status` / `template` blocks above just made.
+        $reserved = ['title', 'draft', 'template', 'path'];
         if (is_array($input['taxonomies'] ?? null)) {
             foreach ($input['taxonomies'] as $taxSlug => $value) {
                 $taxSlug = (string)$taxSlug;
+                if (in_array($taxSlug, $reserved, true)) continue;
                 if (is_array($value)) {
                     $items = array_values(array_filter(array_map(
                         fn ($v) => trim((string)$v),

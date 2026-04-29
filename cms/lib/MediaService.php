@@ -155,7 +155,7 @@ class MediaService
     /** @param array<string, string> $fields */
     public function updateMeta(string $name, array $fields): bool
     {
-        $mediaDir = $this->uploadsDir . '/media';
+        $mediaDir = $this->uploadsDir;
         $stem     = pathinfo($name, PATHINFO_FILENAME);
         $metaFile = $mediaDir . '/' . $stem . '.meta.json';
 
@@ -177,7 +177,7 @@ class MediaService
     /** @return array<int, array<string, mixed>> */
     public function list(): array
     {
-        $mediaDir = $this->uploadsDir . '/media';
+        $mediaDir = $this->uploadsDir;
         $files    = [];
         if (!is_dir($mediaDir)) {
             return $files;
@@ -203,8 +203,8 @@ class MediaService
 
             $files[] = [
                 'name'      => $file,
-                'url'       => '/uploads/media/' . $file,
-                'thumb_url' => is_file($thumbFile) ? '/uploads/media/' . $stem . '.thumb.' . $ext : null,
+                'url'       => '/uploads/' . $file,
+                'thumb_url' => is_file($thumbFile) ? '/uploads/' . $stem . '.thumb.' . $ext : null,
                 'size'      => filesize($full),
                 'mtime'     => filemtime($full),
                 'alt'       => $meta['alt']     ?? '',

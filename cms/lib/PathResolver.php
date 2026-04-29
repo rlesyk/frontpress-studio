@@ -69,10 +69,10 @@ class PathResolver
         return $target;
     }
 
-    /** Returns realpath of a media file, or null if invalid / outside media dir. */
+    /** Returns realpath of a media file, or null if invalid / outside uploads dir. */
     public function mediaFile(string $name): ?string
     {
-        $mediaDir = realpath($this->uploadsDir . '/media');
+        $mediaDir = realpath($this->uploadsDir);
         if (!$mediaDir) {
             return null;
         }
@@ -88,7 +88,15 @@ class PathResolver
     }
 
     /**
-     * Returns [dir, prefix] for the upload sub-directory (per-page or global media).
+     * Returns [dir, prefix] for the upload destination.
+     *
+     *   - **Per-post** (`$pagePath = "blog/hello-world"`): files land next
+     *     to the post's `.md` file in `site/content/blog/hello-world/`.
+     *     Public URL stays under `/uploads/<pagePath>/<file>`; the
+     *     `/uploads/*` route in `public/index.php` resolves it back to the
+     *     content dir on disk.
+     *   - **Global** (no pagePath): files land directly in `site/uploads/`,
+     *     served at `/uploads/<file>`.
      *
      * @return array{dir: string, prefix: string}
      */
@@ -96,9 +104,9 @@ class PathResolver
     {
         $raw = trim($pagePath, '/');
         if ($raw !== '' && preg_match('#^[a-z0-9][a-z0-9/_-]*$#', $raw)) {
-            return ['dir' => $this->uploadsDir . '/' . $raw, 'prefix' => '/uploads/' . $raw . '/'];
+            return ['dir' => $this->contentDir . '/' . $raw, 'prefix' => '/uploads/' . $raw . '/'];
         }
-        return ['dir' => $this->uploadsDir . '/media', 'prefix' => '/uploads/media/'];
+        return ['dir' => $this->uploadsDir, 'prefix' => '/uploads/'];
     }
 
     /**

@@ -4,7 +4,7 @@ date: 2026-03-19
 author: 'Marko Krstić'
 reading_time: 5
 excerpt: 'Constraints feel like an obstacle in the moment and a gift in retrospect. A few notes on how to start treating them as the gift sooner.'
-image: /uploads/media/constraints.jpg
+image: /uploads/blog/on-working-with-constraints/constraints.jpg
 cover_caption: 'Photo by Joel Filipe on Unsplash.'
 categories:
   - Essays

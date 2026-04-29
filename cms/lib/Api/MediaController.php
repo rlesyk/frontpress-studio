@@ -52,9 +52,13 @@ class MediaController
             return $f;
         }, $media->list());
 
+        // Per-post images live next to the post's .md file under
+        // `site/content/<pagePath>/`. The browser still fetches them at
+        // `/uploads/<pagePath>/<file>` — the route in `public/index.php`
+        // resolves that URL back to the content dir on disk.
         $pagePath = trim((string)($_GET['page_path'] ?? ''), '/');
         if ($pagePath !== '' && preg_match('#^[a-z0-9][a-z0-9/_-]*$#', $pagePath)) {
-            $pageDir = $config['uploadsDir'] . '/' . $pagePath;
+            $pageDir = $config['contentDir'] . '/' . $pagePath;
             if (is_dir($pageDir)) {
                 $imgExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
                 foreach (array_diff(scandir($pageDir), ['.', '..']) as $file) {

@@ -4,7 +4,7 @@ date: 2026-04-08
 author: 'Marko Krstić'
 reading_time: 5
 excerpt: 'A periodic audit of what is actually earning its keep on my machine. Three things that did not survive the last round.'
-image: /uploads/media/three-tools.jpg
+image: /uploads/blog/three-tools-i-removed/three-tools.jpg
 cover_caption: 'Photo by Norbert Levajsics on Unsplash.'
 categories:
   - Tools

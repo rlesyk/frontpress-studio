@@ -4,10 +4,10 @@ parameters:
         - bootstrap.php
         - public
         - cms/lib
-        - tests
+        - cms/tests
     excludePaths:
         - cms/vendor
-        - cms/node_modules
+        - src/node_modules
         - site
     bootstrapFiles:
         - cms/vendor/autoload.php

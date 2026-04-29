@@ -20,13 +20,13 @@ class BackupService
      *   - settings: the stuff you *configure* — config + themes.
      */
     public const SCOPES = [
-        'full'     => ['site/content', 'site/config.json', 'site/themes', 'public/uploads'],
-        'content'  => ['site/content', 'public/uploads'],
+        'full'     => ['site/content', 'site/config.json', 'site/themes', 'site/uploads'],
+        'content'  => ['site/content', 'site/uploads'],
         'settings' => ['site/config.json', 'site/themes'],
     ];
 
     /** Entries in a valid backup must begin with one of these prefixes (or be exactly `site/config.json`). */
-    private const ALLOWED_PREFIXES = ['site/content/', 'site/themes/', 'public/uploads/'];
+    private const ALLOWED_PREFIXES = ['site/content/', 'site/themes/', 'site/uploads/'];
 
     /** @var array<string, array{src: string, prefix: string}> */
     private array $roots;
@@ -42,7 +42,7 @@ class BackupService
             'site/content'     => ['src' => $this->appRoot . '/site/content',     'prefix' => 'site/content'],
             'site/config.json' => ['src' => $this->appRoot . '/site/config.json', 'prefix' => 'site/config.json'],
             'site/themes'      => ['src' => $this->appRoot . '/site/themes',      'prefix' => 'site/themes'],
-            'public/uploads'   => ['src' => $this->uploadsDir,                    'prefix' => 'public/uploads'],
+            'site/uploads'     => ['src' => $this->uploadsDir,                    'prefix' => 'site/uploads'],
         ];
     }
 
@@ -128,7 +128,7 @@ class BackupService
             return ['ok' => false, 'error' => 'Not a valid ZIP archive'];
         }
 
-        $counts = ['site/content' => 0, 'site/config.json' => 0, 'site/themes' => 0, 'public/uploads' => 0];
+        $counts = ['site/content' => 0, 'site/config.json' => 0, 'site/themes' => 0, 'site/uploads' => 0];
 
         for ($i = 0; $i < $zip->numFiles; $i++) {
             $name = $zip->getNameIndex($i);

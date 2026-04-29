@@ -11,6 +11,48 @@ $GLOBALS['admin_edit_path'] = null;
 
 $url = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/';
 
+// ── /uploads/* — image-only static serve ──────────────────────────────────────
+// Resolution order:
+//   1. site/content/<rest>   — per-post images stored next to the .md file
+//   2. site/uploads/<rest>   — global media library
+// Only image extensions are served; .md and any other type returns 404.
+// realpath containment guards against `..` escapes.
+
+if (str_starts_with($url, '/uploads/')) {
+    $rel = ltrim(rawurldecode(substr($url, strlen('/uploads/'))), '/');
+    if ($rel === '' || !preg_match('#^[a-zA-Z0-9._/-]+$#', $rel) || str_contains($rel, '..')) {
+        not_found($url);
+        exit;
+    }
+    if (!preg_match('/\.(jpe?g|png|gif|webp|svg|avif)$/i', $rel)) {
+        not_found($url);
+        exit;
+    }
+
+    $bases = [$CONTENT_DIR, $UPLOADS_DIR];
+    foreach ($bases as $base) {
+        $real     = realpath($base . '/' . $rel);
+        $baseReal = realpath($base);
+        if (!$real || !$baseReal || !str_starts_with($real, $baseReal . '/')) {
+            continue;
+        }
+        $ext   = strtolower(pathinfo($real, PATHINFO_EXTENSION));
+        $mimes = [
+            'jpg'  => 'image/jpeg', 'jpeg' => 'image/jpeg',
+            'png'  => 'image/png',  'gif'  => 'image/gif',
+            'webp' => 'image/webp', 'svg'  => 'image/svg+xml',
+            'avif' => 'image/avif',
+        ];
+        header('Content-Type: ' . ($mimes[$ext] ?? 'application/octet-stream'));
+        header('Content-Length: ' . filesize($real));
+        header('Cache-Control: public, max-age=31536000, immutable');
+        readfile($real);
+        exit;
+    }
+    not_found($url);
+    exit;
+}
+
 // ── robots.txt ────────────────────────────────────────────────────────────────
 
 if ($url === '/robots.txt') {

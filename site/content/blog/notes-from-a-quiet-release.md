@@ -4,7 +4,7 @@ date: 2026-04-15
 author: 'Marko Krstić'
 reading_time: 4
 excerpt: 'We shipped a feature this week that nobody noticed, and that was exactly the goal. A short note on the kind of release that does not call attention to itself.'
-image: /uploads/media/quiet-release.jpg
+image: /uploads/blog/notes-from-a-quiet-release/quiet-release.jpg
 cover_caption: 'Photo by Carl Heyerdahl on Unsplash.'
 categories:
   - Notes

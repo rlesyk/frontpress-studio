@@ -1,7 +1,9 @@
 .DS_Store
 .env
 .phpunit.result.cache
-cms/node_modules/
+src/node_modules/
+src/.vite-hot
+**/.vite/
 cms/vendor/
 public/cms/
 site/cache/

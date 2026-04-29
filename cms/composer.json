@@ -20,7 +20,7 @@
         "friendsofphp/php-cs-fixer": "^3.95"
     },
     "scripts": {
-        "test": "phpunit -c ../phpunit.xml",
+        "test": "phpunit",
         "stan": "phpstan analyse --memory-limit=1G -c ../phpstan.neon",
         "lint": "php-cs-fixer check --diff",
         "format": "php-cs-fixer fix",

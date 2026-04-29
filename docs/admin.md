@@ -32,9 +32,9 @@ ADMIN_PASS_HASH=$2y$12$...
 - **Editor** — Toast UI Editor v3 with three views: **WYSIWYG**, **Markdown** (source + preview split), and **HTML** (CodeMirror 6 with HTML syntax highlighting, line numbers, bracket matching, tab-indenting). Toggle via the segmented control above the editor. Toast UI's built-in bottom-right switcher is hidden — our toggle is the single source of truth. Storage is always markdown: in HTML view we round-trip through Toast UI's HTML→Markdown converter on save, so what lands in the `.md` file is markdown regardless of which surface you composed in.
 - **Sibling switcher** — when editing, the middle column lists every page in the same folder with a search filter, so you can hop between files without going back to the list. Unsaved-change prompt appears before switching.
 - **Editor sidebar** — Save / Preview / Slug / Status / Template / Delete live in a right sidebar; the centre pane is title + SunEditor only. The **Template** dropdown is a per-post override that writes to `meta.template` (front-matter `template: <name>`); the list is sourced from the active theme via `GET /admin/api/themes/templates` ([`ThemeService::listTemplates`](app/cms/lib/ThemeService.php)), excluding partials (`_*`) and system templates (`archive`, `taxonomy`, `feed`, `404`). Selecting **Default** clears the key so the public renderer falls back to the route-type default (`post.twig` / `page.twig`). The override is also validated server-side via [`ThemeService::resolveTemplate`](app/cms/lib/ThemeService.php). Custom sub-fields defined in **Settings → Manage fields** render below Status when their parent taxonomy's `Applies to folders` matches the page's folder. **Each sub-field's `Name` is the front-matter key** (e.g. a sub-field named `image` writes to `meta.image`), so a single taxonomy can group several fields that share post-type targeting. The **Allow multiple values** toggle is per-field on List-of-choices fields; the **Hide from sidebar** toggle suppresses a field from the editor while keeping it in config.
-- **Image uploads** — toolbar button; files saved to `public/uploads/`
+- **Image uploads** — toolbar button opens a two-tab picker: **Library** (grid of every image already in `site/uploads/`, click to insert) and **Upload** (drag-and-drop or click-to-pick a new file, auto-inserts on success). Drag-drop / paste straight onto the editor still works and uploads via [`addImageBlobHook`](app/src/screens/PageEditor.jsx).
 - **Create / edit / delete** any `.md` file
-- **Media library** — shared `public/uploads/media/` pool with previews, alt/caption sidecars
+- **Media library** — shared `site/uploads/` pool with previews, alt/caption sidecars; per-post uploads land in `site/content/<pagePath>/` next to the post's `.md` file
 - **Settings** — site name, base path, taxonomies, upload limits
 - **Themes** — list installed themes, activate one, delete non-active ones, install from a starter. Each theme/starter card shows an **engine badge** (`twig` / `php`) sourced from `theme.json:engine` or auto-detected by [`ThemeService::detectEngine`](app/cms/lib/ThemeService.php) (counts top-level `.twig` vs `.php` files in the theme's `templates/` dir). Two starters ship by default: **Blank (Twig)** and **Blank (PHP)** — same look, different engine.
 - **Backup** — download/restore Full / Content / Settings ZIP archives
@@ -106,7 +106,7 @@ All endpoints accept and return JSON. Mutating requests must include the CSRF to
 ## Development workflow
 
 ```bash
-cd app/cms
+cd app/src
 npm install
 npm run dev    # Vite dev server on :5173 with HMR
 ```
@@ -135,12 +135,12 @@ Paths must be lowercase, with only letters, numbers, hyphens, and slashes.
 
 ## Media storage
 
-There's no database — every media file is a plain file on disk under `public/uploads/`, served directly by the web server.
+There's no database — every media file is a plain file on disk under `site/uploads/`, served directly by the web server.
 
 ### Two locations
 
-- **Shared library** — `public/uploads/media/`. The global pool shown in the `/admin/media` page. Files are renamed to a 24-char hex stem on upload (e.g. `abc123…def.jpg`) to avoid collisions.
-- **Per-page attachments** — `public/uploads/<pagePath>/`, e.g. `public/uploads/blog/hello-world/`. Used when uploading directly from the editor for a specific post; original filename is preserved.
+- **Shared library** — `site/uploads/`. The global pool shown in the `/admin/media` page. Files are renamed to a 24-char hex stem on upload (e.g. `abc123…def.jpg`) to avoid collisions. URLs: `/uploads/<file>`.
+- **Per-post attachments** — co-located with the post itself in `site/content/<pagePath>/`, e.g. `site/content/blog/hello-world/cover.jpg`. Used when uploading directly from the editor for a specific post; original filename is preserved. URLs: `/uploads/<pagePath>/<file>`. Both shapes are served by the `/uploads/*` route in `public/index.php` (image extensions only — `.md` and other types return 404). There is **no** `public/uploads` symlink — `public/` only contains entry points.
 
 ### What each upload produces
 
@@ -186,7 +186,7 @@ Alt text, caption, and bookkeeping fields live in a JSON sidecar next to the fil
 - `site/content/` — all your Markdown
 - `site/config.json` — site settings, taxonomies, upload limits
 - `site/themes/` — active and installed themes
-- `public/uploads/` — media files and their `.meta.json` sidecars
+- `site/uploads/` — media files and their `.meta.json` sidecars
 
 ### What's excluded
 
@@ -199,8 +199,8 @@ Each scope offers a single **Download ZIP** action.
 
 | Scope | Covers | When to use |
 |-------|--------|-------------|
-| **Full backup** | `site/content/`, `site/config.json`, `site/themes/`, `public/uploads/` | Default — full disaster recovery. |
-| **Content only** | `site/content/`, `public/uploads/` | Moving posts/media to another install with its own themes and config. |
+| **Full backup** | `site/content/`, `site/config.json`, `site/themes/`, `site/uploads/` | Default — full disaster recovery. |
+| **Content only** | `site/content/`, `site/uploads/` | Moving posts/media to another install with its own themes and config. |
 | **Settings only** | `site/config.json`, `site/themes/` | Cloning a site's design and configuration onto a fresh install, without dragging content. |
 
 The admin page estimates each size before you download. Full backup over 500&nbsp;MB surfaces a warning — at that point, downloading *Content only* and backing up uploads out-of-band is usually saner.

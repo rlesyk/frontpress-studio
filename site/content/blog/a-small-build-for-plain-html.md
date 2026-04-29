@@ -4,7 +4,7 @@ date: 2026-03-28
 author: 'Marko Krstić'
 reading_time: 7
 excerpt: 'You can do a surprising amount with a folder of HTML files, a tiny shell script, and rsync. Here is the setup I keep coming back to for small sites.'
-image: /uploads/media/plain-html.jpg
+image: /uploads/blog/a-small-build-for-plain-html/plain-html.jpg
 cover_caption: 'Photo by Florian Olivo on Unsplash.'
 categories:
   - Howto

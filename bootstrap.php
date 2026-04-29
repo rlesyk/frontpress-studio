@@ -18,6 +18,7 @@ spl_autoload_register(function ($class) {
 $ROOT        = __DIR__;
 $CONTENT_DIR = $ROOT . '/site/content';
 $CACHE_DIR   = $ROOT . '/site/cache';
+$UPLOADS_DIR = $ROOT . '/site/uploads';
 
 $config = new MD\Config($ROOT . '/site/config.json');
 $GLOBALS['md_config'] = $config;
@@ -37,6 +38,7 @@ $GLOBALS['md_router'] = $router;
 $GLOBALS['md_template_dir'] = $TEMPLATE_DIR;
 $GLOBALS['md_content_dir'] = $CONTENT_DIR;
 $GLOBALS['md_cache_dir'] = $CACHE_DIR;
+$GLOBALS['md_uploads_dir'] = $UPLOADS_DIR;
 
 /**
  * CSRF token — generates and stores a token in the session.
