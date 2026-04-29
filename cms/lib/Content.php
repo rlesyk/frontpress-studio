@@ -78,11 +78,95 @@ class Content
             }
         }
 
+        $html = $this->md->convert($body)->getContent();
+        $html = $this->annotateImages($html);
+
         return [
             'meta' => $meta,
             'body' => $body,
-            'html' => $this->md->convert($body)->getContent(),
+            'html' => $html,
         ];
+    }
+
+    /**
+     * Inject `width`, `height`, and `loading="lazy"` (after the first image)
+     * onto every local `<img src="/uploads/…">` in rendered HTML.
+     *
+     * Why here: the result is cached in `cache/html/`, so the `getimagesize()`
+     * calls run once per content edit, never per request. Browsers can
+     * reserve the right slot in layout the moment they parse the HTML, which
+     * eliminates the layout shift / "blink" that fires when an image
+     * suddenly takes up its true height after streaming in.
+     *
+     * Skipped when an `<img>` already has `width=` or `height=` set, so any
+     * hand-authored `<img>` in markdown wins. External URLs are skipped too.
+     */
+    private function annotateImages(string $html): string
+    {
+        if (!str_contains($html, '<img')) return $html;
+
+        $first = true;
+        return (string)preg_replace_callback(
+            '#<img\b([^>]*)>#i',
+            function (array $m) use (&$first): string {
+                $attrs = $m[1];
+                if (preg_match('/\s(width|height)\s*=/i', $attrs)) {
+                    return $m[0];
+                }
+                if (!preg_match('/\bsrc\s*=\s*"([^"]+)"/i', $attrs, $sm)) {
+                    return $m[0];
+                }
+                $src = $sm[1];
+                if (!str_starts_with($src, '/uploads/')) {
+                    return $m[0];
+                }
+
+                $diskPath = $this->resolveUploadPath($src);
+                if (!$diskPath) return $m[0];
+
+                $info = @getimagesize($diskPath);
+                if (!$info) return $m[0];
+
+                [$w, $h] = $info;
+                // Strip a trailing self-closing slash CommonMark emits in
+                // XHTML mode so the new attrs don't end up after the `/`.
+                $attrs  = rtrim($attrs, " /");
+                $extras = sprintf(' width="%d" height="%d"', $w, $h);
+                if (!$first && !preg_match('/\bloading\s*=/i', $attrs)) {
+                    $extras .= ' loading="lazy" decoding="async"';
+                }
+                $first = false;
+                return '<img' . $attrs . $extras . '>';
+            },
+            $html
+        );
+    }
+
+    /**
+     * Map a `/uploads/<rel>` URL back to its file on disk. Tries the per-post
+     * location (`site/content/<rel>`) first, then the global pool
+     * (`site/uploads/<rel>`) — same precedence as the route in
+     * `public/index.php`. Returns null when the file isn't local or escapes
+     * its base via `..`.
+     */
+    private function resolveUploadPath(string $src): ?string
+    {
+        $rel = ltrim(substr($src, strlen('/uploads/')), '/');
+        if ($rel === '' || str_contains($rel, '..')) return null;
+
+        $bases = [
+            $this->contentDir,
+            dirname($this->contentDir) . '/uploads',
+        ];
+        foreach ($bases as $base) {
+            $abs      = $base . '/' . $rel;
+            $real     = realpath($abs);
+            $baseReal = realpath($base);
+            if ($real && $baseReal && str_starts_with($real, $baseReal . '/') && is_file($real)) {
+                return $real;
+            }
+        }
+        return null;
     }
 
     /**
