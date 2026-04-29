@@ -3,6 +3,7 @@ title: Templates
 layout: default
 ---
 
+{% raw %}
 # Templates
 
 Templates can be **plain PHP** or **Twig** — pick per file. `render('post', …)` resolves to `post.php` if it exists, falling back to `post.twig`. Existing PHP themes work unchanged; opt into Twig one template at a time by shipping `post.twig` (and removing `post.php`).
@@ -133,3 +134,4 @@ loop:
 ```
 
 Supported `loop` keys match the `posts()` arguments above. The loop renders as a `<section>` with a list of linked post titles inside the page template.
+{% endraw %}
