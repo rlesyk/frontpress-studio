@@ -6,7 +6,9 @@ import '@toast-ui/editor/dist/toastui-editor.css';
 import { api, getCsrf } from '../lib/api.js';
 import { encodePath, publicUrl, slugify } from '../lib/utils.js';
 import { useDirty } from '../lib/dirty.jsx';
+import { html as beautifyHtml } from 'js-beautify';
 import { Alert, Button, Field, Input, Select } from '../components/ui/index.js';
+import CodeEditor from '../components/CodeEditor.jsx';
 import PageFields from '../components/PageFields.jsx';
 
 export default function PageEditor() {
@@ -36,6 +38,15 @@ export default function PageEditor() {
   const [status, setStatus] = useState('published');
   const [template, setTemplate] = useState('');
   const [taxValues, setTaxValues] = useState({});
+
+  // Editor view: 'wysiwyg' | 'markdown' | 'html'.
+  // `markdown` and `wysiwyg` are Toast UI's native modes (toggled via
+  // `editor.changeMode`). `html` is our addition — we hide the Toast UI
+  // surface and show a textarea seeded from `editor.getHTML()`. Switching
+  // back from `html` calls `editor.setHTML(htmlValue)`, which Toast UI
+  // converts back to markdown internally so saves stay markdown-native.
+  const [editorMode, setEditorMode] = useState('wysiwyg');
+  const [htmlValue, setHtmlValue] = useState('');
 
   const editorElRef = useRef(null);
   const edRef = useRef(null);
@@ -78,6 +89,7 @@ export default function PageEditor() {
       initialEditType: 'wysiwyg',
       previewStyle: 'vertical',
       usageStatistics: false,
+      hideModeSwitch: true,
       initialValue: !isNew && data?.body ? data.body : '',
       hooks: {
         addImageBlobHook(blob, callback) {
@@ -127,7 +139,13 @@ export default function PageEditor() {
     mutationFn: async () => {
       // Toast UI stores content as markdown internally regardless of which
       // edit mode (wysiwyg / markdown) the user is in — `getMarkdown()` is
-      // always the source of truth, no view-toggling required.
+      // always the source of truth, no view-toggling required. When the
+      // user is in our custom HTML view, push the textarea content back
+      // through `setHTML` so Toast UI's HTML→Markdown converter runs before
+      // we serialize.
+      if (editorMode === 'html') {
+        try { edRef.current?.setHTML?.(htmlValue); } catch { /* ignore */ }
+      }
       const body = edRef.current?.getMarkdown?.() ?? '';
       const relPath = [folder, slug].filter(Boolean).join('/');
       const payload = { title, body, status, template, taxonomies: taxValues };
@@ -163,8 +181,44 @@ export default function PageEditor() {
 
         {save.error && <Alert tone="error">{save.error.message}</Alert>}
 
+        <div className="flex items-center gap-2">
+          <ModeToggle
+            mode={editorMode}
+            onChange={(next) => switchMode(next, editorMode, edRef, htmlValue, setHtmlValue, setEditorMode)}
+          />
+          {editorMode === 'html' && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                const formatted = beautifyHtml(htmlValue || '', {
+                  indent_size: 2,
+                  wrap_line_length: 100,
+                  end_with_newline: true,
+                  preserve_newlines: true,
+                  max_preserve_newlines: 1,
+                });
+                setHtmlValue(formatted);
+                setDirty(true);
+              }}
+            >
+              Format
+            </Button>
+          )}
+        </div>
+
         <div className="rounded-lg border border-zinc-200 bg-white">
-          <div ref={editorElRef} />
+          {/* Toast UI surface stays mounted in every mode so its internal
+              markdown/HTML state survives mode switches. We just hide it
+              with display: none when the user is editing raw HTML. */}
+          <div ref={editorElRef} style={{ display: editorMode === 'html' ? 'none' : 'block' }} />
+          {editorMode === 'html' && (
+            <CodeEditor
+              value={htmlValue}
+              onChange={(next) => { setHtmlValue(next); setDirty(true); }}
+              className="min-h-[600px]"
+            />
+          )}
         </div>
       </section>
 
@@ -261,4 +315,74 @@ export default function PageEditor() {
       </aside>
     </div>
   );
+}
+
+// Three-way segmented control for the editor view. Toast UI's own bottom-right
+// switcher is hidden via `hideModeSwitch: true`; this is the single source of
+// truth for which surface the user is editing in.
+function ModeToggle({ mode, onChange }) {
+  const modes = [
+    { value: 'wysiwyg',  label: 'WYSIWYG'  },
+    { value: 'markdown', label: 'Markdown' },
+    { value: 'html',     label: 'HTML'     },
+  ];
+  return (
+    <div className="inline-flex items-center gap-1 rounded-md border border-zinc-200 bg-white p-1">
+      {modes.map(m => (
+        <button
+          key={m.value}
+          type="button"
+          onClick={() => onChange(m.value)}
+          className={`rounded px-2.5 py-1 text-[12px] font-medium transition-colors ${
+            mode === m.value
+              ? 'bg-zinc-900 text-white'
+              : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900'
+          }`}
+        >
+          {m.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// Mode-switch logic kept outside the component so we don't have to thread
+// `useCallback` through the entire editor tree. Pure function: takes the
+// next/current modes and the refs/setters it needs, applies the right
+// Toast UI calls, and returns nothing.
+function switchMode(next, current, edRef, htmlValue, setHtmlValue, setEditorMode) {
+  if (next === current) return;
+  const ed = edRef.current;
+  if (!ed) {
+    setEditorMode(next);
+    return;
+  }
+
+  // Leaving HTML view → push the textarea contents back through Toast UI's
+  // HTML→Markdown converter so the markdown/wysiwyg surfaces reflect the edit.
+  if (current === 'html') {
+    try { ed.setHTML(htmlValue); } catch { /* ignore */ }
+  }
+
+  if (next === 'html') {
+    // Entering HTML view → seed the editor from Toast UI's current HTML,
+    // pretty-printed via js-beautify. Toast UI emits everything on one line,
+    // which is unreadable for anything past a paragraph or two.
+    try {
+      const raw = ed.getHTML() || '';
+      setHtmlValue(beautifyHtml(raw, {
+        indent_size: 2,
+        wrap_line_length: 100,
+        end_with_newline: true,
+        preserve_newlines: true,
+        max_preserve_newlines: 1,
+      }));
+    } catch {
+      setHtmlValue('');
+    }
+  } else {
+    try { ed.changeMode(next, true); } catch { /* ignore */ }
+  }
+
+  setEditorMode(next);
 }

@@ -50,6 +50,13 @@ html, body, #root {
   height: 100%;
 }
 
+/* CodeMirror host — let the editor fill whatever min-height the consumer
+   sets via Tailwind utilities. Without this, .cm-editor sizes to its
+   content and the surface collapses on empty documents. */
+.cm-host { display: flex; flex-direction: column; }
+.cm-host .cm-editor { flex: 1; min-height: inherit; }
+.cm-host .cm-scroller { font-family: var(--font-mono); }
+
 /* Tailwind v4 dropped the default cursor on `<button>`. Restore it so every
    non-disabled button in the admin shows a pointer without per-component opt-in. */
 @layer base {
