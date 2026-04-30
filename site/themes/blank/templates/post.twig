@@ -1,6 +1,11 @@
 {{ partial('header', { page_title: meta.title|default('Post'), meta: meta }) }}
 
 <article>
+  {% if meta.image %}
+    <figure class="post-featured">
+      <img src="{{ meta.image }}" alt="{{ meta.title|default('') }}">
+    </figure>
+  {% endif %}
   <h1>{{ meta.title|default('') }}</h1>
   {% if meta.date %}<p class="archive-meta"><time>{{ meta.date }}</time></p>{% endif %}
   {{ html|raw }}

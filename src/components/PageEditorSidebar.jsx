@@ -1,5 +1,6 @@
 import { publicUrl } from '../lib/utils.js';
 import { Button, ConfirmDialog, Field, Input, SegmentedControl, Select } from './ui/index.js';
+import FeaturedImageField from './FeaturedImageField.jsx';
 import PageFields from './PageFields.jsx';
 
 /**
@@ -82,6 +83,20 @@ export default function PageEditorSidebar({
             </p>
           )}
         </Field>
+
+        <FeaturedImageField
+          value={taxValues.image || ''}
+          pagePath={path}
+          onChange={(url) => {
+            setDirty(true);
+            setTaxValues((prev) => {
+              const next = { ...prev };
+              if (url) next.image = url;
+              else delete next.image;
+              return next;
+            });
+          }}
+        />
 
         <Field label="Status">
           <SegmentedControl

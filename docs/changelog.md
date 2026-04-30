@@ -9,6 +9,9 @@ All notable changes to MD Framework are documented here. The format is based on 
 
 ## [Unreleased]
 
+### Added
+- **Featured image field in the editor sidebar.** New default field positioned between Slug and Status. Picks via the existing MediaPicker (Library + Upload tabs), stores the URL at `meta.image` in front matter. Remove clears the key entirely instead of writing `image: ""`. Starter `post.twig` / `post.php` templates now render the image above the title when set; archive lists already expose it via meta-flattening as `post.image`.
+
 ### Documentation
 - Rewrote **Caching** doc with what's cached / how invalidation works / manual controls / when to think about it.
 - **Split theming docs into three.** `templates.md` is now the engine-agnostic reference (theme structure, route variables, helper signatures, `posts()` API, per-post overrides, theme assets + SCSS auto-compile). New `templates-twig.md` and `templates-php.md` are full end-to-end cookbooks in their respective idioms — header/footer partials, `post`/`archive`/`taxonomy`/`feed`/`404` walkthroughs, full pagination with both default and custom numbered markup, tag/category linking and tag-cloud builders, recent/related-posts partials, and a copy-paste `_inspect` debug partial gated behind `site.debug` in `config.json`.

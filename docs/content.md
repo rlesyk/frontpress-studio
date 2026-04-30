@@ -33,6 +33,8 @@ Post body in **Markdown**.
 | `tags` | list | Filterable |
 | `draft` | bool | Hidden from public, visible in admin |
 | `excerpt` | string | Used in archive templates |
+| `image` | string (URL) | Featured image. Set via the **Featured image** field in the editor sidebar. Starter `post` templates render it above the title; archive lists also have it available as `post.image`. |
+| `template` | string | Per-post template override; resolves against the active theme. See [Templates → Per-post template override](templates.md#per-post-template-override). |
 
 Any additional field you add is available in `$meta` and in the post index.
 
