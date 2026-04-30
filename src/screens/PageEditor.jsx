@@ -11,6 +11,7 @@ import { Alert, Button, ConfirmDialog, Field, Input, SegmentedControl, Select } 
 import { useConfirmDialog } from '../lib/hooks.js';
 import { useToast } from '../lib/toast.jsx';
 import CodeEditor from '../components/CodeEditor.jsx';
+import EditorImageMenu from '../components/EditorImageMenu.jsx';
 import MediaPicker from '../components/MediaPicker.jsx';
 import PageFields from '../components/PageFields.jsx';
 
@@ -55,7 +56,10 @@ export default function PageEditor() {
 
   // Media picker — opened from the editor's toolbar Image button (Toast UI's
   // built-in URL/file dialog is replaced with our two-tab Library/Upload modal).
+  // When `replacingImage` is set, the next pick swaps that image's src in the
+  // current markdown body instead of inserting a new image at the caret.
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [replacingImage, setReplacingImage] = useState(null); // { url, alt } | null
 
   const editorElRef = useRef(null);
   const edRef = useRef(null);
@@ -173,6 +177,54 @@ export default function PageEditor() {
     setDirty(true);
     setter(value);
   };
+
+  // Edit the current markdown body to swap one image URL for another. Matches
+  // both markdown (`![alt](url)`) and HTML (`<img src="url" …>`) syntaxes so a
+  // post that mixes them still reacts. Caret position will reset because Toast
+  // UI's `setMarkdown` rebuilds the document — acceptable: the user just took
+  // a deliberate "replace this image" action, they're not mid-typing.
+  function replaceImageInBody(oldUrl, newUrl, newAlt) {
+    if (editorMode === 'html') {
+      setHtmlValue((v) => v.split(oldUrl).join(newUrl));
+      setDirty(true);
+      return;
+    }
+    const ed = edRef.current;
+    if (!ed?.getMarkdown || !ed?.setMarkdown) return;
+    const md = ed.getMarkdown();
+    const escaped = oldUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const next = md
+      // markdown: ![alt](oldUrl) → ![newAlt](newUrl)
+      .replace(new RegExp(`!\\[([^\\]]*)\\]\\(${escaped}(?:\\s+"[^"]*")?\\)`, 'g'),
+        () => `![${newAlt || '$1'}](${newUrl})`)
+      // raw <img src="oldUrl" …>
+      .split(oldUrl).join(newUrl);
+    ed.setMarkdown(next);
+    setDirty(true);
+  }
+
+  // Remove an image from the current markdown body by URL. Strips the whole
+  // `![alt](url)` token, or any matching `<img …>` tag, then collapses the
+  // resulting blank line so the body doesn't accumulate extra paragraphs.
+  function deleteImageFromBody(url) {
+    if (editorMode === 'html') {
+      setHtmlValue((v) => v
+        .replace(new RegExp(`<img[^>]*src=["']${escapeRegex(url)}["'][^>]*>`, 'g'), '')
+        .replace(/\n{3,}/g, '\n\n'));
+      setDirty(true);
+      return;
+    }
+    const ed = edRef.current;
+    if (!ed?.getMarkdown || !ed?.setMarkdown) return;
+    const md = ed.getMarkdown();
+    const escaped = escapeRegex(url);
+    const next = md
+      .replace(new RegExp(`!\\[[^\\]]*\\]\\(${escaped}(?:\\s+"[^"]*")?\\)`, 'g'), '')
+      .replace(new RegExp(`<img[^>]*src=["']${escaped}["'][^>]*>`, 'g'), '')
+      .replace(/\n{3,}/g, '\n\n');
+    ed.setMarkdown(next);
+    setDirty(true);
+  }
 
   const del = useMutation({
     mutationFn: () => api.delete(`/pages/${encodePath(path)}`),
@@ -390,8 +442,17 @@ export default function PageEditor() {
       <MediaPicker
         open={pickerOpen}
         pagePath={path}
-        onClose={() => setPickerOpen(false)}
+        onClose={() => { setPickerOpen(false); setReplacingImage(null); }}
         onPick={({ url, alt }) => {
+          // Replacement flow: swap the previously-clicked image's src in the
+          // current markdown body. Falls back to insert if the old URL has
+          // already been edited away by hand.
+          if (replacingImage) {
+            replaceImageInBody(replacingImage.url, url, alt);
+            setReplacingImage(null);
+            setPickerOpen(false);
+            return;
+          }
           // `addImage` is Toast UI's built-in command; works in both markdown
           // and WYSIWYG modes. In our HTML view we instead inject an <img>
           // tag into the textarea at the current caret position by appending
@@ -409,6 +470,19 @@ export default function PageEditor() {
           setPickerOpen(false);
         }}
       />
+
+      {/* Floating Replace/Delete bubble over images in the WYSIWYG surface.
+          Hidden in HTML mode — that view edits raw HTML directly so the
+          underlying CodeMirror handles the same operations. */}
+      <EditorImageMenu
+        containerRef={editorElRef}
+        enabled={editorMode !== 'html'}
+        onReplace={(target) => {
+          setReplacingImage({ url: target.url, alt: target.alt });
+          setPickerOpen(true);
+        }}
+        onDelete={(target) => deleteImageFromBody(target.url)}
+      />
     </div>
   );
 }
@@ -416,6 +490,10 @@ export default function PageEditor() {
 // Editor view selector. Toast UI's own bottom-right switcher is hidden via
 // `hideModeSwitch: true`; this is the single source of truth for which
 // surface the user is editing in.
+function escapeRegex(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function ModeToggle({ mode, onChange }) {
   return (
     <SegmentedControl

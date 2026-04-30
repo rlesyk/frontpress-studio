@@ -34,6 +34,7 @@ All notable changes to MD Framework are documented here. The format is based on 
 - **`Cmd/Ctrl+S` saves** in `PageEditor`; a bottom-right toast slides in with "Saved at HH:MM" after each successful save and auto-dismisses after ~2.4s. New `<ToastProvider>` + `useToast()` (`lib/toast.jsx`) is mounted at the app root for any future notification need.
 - **Saved-page slug** is now visually dimmed to signal it's locked (the URL is in the wild — changing it would break links).
 - **`aria-current="page"`** on active sidebar links + folder links so screen readers can announce the current section.
+- **Image action menu in the WYSIWYG editor.** Click any image and a small floating bubble appears above it with **Replace** and **Delete** buttons. Replace opens the existing MediaPicker and swaps the image's URL in the markdown body; Delete strips the `![…](url)` (or matching `<img>`) and collapses the blank line. Closes on Esc or click-outside; available in WYSIWYG and Markdown modes (HTML mode edits the source directly).
 - **New `<SegmentedControl>` UI primitive** replaces the editor mode toggle's hand-rolled markup and is now used for the **Status** sidebar field (Published / Draft) — a two-option pill toggle reads better than a dropdown for binary state. Pass `options=[{value, label}]`, `value`, `onChange`, plus an optional `ariaLabel`; the control renders with `role="radiogroup"` and `aria-checked` per option.
 
 ### Hooks & primitives
