@@ -23,23 +23,23 @@ export default function FeaturedImageField({ value, onChange, pagePath }) {
   return (
     <Field label="Featured image">
       {url ? (
-        <div className="space-y-2">
+        <div className="space-y-2 relative">
           <img
             src={url}
             alt=""
             className="w-full rounded-md border border-zinc-200 object-cover"
           />
-          <div className="flex gap-2">
+          <div className="flex gap-2 absolute bottom-0 left-0 justify-center p-4 right-2 w-full bg-black/50 rounded-md">
             <Button
               variant="secondary"
-              className="btn-sm"
+              className="btn-sm grow-1"
               onClick={() => setOpen(true)}
             >
               Replace
             </Button>
             <Button
-              variant="ghost"
-              className="btn-sm"
+              variant="secondary"
+              className="btn-sm grow-1"
               onClick={() => onChange('')}
             >
               Remove

@@ -37,25 +37,28 @@ export default function PageEditorSidebar({
   return (
     <aside className="flex w-72 shrink-0 flex-col overflow-y-auto border-l border-zinc-200 bg-white">
       <div className="flex flex-col gap-3 p-4">
-        <Button onClick={() => save.mutate()} disabled={save.isPending}>
-          {save.isPending ? 'Saving…' : 'Save'}
-        </Button>
+        <div className="flex gap-2">
 
-        {!isNew && (
-          <a
-            href={publicUrl(path)}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-zinc-200 bg-white px-3.5 text-[13px] font-medium text-zinc-900 transition-colors hover:bg-zinc-100"
-          >
-            Preview
-            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9.5 2.5h4v4" />
-              <path d="M13.5 2.5L7 9" />
-              <path d="M12 9v3.5a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1H7" />
-            </svg>
-          </a>
-        )}
+          {!isNew && (
+            <a
+              href={publicUrl(path)}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-zinc-200 bg-white px-3.5 text-[13px] font-medium text-zinc-900 transition-colors hover:bg-zinc-100 grow-1"
+            >
+              Preview
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9.5 2.5h4v4" />
+                <path d="M13.5 2.5L7 9" />
+                <path d="M12 9v3.5a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1H7" />
+              </svg>
+            </a>
+          )}
+
+          <Button onClick={() => save.mutate()} disabled={save.isPending} className="grow-1">
+            {save.isPending ? 'Saving…' : 'Save'}
+          </Button>
+        </div>
 
         <Field label="Slug">
           {/* Slug is editable on both new and saved pages. For saved pages we
