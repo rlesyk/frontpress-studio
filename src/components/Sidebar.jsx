@@ -29,7 +29,7 @@ export default function Sidebar() {
         <Divider />
 
         <Section>
-          <SidebarLink to="/media" icon={IconImage}>Media</SidebarLink>
+          <SidebarLink to="/media" icon={IconImage}>Global media</SidebarLink>
         </Section>
 
         <Divider />

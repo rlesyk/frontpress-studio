@@ -34,7 +34,7 @@ export default function Media() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Media library</h1>
+        <h1 className="text-xl font-semibold">Global media library</h1>
         <Button onClick={() => setUploadOpen(true)}>Upload</Button>
       </div>
 
