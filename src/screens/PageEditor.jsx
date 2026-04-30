@@ -49,7 +49,19 @@ export default function PageEditor() {
   // surface and show a textarea seeded from `editor.getHTML()`. Switching
   // back from `html` calls `editor.setHTML(htmlValue)`, which Toast UI
   // converts back to markdown internally so saves stay markdown-native.
-  const [editorMode, setEditorMode] = useState('wysiwyg');
+  // Persist the editor surface across reloads — reading the same post tomorrow
+  // shouldn't yank you back to WYSIWYG if you spent the day in HTML mode.
+  const [editorMode, setEditorMode] = useState(() => {
+    try {
+      const saved = localStorage.getItem('mdframework:editor-mode');
+      return ['wysiwyg', 'markdown', 'html'].includes(saved) ? saved : 'wysiwyg';
+    } catch {
+      return 'wysiwyg';
+    }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('mdframework:editor-mode', editorMode); } catch { /* private mode etc. */ }
+  }, [editorMode]);
   const [htmlValue, setHtmlValue] = useState('');
 
   // Media picker — opened from the editor's toolbar Image button (Toast UI's
