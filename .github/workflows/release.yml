@@ -68,7 +68,13 @@ jobs:
             --exclude='release/' \
             ./ "${OUT}/"
 
-          ( cd release && zip -rq "${PKG}.zip" "${PKG}" )
+          # -y preserves symlinks (default zip behavior dereferences them,
+          # turning public/assets -> site/themes/blank/assets into a real
+          # directory of stale files). Modern unzip on macOS/Linux extracts
+          # the link correctly. Windows users will see a regular file
+          # containing the link target — bootstrap.php's
+          # ThemeService::ensureAssetsLink() catches that on first request.
+          ( cd release && zip -ryq "${PKG}.zip" "${PKG}" )
           ls -lh "release/${PKG}.zip"
 
       - name: Create GitHub Release

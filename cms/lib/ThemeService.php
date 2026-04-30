@@ -123,6 +123,36 @@ class ThemeService
         return null;
     }
 
+    /**
+     * Ensure `public/assets` is a symlink to the active theme's assets dir.
+     * Idempotent and cheap — a couple of stat() calls when the link is
+     * already correct. Called from bootstrap.php on every public-site
+     * request so a fresh install (where `public/assets` was dereferenced
+     * by `unzip` into a real directory of stale files) self-heals on the
+     * first hit.
+     *
+     * Returns true when the link is correct on exit, false if the host
+     * disallows symlinks or the active theme has no assets directory.
+     */
+    public function ensureAssetsLink(): bool
+    {
+        $slug   = $this->active();
+        $link   = $this->publicDir . '/assets';
+        $target = '../site/themes/' . $slug . '/assets';
+
+        // Active theme has no assets dir — nothing to link.
+        if (!is_dir($this->themesDir . '/' . $slug . '/assets')) {
+            return false;
+        }
+
+        // Fast path: already correctly linked.
+        if (is_link($link) && readlink($link) === $target) {
+            return true;
+        }
+
+        return $this->relinkAssets($slug)['ok'];
+    }
+
     /** @return array{ok: bool, error?: string} */
     public function activate(string $slug): array
     {
