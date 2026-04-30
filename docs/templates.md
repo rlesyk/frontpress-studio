@@ -259,13 +259,38 @@ The admin's editor sidebar exposes the same choice as a **Template** dropdown �
 
 The bundled `blank-twig` / `blank-php` starters ship `assets/style.css` only — there's no SCSS source out of the box. To opt in, drop a `style.scss` (or any `.scss` file) into your active theme's `assets/` directory.
 
-When **`APP_ENV=dev`** (the default in `.env.example`), every **public-site** request runs `MD\ScssCompiler::compileTheme()` — a few `stat()` calls comparing each `.scss` mtime against its `.css` sibling. Anything newer is recompiled to the matching `.css`, and the freshly-compiled file is what `/assets/style.css` serves. `@import 'partials/forms';` works; partial files (`_*.scss`) aren't compiled standalone, only inlined by their importer.
+#### Engine: scssphp (pure PHP, no Node)
+
+The compiler is `scssphp/scssphp` (v2.x), pulled in via composer and shipped in `cms/vendor/`. **No Node, no `sass` binary, no build step** — it works on any host that runs PHP, including shared hosting where you can't install a toolchain. Output is minified (compressed) by default.
+
+Tradeoff: scssphp implements a useful but partial subset of Sass. `@import`, `@mixin`, `@function`, control directives, and the standard math/color functions all work. **`@use` / `@forward`** (the modern Sass module syntax) have limited support — if you're starting fresh, prefer `@import` for partials. Anything that compiles in scssphp 2.x compiles here; the [scssphp docs](https://scssphp.github.io/scssphp/) are the authoritative reference for what's supported.
+
+#### Two layout conventions
+
+Both are scanned automatically, mix-and-match within the same theme:
+
+| Layout | Source | Output |
+|--------|--------|--------|
+| **Flat** | `assets/style.scss` | `assets/style.css` (sibling) |
+| **Nested** | `assets/scss/style.scss` | `assets/css/style.css` |
+
+Flat is simplest for small themes. Nested is useful when you want SCSS sources visibly separated from compiled output (e.g. `assets/scss/_tokens.scss`, `assets/scss/_forms.scss`, `assets/scss/style.scss` → `assets/css/style.css`).
+
+Files whose basename starts with `_` (`_tokens.scss`, `_forms.scss`) are treated as **partials** — inlined by their importer, no standalone `.css` produced. The entire `assets/` tree is added to scssphp's import paths, so `@import 'tokens';` resolves regardless of subfolder depth.
+
+#### When it runs
+
+With **`APP_ENV=dev`** (the default in `.env.example`), every **public-site** request runs `MD\ScssCompiler::compileTheme()`. The freshness check is the *newest mtime under the entire `assets/` tree* compared against each entry's compiled `.css` — touch any partial or import, every dependent entry recompiles. Cheap on hot cache: one `RecursiveDirectoryIterator` walk and one `stat()` per entry.
 
 **Admin requests don't trigger SCSS compile** — `admin.php` doesn't run `bootstrap.php`. To pick up an `.scss` edit, refresh the public site (`/`) once; the admin sees the new CSS on its next reload because both surfaces serve from the same `/assets/style.css`.
 
 In **production**, set `APP_ENV=prod` in `.env` to skip the freshness check entirely. Compile never runs; deploy with `style.css` already built (visit `/` once locally with `APP_ENV=dev` before zipping, or run your own SCSS pipeline).
 
-To opt out entirely on a theme that has a `.scss`, just delete it — the framework leaves your hand-authored `style.css` alone.
+To opt out entirely, just delete the `.scss` files — the framework leaves your hand-authored `style.css` alone.
+
+#### Compile errors
+
+A malformed `.scss` file logs to PHP's `error_log` (`MD\ScssCompiler: failed compiling <path>: <message>`) and is skipped — the request still serves whatever `.css` is on disk, so a broken SCSS edit can't take down the public site. When CSS isn't updating as you expect, the PHP error log is the first place to look.
 
 ## Engine specifics
 
