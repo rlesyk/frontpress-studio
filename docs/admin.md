@@ -12,20 +12,49 @@ Visit `/admin/` in a browser.
 
 ## Setting the password
 
-Admin auth requires a bcrypt-hashed password — there is no plaintext fallback. On a fresh install the admin will refuse to load until `ADMIN_PASS_HASH` is set in `.env`.
+The framework ships with a friendly default in `.env.example`:
 
-Generate a hash:
-
-```bash
-php -r "echo password_hash('yourpassword', PASSWORD_BCRYPT);"
+```
+ADMIN_USER=admin
+ADMIN_PASS=admin
+ADMIN_PASS_HASH=
 ```
 
-Paste the output into `.env`:
+On the first request to `/admin/`, the plaintext `ADMIN_PASS` is bcrypt-hashed and `.env` is rewritten atomically to `ADMIN_PASS_HASH=…` (the plaintext line is removed). Subsequent requests see only the hash.
+
+To get started locally:
+
+```bash
+cp .env.example .env
+# Optional: edit ADMIN_PASS to something other than "admin" before first hit
+```
+
+Then visit `/admin/`. After that first request, `.env` looks like this on disk:
 
 ```
 ADMIN_USER=admin
 ADMIN_PASS_HASH=$2y$12$...
 ```
+
+### Production: hash from day one
+
+If you'd rather skip the auto-hash window entirely (the seconds-to-minutes between unzip and first `/admin/` hit, when plaintext sits on disk), generate the hash yourself and put it directly in `.env`:
+
+```bash
+php -r "echo password_hash('yourpassword', PASSWORD_BCRYPT);"
+```
+
+```
+ADMIN_USER=admin
+ADMIN_PASS=
+ADMIN_PASS_HASH=$2y$12$...
+```
+
+When `ADMIN_PASS_HASH` is set, the auto-hash step is skipped — `ADMIN_PASS` is ignored if both are present.
+
+### If `.env` isn't writable
+
+If the web server can't rewrite `.env` (read-only filesystem, wrong file owner), the in-memory hash still works for the current request and login succeeds — but the next request will see the plaintext again and re-hash it. The error is logged via `error_log()`. Fix file permissions or set `ADMIN_PASS_HASH` directly to break the cycle.
 
 ## Admin features
 

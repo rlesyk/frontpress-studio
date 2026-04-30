@@ -37,4 +37,61 @@ class Env
     {
         return self::$loaded[$key] ?? $default;
     }
+
+    /**
+     * Replace the plaintext `ADMIN_PASS=` line in .env with a hashed
+     * `ADMIN_PASS_HASH=`. Used by the admin shell on first request when a
+     * fresh install was unzipped with the friendly default `.env.example`
+     * (`ADMIN_PASS=admin`).
+     *
+     * The plaintext is removed from disk; subsequent requests see only the
+     * hash. The atomic-write guarantees readers never see a half-rewritten
+     * file. Returns true on success — caller can decide whether a failure
+     * (read-only .env, etc.) is fatal or just a warning.
+     */
+    public static function upgradePlaintextPassword(string $file, string $hash): bool
+    {
+        if (!is_file($file)) {
+            return false;
+        }
+
+        $lines  = file($file, FILE_IGNORE_NEW_LINES) ?: [];
+        $out    = [];
+        $hashed = false;
+
+        foreach ($lines as $line) {
+            $trim = trim($line);
+
+            // Drop the plaintext line entirely.
+            if (preg_match('/^ADMIN_PASS\s*=/', $trim)) {
+                continue;
+            }
+
+            // Replace an existing (empty) hash line in place to keep ordering.
+            if (preg_match('/^ADMIN_PASS_HASH\s*=/', $trim)) {
+                $out[]  = 'ADMIN_PASS_HASH=' . $hash;
+                $hashed = true;
+                continue;
+            }
+
+            $out[] = $line;
+        }
+
+        // Nothing existing to replace — append at the end.
+        if (!$hashed) {
+            $out[] = 'ADMIN_PASS_HASH=' . $hash;
+        }
+
+        $contents = implode("\n", $out);
+        if (!str_ends_with($contents, "\n")) {
+            $contents .= "\n";
+        }
+
+        // Reflect the change in the in-memory cache so the current request
+        // sees the new hash without re-reading the file.
+        self::$loaded['ADMIN_PASS_HASH'] = $hash;
+        unset(self::$loaded['ADMIN_PASS']);
+
+        return Fs::atomicWrite($file, $contents);
+    }
 }

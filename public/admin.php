@@ -5,6 +5,7 @@ declare(strict_types=1);
 $appRoot = dirname(__DIR__);
 $cmsRoot = dirname(__DIR__) . '/cms';
 require_once $cmsRoot . '/vendor/autoload.php';
+require_once $cmsRoot . '/lib/template_helpers.php';
 
 spl_autoload_register(function ($class) use ($cmsRoot) {
     if (str_starts_with($class, 'MD\\')) {
@@ -48,6 +49,24 @@ header('Referrer-Policy: strict-origin-when-cross-origin');
 
 $ADMIN_USER      = MD\Env::get('ADMIN_USER', 'admin');
 $ADMIN_PASS_HASH = MD\Env::get('ADMIN_PASS_HASH', '');
+
+// First-run convenience: if .env ships a plaintext ADMIN_PASS (the friendly
+// default in .env.example), hash it now and rewrite .env so subsequent
+// requests see only the hash. Plaintext is removed from disk in a single
+// atomic write — see MD\Env::upgradePlaintextPassword().
+if ($ADMIN_PASS_HASH === '') {
+    $plain = (string)MD\Env::get('ADMIN_PASS', '');
+    if ($plain !== '') {
+        $ADMIN_PASS_HASH = password_hash($plain, PASSWORD_BCRYPT);
+        if (!MD\Env::upgradePlaintextPassword($appRoot . '/.env', $ADMIN_PASS_HASH)) {
+            // Couldn't write — the in-memory hash still works for this
+            // request, but next request will re-hash the same plaintext.
+            // Surface in the error log so a permissions issue is visible.
+            error_log('admin: failed to rewrite .env with hashed password — check file permissions');
+        }
+    }
+}
+
 $CONTENT_DIR     = $appRoot . '/site/content';
 $UPLOADS_DIR     = $appRoot . '/site/uploads';
 $TEMPLATE_DIR    = $cmsRoot . '/templates';
