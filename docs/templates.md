@@ -31,8 +31,8 @@ site/themes/<slug>/
 │   ├── _header.{twig|php}  # partial
 │   └── _footer.{twig|php}
 └── assets/
-    ├── style.scss          # auto-compiled to style.css
-    └── style.css           # served at /assets/style.css
+    ├── style.css           # served at /assets/style.css
+    └── style.scss          # optional — see "SCSS auto-compile" below
 ```
 
 `theme.json` minimum:
@@ -255,13 +255,17 @@ The admin's editor sidebar exposes the same choice as a **Template** dropdown �
 <img src="{{ asset_url('logo.svg') }}" alt="Logo">
 ```
 
-### SCSS auto-compile
+### SCSS auto-compile (optional)
 
-If `assets/style.scss` exists and is newer than `assets/style.css`, `MD\ScssCompiler` compiles it on the next public or admin request — no build step. Imports (`@import 'partials/forms';`) work; partial files (`_*.scss`) aren't compiled standalone. Compilation only runs when something changed (a few `stat()` calls).
+The bundled `blank-twig` / `blank-php` starters ship `assets/style.css` only — there's no SCSS source out of the box. To opt in, drop a `style.scss` (or any `.scss` file) into your active theme's `assets/` directory.
 
-In production, set `APP_ENV=prod` in `.env` to skip the freshness check entirely. Default is `dev`.
+When **`APP_ENV=dev`** (the default in `.env.example`), every **public-site** request runs `MD\ScssCompiler::compileTheme()` — a few `stat()` calls comparing each `.scss` mtime against its `.css` sibling. Anything newer is recompiled to the matching `.css`, and the freshly-compiled file is what `/assets/style.css` serves. `@import 'partials/forms';` works; partial files (`_*.scss`) aren't compiled standalone, only inlined by their importer.
 
-To skip auto-compile (e.g. you have your own pipeline), don't ship a `.scss` file — drop a hand-authored `style.css` instead.
+**Admin requests don't trigger SCSS compile** — `admin.php` doesn't run `bootstrap.php`. To pick up an `.scss` edit, refresh the public site (`/`) once; the admin sees the new CSS on its next reload because both surfaces serve from the same `/assets/style.css`.
+
+In **production**, set `APP_ENV=prod` in `.env` to skip the freshness check entirely. Compile never runs; deploy with `style.css` already built (visit `/` once locally with `APP_ENV=dev` before zipping, or run your own SCSS pipeline).
+
+To opt out entirely on a theme that has a `.scss`, just delete it — the framework leaves your hand-authored `style.css` alone.
 
 ## Engine specifics
 

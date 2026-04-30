@@ -9,6 +9,9 @@ All notable changes to MD Framework are documented here. The format is based on 
 
 ## [Unreleased]
 
+### Documentation
+- Updated **SCSS auto-compile** section in `templates.md` — corrected three stale claims: (1) compile only fires on public-site requests, not admin (`admin.php` doesn't load `bootstrap.php`); (2) the bundled starters ship `style.css` only, no `.scss`, so auto-compile is opt-in by dropping a file in; (3) `APP_ENV=dev` gating is now front-and-center instead of a footnote, with a note that production deploys should ship pre-built CSS.
+
 ### Changed
 - **`/site` is now fully gitignored; defaults live under `cms/starters/`.** Editing content in the admin no longer creates a diff in the framework repo. Symfony's YAML dumper rewrites every save in its preferred style (single-quoted strings, block-style lists), so previously-tracked starter files (`pages/index.md`, `blog/hello-world.md`, `blog/_index.md`, `themes/blank/`, `config.json`, `uploads/index.php`) generated phantom diffs on every admin save. Moved them all into `cms/starters/` (`content/`, `uploads/`, `config.example.json`; theme is the existing `blank-twig` starter). New `MD\Bootstrap::ensureSiteDefaults()` copies them into `/site/` on the first request after install — idempotent, ~5 stat() calls when `/site` is already populated. Triggered from both `bootstrap.php` (public entry) and `admin.php` (admin entry).
 
