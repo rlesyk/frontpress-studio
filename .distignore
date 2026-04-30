@@ -7,8 +7,12 @@
 
 # ──────────────────────────────────────────────────────────────────
 # Source code that's compiled into public/cms/dist/
+#
+# Patterns that match basenames anywhere in the tree (no leading `/`)
+# are dangerous: `src/` would also exclude `cms/vendor/twig/twig/src/`.
+# Anchor with a leading slash so only the top-level dir is matched.
 # ──────────────────────────────────────────────────────────────────
-src/
+/src/
 
 # ──────────────────────────────────────────────────────────────────
 # Tests + linting + static analysis
@@ -24,8 +28,9 @@ phpstan-baseline.neon
 
 # ──────────────────────────────────────────────────────────────────
 # Documentation source (Jekyll site for GitHub Pages)
+# Anchored — some vendor packages have their own `docs/` directory.
 # ──────────────────────────────────────────────────────────────────
-docs/
+/docs/
 
 # ──────────────────────────────────────────────────────────────────
 # Local config / runtime / secrets
@@ -56,7 +61,8 @@ Thumbs.db
 
 # ──────────────────────────────────────────────────────────────────
 # Build / release artifacts
+# Anchored — `release/` could exist inside a vendor package's tests.
 # ──────────────────────────────────────────────────────────────────
-release/
+/release/
 *.zip
 *.log
