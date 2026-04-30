@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, getCsrf } from '../lib/api.js';
+import { useFileUpload } from '../lib/hooks.js';
 import { formatBytes } from '../lib/utils.js';
 import { Alert, Button, Card, Input } from '../components/ui/index.js';
 
@@ -10,6 +11,7 @@ export default function Backup() {
   const [confirmText, setConfirmText] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null);
+  const restoreUpload = useFileUpload({ endpoint: '/admin/api/backup/restore', fileField: 'backup' });
 
   const { data, isLoading } = useQuery({
     queryKey: ['backup'],
@@ -52,25 +54,14 @@ export default function Backup() {
     const f = fileRef.current?.files?.[0];
     if (!f) { setMsg({ tone: 'error', text: 'Choose a backup file.' }); return; }
 
-    setBusy(true);
     setMsg(null);
     try {
-      const fd = new FormData();
-      fd.append('backup', f);
-      const res = await fetch('/admin/api/backup/restore', {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'X-CSRF-Token': getCsrf() },
-        body: fd,
-      });
-      const data = await res.json();
-      if (!data.ok) throw new Error(data.error || 'Restore failed');
+      await restoreUpload.upload(f);
       setMsg({ tone: 'success', text: 'Restored successfully.' });
       qc.invalidateQueries();
-    } catch (e) {
-      setMsg({ tone: 'error', text: e.message });
+    } catch (err) {
+      setMsg({ tone: 'error', text: err.message });
     } finally {
-      setBusy(false);
       setConfirmText('');
       if (fileRef.current) fileRef.current.value = '';
     }
@@ -110,8 +101,8 @@ export default function Backup() {
             onChange={e => setConfirmText(e.target.value)}
             placeholder="Type RESTORE"
           />
-          <Button type="submit" variant="danger" disabled={busy}>
-            {busy ? 'Working…' : 'Restore'}
+          <Button type="submit" variant="danger" disabled={busy || restoreUpload.busy}>
+            {restoreUpload.busy ? 'Restoring…' : busy ? 'Working…' : 'Restore'}
           </Button>
         </form>
       </Card>

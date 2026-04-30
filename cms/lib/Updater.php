@@ -71,9 +71,28 @@ class Updater
         return version_compare($latest['version'], $this->currentVersion(), '>');
     }
 
+    /**
+     * Hosts allowed for update ZIP downloads. GitHub redirects releases through
+     * codeload.github.com; api.github.com is the metadata host.
+     */
+    private const ALLOWED_HOSTS = ['codeload.github.com', 'api.github.com', 'github.com'];
+
+    public static function isAllowedZipUrl(string $url): bool
+    {
+        if (!str_starts_with($url, 'https://')) {
+            return false;
+        }
+        $host = parse_url($url, PHP_URL_HOST);
+        return is_string($host) && in_array(strtolower($host), self::ALLOWED_HOSTS, true);
+    }
+
     /** @return array<string, mixed> */
     public function apply(string $zipUrl, string $backupDir): array
     {
+        if (!self::isAllowedZipUrl($zipUrl)) {
+            return ['ok' => false, 'error' => 'ZIP URL host not allowed'];
+        }
+
         // Download ZIP to temp file
         $tmpZip = tempnam(sys_get_temp_dir(), 'mdf_') . '.zip';
         $ctx    = stream_context_create(['http' => [
@@ -147,13 +166,33 @@ class Updater
         $zip->close();
         unlink($tmpZip);
 
-        // Run pending migrations
-        $this->runMigrations();
+        // Migrations are NOT auto-run. The admin must invoke them explicitly via
+        // runMigrations() (e.g. through the dedicated update/migrate endpoint).
+        $pending = $this->pendingMigrations();
 
-        return ['ok' => true, 'version' => $newVersion, 'backup' => basename($backupFile)];
+        return [
+            'ok'                  => true,
+            'version'             => $newVersion,
+            'backup'              => basename($backupFile),
+            'pending_migrations'  => array_map('basename', $pending),
+        ];
     }
 
-    private function runMigrations(): void
+    /** @return list<string> */
+    public function pendingMigrations(): array
+    {
+        $dir     = $this->appRoot . '/cms/migrations';
+        $applied = $dir . '/.applied';
+        if (!is_dir($dir)) {
+            return [];
+        }
+        $done    = is_file($applied) ? array_filter(explode("\n", file_get_contents($applied))) : [];
+        $scripts = glob($dir . '/*.php') ?: [];
+        sort($scripts);
+        return array_values(array_filter($scripts, fn ($s) => !in_array(basename($s), $done, true)));
+    }
+
+    public function runMigrations(): void
     {
         $dir     = $this->appRoot . '/cms/migrations';
         $applied = $dir . '/.applied';

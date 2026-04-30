@@ -22,13 +22,23 @@ class ThemeService
     {
         $themes = [];
         foreach (glob($this->themesDir . '/*/theme.json') ?: [] as $f) {
-            $slug          = basename(dirname($f));
-            $meta          = json_decode(file_get_contents($f), true) ?? [];
-            $engine        = $meta['engine'] ?? self::detectEngine(dirname($f) . '/templates');
+            $slug = basename(dirname($f));
+            $meta = json_decode(file_get_contents($f), true) ?? [];
+
+            // Persist the detected engine into theme.json on first sight so we
+            // don't re-glob the templates dir for every admin page load. Themes
+            // can hand-edit the value if they want to override the heuristic.
+            if (empty($meta['engine'])) {
+                $meta['engine'] = self::detectEngine(dirname($f) . '/templates');
+                if ($meta['engine'] !== 'unknown') {
+                    @file_put_contents($f, json_encode($meta, JSON_PRETTY_PRINT));
+                }
+            }
+
             $themes[$slug] = array_merge(
                 ['name' => $slug, 'description' => '', 'version' => '', 'author' => '', 'preview' => ''],
                 $meta,
-                ['slug' => $slug, 'engine' => $engine]
+                ['slug' => $slug, 'engine' => $meta['engine']]
             );
         }
         return $themes;
@@ -146,7 +156,7 @@ class ThemeService
             return ['ok' => false, 'error' => 'Theme slug already exists'];
         }
 
-        $this->copyDir($src, $dst);
+        FilesystemUtils::copyDir($src, $dst);
 
         if (is_file($dst . '/config.example.json') && !is_file(dirname($this->themesDir) . '/config.json')) {
             copy($dst . '/config.example.json', dirname($this->themesDir) . '/config.json');
@@ -183,7 +193,7 @@ class ThemeService
             return ['ok' => false, 'error' => 'Theme not found'];
         }
 
-        $this->copyDir($src, $dst . '/templates');
+        FilesystemUtils::copyDir($src, $dst . '/templates');
 
         return ['ok' => true];
     }
@@ -256,39 +266,11 @@ class ThemeService
             return ['ok' => false, 'error' => 'Theme not found'];
         }
 
-        $this->removeDir($real);
+        FilesystemUtils::removeDir($real);
         if (is_dir($real)) {
             return ['ok' => false, 'error' => 'Failed to remove theme directory'];
         }
         return ['ok' => true];
     }
 
-    private function removeDir(string $dir): void
-    {
-        $it = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($dir, \RecursiveDirectoryIterator::SKIP_DOTS),
-            \RecursiveIteratorIterator::CHILD_FIRST
-        );
-        foreach ($it as $item) {
-            $item->isDir() ? rmdir($item->getPathname()) : unlink($item->getPathname());
-        }
-        rmdir($dir);
-    }
-
-    private function copyDir(string $src, string $dst): void
-    {
-        if (!is_dir($dst)) {
-            mkdir($dst, 0755, true);
-        }
-        $it = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($src, \RecursiveDirectoryIterator::SKIP_DOTS),
-            \RecursiveIteratorIterator::SELF_FIRST
-        );
-        foreach ($it as $item) {
-            $target = $dst . '/' . substr($item->getPathname(), strlen($src) + 1);
-            $item->isDir()
-                ? (is_dir($target) ?: mkdir($target, 0755, true))
-                : copy($item->getPathname(), $target);
-        }
-    }
 }

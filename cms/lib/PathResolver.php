@@ -103,7 +103,7 @@ class PathResolver
     public function uploadsSubDir(string $pagePath): array
     {
         $raw = trim($pagePath, '/');
-        if ($raw !== '' && preg_match('#^[a-z0-9][a-z0-9/_-]*$#', $raw)) {
+        if ($raw !== '' && $this->isValidRelPath($raw)) {
             return ['dir' => $this->contentDir . '/' . $raw, 'prefix' => '/uploads/' . $raw . '/'];
         }
         return ['dir' => $this->uploadsDir, 'prefix' => '/uploads/'];

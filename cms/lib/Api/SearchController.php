@@ -8,6 +8,7 @@ use MD\Content;
 use MD\Index;
 use MD\PathResolver;
 
+
 class SearchController
 {
     /** @param array<string, mixed> $config */
@@ -21,17 +22,21 @@ class SearchController
         if (strlen($q) < 2) {
             \json_response(['ok' => true, 'results' => []]);
         }
+        // Body search reads every .md file from disk to match — fine for small
+        // sites, painful at scale. Off by default; pass `?body=1` (the admin
+        // UI can wire this to a "search inside content" toggle) to opt in.
+        $searchBody = (string)($_GET['body'] ?? '') === '1';
 
-        $paths   = new PathResolver($config['contentDir'], $config['uploadsDir'], $config['cacheDir'], $config['themesDir']);
-        $content = new Content($config['contentDir'], $config['cacheDir']);
-        $index   = new Index($config['contentDir'], $config['cacheDir'], $content);
+        $paths   = ServiceFactory::paths($config);
+        $content = ServiceFactory::content($config);
+        $index   = ServiceFactory::index($config, $content);
 
         $results = [];
         foreach ($index->get(includeDrafts: true) as $page) {
             $titleMatch = str_contains(strtolower((string)($page['title'] ?? '')), $q);
             $pathMatch  = str_contains(strtolower((string)($page['path']  ?? '')), $q);
             $bodyMatch  = false;
-            if (!$titleMatch && !$pathMatch) {
+            if ($searchBody && !$titleMatch && !$pathMatch) {
                 $abs = $paths->contentFile($page['path']);
                 if ($abs) {
                     $bodyMatch = str_contains(strtolower((string)file_get_contents($abs)), $q);

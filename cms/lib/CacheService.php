@@ -67,8 +67,18 @@ class CacheService
         }
     }
 
-    /** @return array{ok: bool, count?: int, error?: string} */
-    public function rebuild(): array
+    /**
+     * Clear the index, HTML, and Twig caches and rebuild the post index.
+     *
+     * Set `$warm = true` to additionally re-parse every page so the HTML cache
+     * is hot when the next request comes in. That's a big-O(n) walk over all
+     * content and used to run unconditionally — it now only runs on demand
+     * (admin "Warm cache" button) so a routine save doesn't re-render the
+     * whole site synchronously.
+     *
+     * @return array{ok: bool, count?: int, warmed?: bool, error?: string}
+     */
+    public function rebuild(bool $warm = false): array
     {
         $htmlDir = $this->cacheDir . '/html';
         if (is_dir($htmlDir)) {
@@ -83,9 +93,11 @@ class CacheService
         $index   = new Index($this->contentDir, $this->cacheDir, $content);
         $index->build();
         $pages = $index->get(includeDrafts: true);
-        foreach ($pages as $page) {
-            $content->load($page['path']);
+        if ($warm) {
+            foreach ($pages as $page) {
+                $content->load($page['path']);
+            }
         }
-        return ['ok' => true, 'count' => count($pages)];
+        return ['ok' => true, 'count' => count($pages), 'warmed' => $warm];
     }
 }

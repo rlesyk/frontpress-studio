@@ -8,11 +8,13 @@ layout: default
 * TOC
 {:toc}
 
-Visit `/admin/` in a browser. Default credentials: `admin` / `admin`.
+Visit `/admin/` in a browser.
 
-## Changing the password
+## Setting the password
 
-**Change the password before deploying:**
+Admin auth requires a bcrypt-hashed password — there is no plaintext fallback. On a fresh install the admin will refuse to load until `ADMIN_PASS_HASH` is set in `.env`.
+
+Generate a hash:
 
 ```bash
 php -r "echo password_hash('yourpassword', PASSWORD_BCRYPT);"
@@ -100,8 +102,10 @@ All endpoints accept and return JSON. Mutating requests must include the CSRF to
 | `POST` | `/admin/api/backup/download` | Download a `.zip` (returns binary) |
 | `POST` | `/admin/api/backup/restore` | Restore from uploaded `.zip` (multipart) |
 | `GET`  | `/admin/api/search?q=…` | Full-text search across pages |
-| `GET`  | `/admin/api/update` | Check for a new release |
-| `POST` | `/admin/api/update` | Apply an update |
+| `GET`  | `/admin/api/update` | Check for a new release (also returns `pending_migrations`) |
+| `POST` | `/admin/api/update` | Apply the latest release. The ZIP URL is taken from GitHub's release metadata server-side and host-checked against an allowlist; client-supplied URLs are ignored |
+| `POST` | `/admin/api/update/migrate` | Explicitly run pending migration scripts (no longer auto-run on update) |
+| `GET`  | `/admin/api/audit?limit=N` | Most-recent admin write actions (page create/update/delete). Append-only log at `site/cache/audit.log` — N defaults to 100, capped at 500 |
 
 ## Development workflow
 

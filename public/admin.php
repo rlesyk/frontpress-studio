@@ -25,9 +25,29 @@ session_set_cookie_params([
 ]);
 session_start();
 
+// Idle-timeout: log the user out if there's been no admin activity for
+// `session_idle_seconds` (default: 2 hours). Refreshed on every request below.
+$idleLimit = (int)(MD\Env::get('SESSION_IDLE_SECONDS', '7200'));
+if (!empty($_SESSION['admin_user']) && $idleLimit > 0) {
+    $last = (int)($_SESSION['last_activity'] ?? 0);
+    if ($last > 0 && (time() - $last) > $idleLimit) {
+        $_SESSION = [];
+        session_destroy();
+        session_start();
+    }
+}
+$_SESSION['last_activity'] = time();
+
+// Baseline security headers for every admin response (HTML and JSON alike).
+// HSTS is intentionally omitted here — set it at the web-server level once
+// HTTPS is confirmed for the host so we don't lock users out of plain-HTTP
+// dev environments by accident.
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: DENY');
+header('Referrer-Policy: strict-origin-when-cross-origin');
+
 $ADMIN_USER      = MD\Env::get('ADMIN_USER', 'admin');
 $ADMIN_PASS_HASH = MD\Env::get('ADMIN_PASS_HASH', '');
-$ADMIN_PASS      = MD\Env::get('ADMIN_PASS', '');
 $CONTENT_DIR     = $appRoot . '/site/content';
 $UPLOADS_DIR     = $appRoot . '/site/uploads';
 $TEMPLATE_DIR    = $cmsRoot . '/templates';
@@ -44,15 +64,12 @@ function csrf_token(): string
     return $_SESSION['csrf_token'];
 }
 
-function passwordCheck(string $input, string $hash, string $plain): bool
+function passwordCheck(string $input, string $hash): bool
 {
-    if ($hash !== '') {
-        return password_verify($input, $hash);
+    if ($hash === '') {
+        return false;
     }
-    if ($plain !== '') {
-        return hash_equals($plain, $input);
-    }
-    return false;
+    return password_verify($input, $hash);
 }
 
 /** @param array<string, mixed> $data */
@@ -68,7 +85,7 @@ function json_response(array $data, int $code = 200): never
 
 // ── Setup gate: refuse if no credentials are configured ──────────────────────
 
-if ($ADMIN_PASS_HASH === '' && $ADMIN_PASS === '') {
+if ($ADMIN_PASS_HASH === '') {
     http_response_code(503);
     $envFile = $appRoot . '/.env';
     require $TEMPLATE_DIR . '/setup-required.php';
@@ -92,7 +109,6 @@ if (preg_match('#^/admin/api/(.*)$#', $uri, $apiMatch)) {
         'config'          => $config,
         'ADMIN_USER'      => $ADMIN_USER,
         'ADMIN_PASS_HASH' => $ADMIN_PASS_HASH,
-        'ADMIN_PASS'      => $ADMIN_PASS,
     ]);
     exit;
 }

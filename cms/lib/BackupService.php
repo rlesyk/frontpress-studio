@@ -165,112 +165,16 @@ class BackupService
     }
 
     /**
-     * Restore a validated backup ZIP onto the live install. Strategy:
-     *   1. Extract to a staging directory.
-     *   2. For each of the four backup roots, rename the live path to a
-     *      `.restore-bak-<ts>` sibling, then move the staged root into place.
-     *   3. On success, remove the `.restore-bak-*` siblings.
-     *   4. On any failure, roll back the renames and remove the staging dir.
-     *
-     * The rename dance keeps each swap atomic from a reader's point of view —
-     * live requests see either the old tree or the fully-extracted new one.
+     * Restore a validated backup ZIP onto the live install. Delegates the
+     * staging + rename + rollback machinery to {@see BackupRestorer}; this
+     * method exists for backwards compatibility (the API surface used to live
+     * here).
      *
      * @return array{ok: true, counts: array<string, int>}|array{ok: false, error: string}
      */
     public function restore(string $zipPath): array
     {
-        $check = $this->inspectZip($zipPath);
-        if (!$check['ok']) {
-            return $check;
-        }
-
-        $stage = sys_get_temp_dir() . '/mdrestore_' . bin2hex(random_bytes(6));
-        if (!@mkdir($stage, 0755, true)) {
-            return ['ok' => false, 'error' => 'Could not create staging directory'];
-        }
-
-        $zip = new \ZipArchive();
-        if ($zip->open($zipPath, \ZipArchive::RDONLY) !== true) {
-            $this->rrmdir($stage);
-            return ['ok' => false, 'error' => 'Could not open ZIP for extraction'];
-        }
-        if (!$zip->extractTo($stage)) {
-            $zip->close();
-            $this->rrmdir($stage);
-            return ['ok' => false, 'error' => 'ZIP extraction failed'];
-        }
-        $zip->close();
-
-        $ts      = date('YmdHis');
-        $renames = []; // [live, backup] pairs we did, for rollback.
-
-        foreach ($this->roots as $root) {
-            $stagedPath = $stage . '/' . $root['prefix'];
-            $livePath   = $root['src'];
-
-            // No entries for this root in the backup → nothing to replace.
-            if (!file_exists($stagedPath)) {
-                continue;
-            }
-
-            $bak = $livePath . '.restore-bak-' . $ts;
-            if (file_exists($livePath)) {
-                if (!@rename($livePath, $bak)) {
-                    $this->rollback($renames);
-                    $this->rrmdir($stage);
-                    return ['ok' => false, 'error' => 'Could not move existing ' . $root['prefix'] . ' aside'];
-                }
-                $renames[] = [$livePath, $bak];
-            }
-
-            if (!@is_dir(dirname($livePath)) && !@mkdir(dirname($livePath), 0755, true)) {
-                $this->rollback($renames);
-                $this->rrmdir($stage);
-                return ['ok' => false, 'error' => 'Could not create parent directory for ' . $root['prefix']];
-            }
-            if (!@rename($stagedPath, $livePath)) {
-                $this->rollback($renames);
-                $this->rrmdir($stage);
-                return ['ok' => false, 'error' => 'Could not install restored ' . $root['prefix']];
-            }
-        }
-
-        // Success — drop backups and staging dir.
-        foreach ($renames as [, $bak]) {
-            $this->rrmdir($bak);
-        }
-        $this->rrmdir($stage);
-
-        return ['ok' => true, 'counts' => $check['counts']];
-    }
-
-    /** @param list<array{0: string, 1: string}> $renames */
-    private function rollback(array $renames): void
-    {
-        foreach (array_reverse($renames) as [$live, $bak]) {
-            if (file_exists($live)) {
-                $this->rrmdir($live);
-            }
-            @rename($bak, $live);
-        }
-    }
-
-    private function rrmdir(string $path): void
-    {
-        if (is_file($path) || is_link($path)) {
-            @unlink($path);
-            return;
-        }
-        if (!is_dir($path)) {
-            return;
-        }
-        foreach (scandir($path) ?: [] as $entry) {
-            if ($entry === '.' || $entry === '..') {
-                continue;
-            }
-            $this->rrmdir($path . '/' . $entry);
-        }
-        @rmdir($path);
+        return (new BackupRestorer($this, $this->roots))->restore($zipPath);
     }
 
     private function isSafeEntry(string $name): bool

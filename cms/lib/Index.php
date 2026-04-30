@@ -10,6 +10,15 @@ class Index
     private string $cacheDir;
     private Content $content;
 
+    /**
+     * Per-request memo of the parsed index, keyed by absolute index-file path
+     * + filemtime. Several controllers can each instantiate `Index` during a
+     * single request; without this they each re-decode the same JSON.
+     *
+     * @var array<string, array<string, array<string, mixed>>>
+     */
+    private static array $cache = [];
+
     public function __construct(string $contentDir, string $cacheDir, Content $content)
     {
         $this->contentDir = rtrim($contentDir, '/');
@@ -27,8 +36,12 @@ class Index
         $indexFile = $this->cacheDir . '/index.json';
         if ($this->needsRebuild($indexFile)) {
             $this->build();
+            unset(self::$cache[$indexFile]);
         }
-        $all = json_decode(file_get_contents($indexFile), true) ?? [];
+        $cacheKey = $indexFile . '@' . (int)@filemtime($indexFile);
+        $all      = self::$cache[$cacheKey]
+            ?? (self::$cache[$cacheKey] = json_decode(file_get_contents($indexFile), true) ?? []);
+
         if ($includeDrafts) {
             return $all;
         }

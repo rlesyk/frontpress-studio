@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api.js';
+import { useConfirmDialog } from '../lib/hooks.js';
 import { cap, encodePath } from '../lib/utils.js';
-import { Badge, Button, Input, Select } from '../components/ui/index.js';
+import { Badge, Button, ConfirmDialog, Input, Select } from '../components/ui/index.js';
 import { IconSearch } from '../components/icons.jsx';
 
 // Mirrors dsystem ui_kit `PagesList.jsx` — card-wrapped, header with count
@@ -16,6 +17,10 @@ export default function PagesList() {
 
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  // Bulk selection — tracks page paths the user has ticked. Cleared on
+  // filter changes so what's "selected" always matches what's visible.
+  const [selected, setSelected] = useState(() => new Set());
+  const { confirm, dialogProps } = useConfirmDialog();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['pages'],
@@ -41,7 +46,59 @@ export default function PagesList() {
     return list;
   }, [data, folder, statusFilter, query]);
 
-  if (isLoading) return <div className="text-sm text-zinc-500">Loading…</div>;
+  // Drop selections that aren't visible after a filter change so the bulk
+  // toolbar count never lies about what "Delete selected" will affect.
+  const visiblePaths = useMemo(() => new Set(filtered.map((p) => p.path)), [filtered]);
+  const visibleSelected = useMemo(
+    () => Array.from(selected).filter((p) => visiblePaths.has(p)),
+    [selected, visiblePaths],
+  );
+  const allVisibleSelected = filtered.length > 0 && visibleSelected.length === filtered.length;
+
+  function toggleOne(path, checked) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(path); else next.delete(path);
+      return next;
+    });
+  }
+  function toggleAll(checked) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (checked) filtered.forEach((p) => next.add(p.path));
+      else filtered.forEach((p) => next.delete(p.path));
+      return next;
+    });
+  }
+
+  async function bulkDelete() {
+    if (visibleSelected.length === 0) return;
+    const ok = await confirm({
+      title: `Delete ${visibleSelected.length} pages`,
+      message: `Delete ${visibleSelected.length} selected ${visibleSelected.length === 1 ? 'page' : 'pages'}? This cannot be undone.`,
+    });
+    if (!ok) return;
+    // Run sequentially so a failure doesn't bury earlier successes; the
+    // mutation cache invalidates only when everything's done.
+    for (const path of visibleSelected) {
+      try { await api.delete(`/pages/${encodePath(path)}`); } catch { /* keep going */ }
+    }
+    setSelected(new Set());
+    qc.invalidateQueries({ queryKey: ['pages'] });
+  }
+
+  if (isLoading) {
+    return (
+      <div className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm" aria-hidden="true">
+        <div className="h-6 w-40 animate-pulse rounded bg-zinc-200" />
+        <div className="mt-6 space-y-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-10 w-full animate-pulse rounded bg-zinc-100" />
+          ))}
+        </div>
+      </div>
+    );
+  }
   if (error) return <div className="text-sm text-red-600">Failed to load: {error.message}</div>;
 
   const title = folder ? cap(folder) : 'All Content';
@@ -85,9 +142,31 @@ export default function PagesList() {
         </div>
       </header>
 
+      {visibleSelected.length > 0 && (
+        <div className="flex items-center justify-between gap-3 border-b border-zinc-100 bg-zinc-50 px-6 py-2 text-[12px]">
+          <span className="font-medium text-zinc-700">
+            {visibleSelected.length} selected
+          </span>
+          <div className="flex gap-2">
+            <Button variant="secondary" size="sm" onClick={() => setSelected(new Set())}>Clear</Button>
+            <Button variant="danger" size="sm" onClick={bulkDelete}>Delete selected</Button>
+          </div>
+        </div>
+      )}
+
       <table className="w-full text-[13px]">
         <thead>
           <tr className="border-b border-zinc-100 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-zinc-500">
+            <th className="w-10 px-6 py-3">
+              <input
+                type="checkbox"
+                aria-label="Select all"
+                checked={allVisibleSelected}
+                ref={(el) => { if (el) el.indeterminate = visibleSelected.length > 0 && !allVisibleSelected; }}
+                onChange={(e) => toggleAll(e.target.checked)}
+                className="h-4 w-4 cursor-pointer rounded border-zinc-300"
+              />
+            </th>
             <th className="px-6 py-3">Title</th>
             <th className="px-6 py-3">Path</th>
             {folder ? (
@@ -101,46 +180,85 @@ export default function PagesList() {
         <tbody>
           {filtered.length === 0 && (
             <tr>
-              <td colSpan={4} className="px-6 py-10 text-center text-zinc-500">
-                No pages match.
+              <td colSpan={5} className="px-6 py-12 text-center">
+                <div className="mx-auto max-w-sm space-y-3 text-zinc-500">
+                  <div className="text-sm font-semibold text-zinc-700">
+                    {query || statusFilter ? 'No pages match your filter' : 'No pages yet'}
+                  </div>
+                  <div className="text-xs">
+                    {query || statusFilter
+                      ? 'Try clearing the search or status filter.'
+                      : folder
+                        ? `Create your first page under ${folder} to get started.`
+                        : 'Pick a folder from the sidebar and add a page.'}
+                  </div>
+                  {folder && !query && !statusFilter && (
+                    <Button onClick={() => navigate(`/new/${encodeURIComponent(folder)}`)}>
+                      New page
+                    </Button>
+                  )}
+                </div>
               </td>
             </tr>
           )}
           {filtered.map(p => (
-            <tr key={p.path} className="border-b border-zinc-100 last:border-b-0 hover:bg-zinc-50">
-              <td className="px-6 py-4">
-                <Link to={`/${p.path}`} className="font-semibold text-zinc-900 hover:underline">
-                  {p.title || '(untitled)'}
-                </Link>
-              </td>
-              <td className="px-6 py-4 font-mono text-[12px] text-zinc-500">{p.path}</td>
-              {folder ? (
-                <td className="px-6 py-4">
-                  <Badge tone={p.draft ? 'draft' : 'live'}>{p.draft ? 'Draft' : 'Live'}</Badge>
-                </td>
-              ) : (
-                <td className="px-6 py-4 text-zinc-500">{p.folder || '—'}</td>
-              )}
-              <td className="px-6 py-4">
-                <div className="flex justify-end gap-2">
-                  <Button variant="secondary" size="sm" onClick={() => navigate(`/${p.path}`)}>
-                    Edit
-                  </Button>
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    onClick={() => {
-                      if (confirm(`Delete "${p.title || p.path}"?`)) del.mutate(p.path);
-                    }}
-                  >
-                    Delete
-                  </Button>
-                </div>
-              </td>
-            </tr>
+            <PageRow
+              key={p.path}
+              page={p}
+              showStatus={!!folder}
+              selected={selected.has(p.path)}
+              onToggle={toggleOne}
+              onEdit={navigate}
+              onDelete={async (page) => {
+                const ok = await confirm({
+                  title: 'Delete page',
+                  message: `Delete "${page.title || page.path}"? This cannot be undone.`,
+                });
+                if (ok) del.mutate(page.path);
+              }}
+            />
           ))}
         </tbody>
       </table>
+      <ConfirmDialog {...dialogProps} />
     </div>
   );
 }
+
+const PageRow = memo(function PageRow({ page, showStatus, selected, onToggle, onEdit, onDelete }) {
+  const handleEdit = useCallback(() => onEdit(`/${page.path}`), [onEdit, page.path]);
+  const handleDelete = useCallback(() => onDelete(page), [onDelete, page]);
+  const handleToggle = useCallback((e) => onToggle(page.path, e.target.checked), [onToggle, page.path]);
+  return (
+    <tr className="border-b border-zinc-100 last:border-b-0 hover:bg-zinc-50">
+      <td className="px-6 py-4">
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={handleToggle}
+          aria-label={`Select ${page.title || page.path}`}
+          className="h-4 w-4 cursor-pointer rounded border-zinc-300"
+        />
+      </td>
+      <td className="px-6 py-4">
+        <Link to={`/${page.path}`} className="font-semibold text-zinc-900 hover:underline">
+          {page.title || '(untitled)'}
+        </Link>
+      </td>
+      <td className="px-6 py-4 font-mono text-[12px] text-zinc-500">{page.path}</td>
+      {showStatus ? (
+        <td className="px-6 py-4">
+          <Badge tone={page.draft ? 'draft' : 'live'}>{page.draft ? 'Draft' : 'Live'}</Badge>
+        </td>
+      ) : (
+        <td className="px-6 py-4 text-zinc-500">{page.folder || '—'}</td>
+      )}
+      <td className="px-6 py-4">
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" size="sm" onClick={handleEdit}>Edit</Button>
+          <Button variant="danger" size="sm" onClick={handleDelete}>Delete</Button>
+        </div>
+      </td>
+    </tr>
+  );
+});

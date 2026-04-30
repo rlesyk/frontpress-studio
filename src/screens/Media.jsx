@@ -1,13 +1,14 @@
-import { useRef, useState } from 'react';
+import { memo, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api, getCsrf } from '../lib/api.js';
-import { Alert, Button } from '../components/ui/index.js';
+import { api } from '../lib/api.js';
+import { useConfirmDialog, useFileUpload } from '../lib/hooks.js';
+import { extLabel, isImageFile } from '../lib/utils.js';
+import { Alert, Button, ConfirmDialog } from '../components/ui/index.js';
 
 export default function Media() {
   const qc = useQueryClient();
   const fileRef = useRef(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(null);
+  const { confirm, dialogProps } = useConfirmDialog();
 
   const { data, isLoading } = useQuery({
     queryKey: ['media'],
@@ -19,29 +20,22 @@ export default function Media() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['media'] }),
   });
 
+  async function askDelete(name) {
+    const ok = await confirm({
+      title: 'Delete media',
+      message: `Delete ${name}? This cannot be undone.`,
+    });
+    if (ok) del.mutate(name);
+  }
+
+  const { upload, busy, error } = useFileUpload({
+    endpoint: '/admin/api/media',
+    invalidate: [['media']],
+  });
+
   async function onPick(e) {
     const f = e.target.files?.[0];
-    if (!f) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const fd = new FormData();
-      fd.append('file', f);
-      const res = await fetch('/admin/api/media', {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'X-CSRF-Token': getCsrf() },
-        body: fd,
-      });
-      const data = await res.json();
-      if (!data.ok) throw new Error(data.error || 'Upload failed');
-      qc.invalidateQueries({ queryKey: ['media'] });
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusy(false);
-      e.target.value = '';
-    }
+    try { await upload(f); } catch {} finally { e.target.value = ''; }
   }
 
   if (isLoading) return <div className="text-sm text-zinc-500">Loading…</div>;
@@ -67,21 +61,28 @@ export default function Media() {
           </div>
         )}
         {(data?.files || []).map(f => (
-          <MediaItem key={f.name + (f.url || '')} file={f} onDelete={() => del.mutate(f.name)} />
+          <MediaItem key={f.name + (f.url || '')} file={f} onDelete={() => askDelete(f.name)} />
         ))}
       </div>
+      <ConfirmDialog {...dialogProps} />
     </div>
   );
 }
 
-function MediaItem({ file, onDelete }) {
+const MediaItem = memo(function MediaItem({ file, onDelete }) {
   return (
     <div className="group relative overflow-hidden rounded-lg border border-zinc-200 bg-white">
-      {isImage(file) ? (
-        <img src={file.thumb_url || file.url} alt={file.alt || file.name} className="aspect-square w-full object-cover" />
+      {isImageFile(file) ? (
+        <img
+          src={file.thumb_url || file.url}
+          alt={file.alt || file.name}
+          loading="lazy"
+          decoding="async"
+          className="aspect-square w-full object-cover"
+        />
       ) : (
         <div className="flex aspect-square w-full items-center justify-center bg-zinc-50 text-xs text-zinc-500">
-          {ext(file.name)}
+          {extLabel(file.name)}
         </div>
       )}
       <div className="border-t border-zinc-100 p-2">
@@ -91,7 +92,7 @@ function MediaItem({ file, onDelete }) {
             View
           </a>
           <button
-            onClick={() => { if (confirm(`Delete ${file.name}?`)) onDelete(); }}
+            onClick={onDelete}
             className="text-xs text-red-600 hover:underline"
           >
             Delete
@@ -100,12 +101,5 @@ function MediaItem({ file, onDelete }) {
       </div>
     </div>
   );
-}
+});
 
-function isImage(f) {
-  return /\.(jpe?g|png|gif|webp|svg)$/i.test(f.name);
-}
-function ext(name) {
-  const m = /\.([^.]+)$/.exec(name);
-  return m ? m[1].toUpperCase() : 'FILE';
-}

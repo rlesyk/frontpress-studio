@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace MD\Api;
 
-use MD\CacheService;
-use MD\Content;
-use MD\PathResolver;
 use MD\ThemeService;
 
 class ThemesController
@@ -19,7 +16,7 @@ class ThemesController
     {
         Router::requireAuth();
 
-        $themes = new ThemeService($config['appRoot'], $config['config']);
+        $themes = ServiceFactory::themes($config);
         $action = $pathParts[0] ?? '';
 
         if ($method === 'GET' && $action === '') {
@@ -104,8 +101,7 @@ class ThemesController
     /** @param array<string, mixed> $config */
     private static function clearCache(array $config): void
     {
-        $paths = new PathResolver($config['contentDir'], $config['uploadsDir'], $config['cacheDir'], $config['themesDir']);
-        $cache = new CacheService($paths, $config['contentDir'], $config['cacheDir']);
+        $cache = ServiceFactory::cache($config);
         $cache->clearAllHtml();
         $cache->clearIndex();
         $cache->clearTwig();

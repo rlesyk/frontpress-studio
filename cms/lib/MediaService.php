@@ -12,12 +12,22 @@ class MediaService
     private int $maxWidth;
     private int $maxHeight;
 
-    private const THUMB_WIDTH = 400;
-
     private const ALLOWED_EXTS = [
         'jpg'  => 'jpg', 'jpeg' => 'jpg', 'png' => 'png', 'gif' => 'gif',
         'webp' => 'webp', 'svg' => 'svg', 'pdf' => 'pdf', 'zip' => 'zip',
     ];
+
+    /**
+     * Canonical list of extensions treated as "an image" by the admin (used by
+     * MediaController when listing per-post attachments and by anything else
+     * that needs to know whether a file should render as a preview).
+     */
+    public const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+
+    public static function isImageFile(string $name): bool
+    {
+        return in_array(strtolower(pathinfo($name, PATHINFO_EXTENSION)), self::IMAGE_EXTS, true);
+    }
 
     private const MIME_MAP = [
         'image/jpeg'                   => 'jpg',
@@ -110,7 +120,7 @@ class MediaService
         // Generate thumbnail for raster images
         $thumbUrl = null;
         if (in_array($mime, self::RASTER_MIMES, true)) {
-            $thumbUrl = $this->generateThumb($subDir . '/' . $name, $ext, $urlPrefix);
+            $thumbUrl = ThumbnailGenerator::generate($subDir . '/' . $name, $ext, $urlPrefix);
         }
 
         // Create sidecar metadata
@@ -215,52 +225,4 @@ class MediaService
         return $files;
     }
 
-    private function generateThumb(string $src, string $ext, string $urlPrefix): ?string
-    {
-        [$w, $h] = getimagesize($src) ?: [0, 0];
-        if ($w <= 0 || $h <= 0 || $w <= self::THUMB_WIDTH) {
-            return null;
-        }
-
-        $newH = (int)round($h * (self::THUMB_WIDTH / $w));
-        $orig = match($ext) {
-            'jpg'   => @imagecreatefromjpeg($src),
-            'png'   => @imagecreatefrompng($src),
-            'gif'   => @imagecreatefromgif($src),
-            'webp'  => @imagecreatefromwebp($src),
-            default => null,
-        };
-        if (!$orig) {
-            return null;
-        }
-
-        $thumb = imagecreatetruecolor(self::THUMB_WIDTH, $newH);
-        if ($ext === 'png') {
-            imagealphablending($thumb, false);
-            imagesavealpha($thumb, true);
-            imagefilledrectangle(
-                $thumb,
-                0,
-                0,
-                self::THUMB_WIDTH,
-                $newH,
-                imagecolorallocatealpha($thumb, 0, 0, 0, 127)
-            );
-        }
-        imagecopyresampled($thumb, $orig, 0, 0, 0, 0, self::THUMB_WIDTH, $newH, $w, $h);
-
-        $stem      = pathinfo($src, PATHINFO_FILENAME);
-        $thumbFile = dirname($src) . '/' . $stem . '.thumb.' . $ext;
-        $ok        = match($ext) {
-            'jpg'   => imagejpeg($thumb, $thumbFile, 82),
-            'png'   => imagepng($thumb, $thumbFile, 6),
-            'gif'   => imagegif($thumb, $thumbFile),
-            'webp'  => imagewebp($thumb, $thumbFile, 82),
-            default => false,
-        };
-        imagedestroy($orig);
-        imagedestroy($thumb);
-
-        return $ok ? $urlPrefix . $stem . '.thumb.' . $ext : null;
-    }
 }

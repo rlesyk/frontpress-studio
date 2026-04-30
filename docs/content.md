@@ -90,11 +90,23 @@ $all = posts();
 // Posts in a folder
 $blog = posts(['folder' => 'blog']);
 
-// Posts with a specific category
-$news = posts(['categories' => 'news']);
+// Posts with a specific category (note: filter goes inside the `filter` key)
+$news = posts(['filter' => ['categories' => 'news']]);
 
-// Any custom field
-$featured = posts(['featured' => true]);
+// Posts with a specific tag
+$phpPosts = posts(['filter' => ['tags' => 'PHP']]);
+
+// Any custom front-matter field
+$featured = posts(['filter' => ['featured' => true]]);
+
+// Combined: featured posts in /blog, latest 5
+$featuredBlog = posts([
+    'folder' => 'blog',
+    'filter' => ['featured' => true],
+    'limit'  => 5,
+]);
 ```
 
-`posts()` calls `$index->filter()` under the hood and excludes drafts by default.
+> **Gotcha:** only `folder`, `orderby`, `order`, `limit`, and `offset` are top-level keys. Custom field filters must live under `filter:` or they're silently ignored.
+
+`posts()` calls `$index->filter()` under the hood and excludes drafts by default. See [Templates → Querying posts](templates.md#querying-posts) for the full reference and more examples (including pagination and taxonomy filtering).

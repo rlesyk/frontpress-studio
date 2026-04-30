@@ -9,6 +9,67 @@ All notable changes to MD Framework are documented here. The format is based on 
 
 ## [Unreleased]
 
+### Documentation
+- Rewrote **Caching** doc with what's cached / how invalidation works / manual controls / when to think about it.
+- Rewrote **Templates** doc as the full theming guide for both Twig and PHP — partials, layouts, per-route variable reference, helper reference, full pagination examples in both engines, taxonomy filtering and tag/category linking, custom queries via `posts()` and `Index`, per-post template overrides, theme assets + SCSS auto-compile, and a reusable `_inspect.twig` / `_inspect.php` partial for dumping every variable available to a template.
+- Fixed `content.md` filter examples (custom-field filters must go inside `filter:`, not at the top level of `posts()`).
+- Updated `index.md` directory tree to match the current `cms/` + `site/` + `src/` layout.
+- Replaced `extending.md` with new sections on adding collections, taxonomies, template helpers, and using `Index` for custom queries — old advice to switch on `$data['meta']['template']` inside `public/index.php` was stale; per-post template overrides are now declarative via the `template:` front-matter field.
+
+### Refactor
+- **New `MD\Api\ServiceFactory`** centralises construction of `PathResolver`, `Content`, `CacheService`, `ContentRepository`, `Index`, `MediaService`, `ThemeService`, and `BackupService`. Every API controller now goes through it instead of hand-wiring its own service graph.
+- **Extracted `MD\FilesystemUtils`** for generic recursive `copyDir()` / `removeDir()`. Both `ThemeService` and `BackupService` now share a single implementation; `removeDir()` also handles regular files and symlinks transparently so callers don't have to branch.
+- **Extracted `MD\BackupRestorer`** from `BackupService`. Restore is a state machine of its own (extract, atomic-rename per root, rollback on failure); it now lives in its own file and `BackupService::restore()` is a one-line delegation kept for backwards compatibility.
+- **Extracted `MD\ThumbnailGenerator`** from `MediaService`. The 50-line GD raster pipeline is now a stand-alone static helper.
+- **Extracted `MD\ImageAnnotator`** from `Content`. The `<img>` width/height/lazy-loading injection is its own class, leaving `Content` focused on parse + cache.
+- **`MD\MediaService::IMAGE_EXTS` constant** + `isImageFile()` static helper replace a duplicated extension list inside `MediaController`.
+
+### Frontend
+- **Lazy-loaded route skeleton** replaces the bare "Loading…" text in `App.jsx` so each lazy chunk renders a placeholder block while it streams in.
+- **Skeleton + illustrated empty states** on `PagesList` (loading skeleton rows; empty state with a "New page" CTA) and `MediaPicker` (skeleton tiles while the library loads).
+- **`<img loading="lazy" decoding="async">`** on every grid thumbnail in the media library and media picker.
+- **`PagesList` rows are memoised** (`React.memo` + stable `useCallback` handlers) so search/filter typing only re-renders the row whose props actually changed.
+- **Bulk delete** on `PagesList` — header checkbox toggles all visible rows, per-row checkbox toggles one, a sticky toolbar surfaces the count and "Delete selected" action.
+- **Themed `<ConfirmDialog>`** + `useConfirmDialog()` hook replaces every `window.confirm` in the admin (PagesList row delete, Media library delete, PageEditor delete sidebar button). Esc and the backdrop cancel; the destructive action is auto-focused.
+- **`Cmd/Ctrl+S` saves** in `PageEditor`; the sidebar shows a compact "Saved at HH:MM" indicator after each successful save.
+- **Saved-page slug** is now visually dimmed to signal it's locked (the URL is in the wild — changing it would break links).
+- **`aria-current="page"`** on active sidebar links + folder links so screen readers can announce the current section.
+- **New `<SegmentedControl>` UI primitive** replaces the editor mode toggle's hand-rolled markup and is now used for the **Status** sidebar field (Published / Draft) — a two-option pill toggle reads better than a dropdown for binary state. Pass `options=[{value, label}]`, `value`, `onChange`, plus an optional `ariaLabel`; the control renders with `role="radiogroup"` and `aria-checked` per option.
+
+### Hooks & primitives
+- **`lib/hooks.js`** — new home for cross-screen helpers:
+  - `useFolders()` shares a single TanStack Query for the folder list (Sidebar + PostTypeShell).
+  - `useFileUpload({ endpoint, fileField, extraFields, invalidate })` standardises FormData + CSRF + busy/error state for media uploads, backup restores, and the picker upload tab.
+  - `useConfirmDialog()` pairs the `<ConfirmDialog>` UI with a promise-based `confirm({ title, message })` API.
+- **`lib/utils.js`** — added `isImageFile()` and `extLabel()` so the media library, media picker, and any future consumer share one definition (and one regex) of "this is an image".
+
+### Tabs & controls
+- **`MediaPicker`** is now a thin shell; its Library and Upload tabs live in their own files (`MediaPickerLibraryTab.jsx`, `MediaPickerUploadTab.jsx`).
+- **`TaxonomyField`** dispatches to one component per shape under `components/taxonomy/` (`SingleValueControl`, `MultiCheckboxControl`, `MultiSelectControl`, `MultiTagsControl`) instead of a 60-line conditional.
+
+### Audit log
+- **New `MD\AuditLog`** appends one JSON line per admin write to `site/cache/audit.log`. `PagesController` records `page.create`, `page.update`, and `page.delete` (with title and draft state). New `GET /admin/api/audit?limit=N` returns the most recent entries (auth-required, default 100, capped at 500).
+
+### Performance
+- **SCSS auto-compile only runs when `APP_ENV=dev`** (the default). Set `APP_ENV=prod` in `.env` on a deployed host to skip the per-request freshness check entirely. `bootstrap.php` now loads `.env` itself so both the public site and admin shell see the same value.
+- **`CacheService::rebuild()` no longer warms every page synchronously.** It clears + rebuilds the index by default; pass `?warm=1` to `POST /admin/api/cache/rebuild` to opt back into a full re-parse. The HTML cache fills lazily as pages are visited.
+- **Per-page image listings are cached** at `site/cache/page-images/<md5(pagePath)>.json`, keyed by the page directory's mtime. Subsequent admin requests for the same `page_path` skip `scandir()` entirely until something changes on disk.
+- **Theme engine detection is persisted into `theme.json`** on first sight (when missing). Listing 10+ themes no longer globs `*.php` and `*.twig` for each one on every admin page load.
+- **Body search in `/admin/api/search` is now opt-in** via `?body=1`; default behaviour matches against title and path only, eliminating an N file-read worst case on every keystroke.
+- **`Index::get()` is memoised per request** (keyed by index-file mtime). Multiple controllers that each construct their own `Index` no longer re-decode the same JSON.
+
+### Security
+- **Removed plaintext `ADMIN_PASS` fallback.** Admin login now requires `ADMIN_PASS_HASH` (bcrypt). The setup-required gate refuses to boot the admin until a hash is set; existing installs that relied on plaintext must run `php -r "echo password_hash('…', PASSWORD_BCRYPT);"` and paste the result into `.env`.
+- **Updater ZIP source is no longer client-controlled.** `POST /admin/api/update` ignores any `zip_url` in the request body — the server fetches GitHub's release metadata itself and uses that URL, additionally host-checking it against an allowlist (`codeload.github.com`, `api.github.com`, `github.com`).
+- **Hardened `partial()` template helper** to reject names that aren't bare alphanumerics + slashes/underscores/hyphens, blocking `..` and absolute-path injection.
+- **Tightened `MediaController::list` page-path validation** to use `PathResolver::isValidRelPath()` plus a realpath containment check, so `page_path` cannot resolve outside `site/content/`.
+- **Per-post `template:` field is now allowlist-validated** against `ThemeService::listTemplates()`. Saving a page with an unknown template name returns 400 instead of silently falling back.
+- **API exception messages are no longer returned to the client** by default — they're written to the PHP error log and replaced with a generic `Internal error` response. Set `APP_DEBUG=1` in `.env` to surface them in development.
+- **Static `/uploads/*` responses** now send `X-Content-Type-Options: nosniff`, and SVGs additionally get `Content-Security-Policy: default-src 'none'; sandbox` so any payload that slips past the sanitiser cannot reach the embedding page.
+- **Admin shell sends `X-Content-Type-Options`, `X-Frame-Options: DENY`, and `Referrer-Policy: strict-origin-when-cross-origin`** on every response (login screen, SPA shell, JSON API).
+- **Admin sessions now idle-expire** after `SESSION_IDLE_SECONDS` (default 7200 = 2 h). Each request refreshes the timer; once it lapses the next request is forced through `/admin/login`.
+- **Migrations no longer auto-run on update.** `Updater::apply()` returns the list of pending migration filenames; running them requires an explicit `POST /admin/api/update/migrate` call. This prevents a malicious file dropped under `cms/migrations/` from being executed silently.
+
 ### Changed
 - **Admin rewritten as a React SPA.** The admin under `/admin/*` is now a Vite + React 18 + Tailwind v4 single-page app served by a thin PHP shell. All admin actions go through a new JSON API at `/admin/api/*` (controllers under `app/cms/lib/Api/`). PHP-rendered admin templates removed; only `setup-required.php` (pre-config gate) and `spa.php` (SPA shell) remain. Build tooling switched from esbuild + a custom `build.js` to Vite (`npm run dev` for HMR, `npm run build` for production assets). Auth still uses session cookies; CSRF moved from form fields to an `X-CSRF-Token` header.
 

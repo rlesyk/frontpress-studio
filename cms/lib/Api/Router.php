@@ -51,14 +51,26 @@ class Router
                     SearchController::handle($method, $config);
                     return;
                 case 'update':
-                    UpdateController::handle($method, $config);
+                    UpdateController::handle($method, $config, $rest);
                     return;
                 case 'cache':
                     CacheController::handle($rest, $method, $config);
                     return;
+                case 'audit':
+                    AuditController::handle($method, $config);
+                    return;
             }
         } catch (\Throwable $e) {
-            \json_response(['ok' => false, 'error' => $e->getMessage()], 500);
+            // Don't leak exception messages to the client by default — they
+            // routinely contain absolute paths, SQL fragments, or stack frames.
+            // Set APP_DEBUG=1 in `.env` to surface the message during local
+            // development.
+            error_log('[admin/api] ' . $e::class . ': ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
+            $debug = (\MD\Env::get('APP_DEBUG', '') === '1');
+            \json_response([
+                'ok'    => false,
+                'error' => $debug ? $e->getMessage() : 'Internal error',
+            ], 500);
         }
 
         \json_response(['ok' => false, 'error' => 'Unknown endpoint'], 404);

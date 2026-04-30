@@ -35,6 +35,13 @@ if (!function_exists('partial')) {
      */
     function partial(string $name, array $vars = []): void
     {
+        // Reject anything that isn't a plain partial name. Slashes are allowed
+        // for nested partials (e.g. "blocks/hero") but `..`, leading slashes,
+        // and any non-alphanumeric segment characters are rejected to prevent
+        // path traversal into the wider filesystem.
+        if (!preg_match('#^[a-z0-9][a-z0-9_/-]*$#i', $name) || str_contains($name, '..')) {
+            throw new RuntimeException("Invalid partial name: $name");
+        }
         $dir = $GLOBALS['md_template_dir'];
         $candidates = [
             ["components/{$name}.php",  'php'],

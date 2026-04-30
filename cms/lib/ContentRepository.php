@@ -6,6 +6,13 @@ namespace MD;
 
 use Symfony\Component\Yaml\Yaml;
 
+/**
+ * Write-side counterpart to {@see Content}: knows how to serialise front
+ * matter + body back to disk, and pairs every write/delete with the cache
+ * invalidations that have to happen alongside it. The `parse*` methods are
+ * thin pass-throughs so callers can hold a single object instead of two —
+ * but the real reason this class exists is `save()` and `delete()`.
+ */
 class ContentRepository
 {
     private string $contentDir;

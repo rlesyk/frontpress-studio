@@ -7,7 +7,8 @@ import { api, getCsrf } from '../lib/api.js';
 import { encodePath, publicUrl, slugify } from '../lib/utils.js';
 import { useDirty } from '../lib/dirty.jsx';
 import { html as beautifyHtml } from 'js-beautify';
-import { Alert, Button, Field, Input, Select } from '../components/ui/index.js';
+import { Alert, Button, ConfirmDialog, Field, Input, SegmentedControl, Select } from '../components/ui/index.js';
+import { useConfirmDialog } from '../lib/hooks.js';
 import CodeEditor from '../components/CodeEditor.jsx';
 import MediaPicker from '../components/MediaPicker.jsx';
 import PageFields from '../components/PageFields.jsx';
@@ -21,6 +22,7 @@ export default function PageEditor() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { setDirty } = useDirty();
+  const { confirm: confirmDelete, dialogProps: confirmProps } = useConfirmDialog();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['page', path],
@@ -48,6 +50,10 @@ export default function PageEditor() {
   // converts back to markdown internally so saves stay markdown-native.
   const [editorMode, setEditorMode] = useState('wysiwyg');
   const [htmlValue, setHtmlValue] = useState('');
+
+  // Last-save timestamp (ms epoch) for the "Saved at HH:MM" indicator next to
+  // the Save button. Reset on every successful save mutation.
+  const [savedAt, setSavedAt] = useState(null);
 
   // Media picker — opened from the editor's toolbar Image button (Toast UI's
   // built-in URL/file dialog is replaced with our two-tab Library/Upload modal).
@@ -183,12 +189,27 @@ export default function PageEditor() {
       qc.invalidateQueries({ queryKey: ['pages'] });
       qc.invalidateQueries({ queryKey: ['page', res.path] });
       setDirty(false);
+      setSavedAt(Date.now());
       if (isNew) {
         const rest = (res.path || '').split('/').slice(1).join('/');
         navigate(`/${encodeURIComponent(folder)}/${encodePath(rest)}`, { replace: true });
       }
     },
   });
+
+  // Cmd/Ctrl+S — save without leaving the keyboard. The save mutation owns
+  // the "are we saving?" guard, so we don't try to fire a second one while
+  // one's in flight.
+  useEffect(() => {
+    function onKey(e) {
+      const isMeta = e.metaKey || e.ctrlKey;
+      if (!isMeta || e.key.toLowerCase() !== 's') return;
+      e.preventDefault();
+      if (!save.isPending) save.mutate();
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [save]);
 
   if (!isNew && isLoading) return <div className="text-sm text-zinc-500">Loading…</div>;
   if (!isNew && error) return <div className="text-sm text-red-600">Failed to load: {error.message}</div>;
@@ -254,6 +275,11 @@ export default function PageEditor() {
           <Button onClick={() => save.mutate()} disabled={save.isPending}>
             {save.isPending ? 'Saving…' : 'Save'}
           </Button>
+          {savedAt && !save.isPending && (
+            <div className="text-center text-[11px] text-zinc-500">
+              Saved at {new Date(savedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </div>
+          )}
 
           {!isNew && (
             <a
@@ -288,18 +314,23 @@ export default function PageEditor() {
                 />
               </div>
             ) : (
-              <Input mono value={path} readOnly />
+              // Saved pages have a frozen slug — the URL is in the wild.
+              // Visually dim the field so it's obvious it isn't editable.
+              <Input mono value={path} readOnly className="cursor-not-allowed bg-zinc-50 text-zinc-500" />
             )}
           </Field>
 
           <Field label="Status">
-            <Select
+            <SegmentedControl
+              ariaLabel="Status"
               value={status}
-              onChange={e => markDirty(setStatus)(e.target.value)}
-            >
-              <option value="published">Published</option>
-              <option value="draft">Draft</option>
-            </Select>
+              onChange={(v) => markDirty(setStatus)(v)}
+              className="flex w-full"
+              options={[
+                { value: 'published', label: 'Published' },
+                { value: 'draft',     label: 'Draft' },
+              ]}
+            />
           </Field>
 
           <Field label="Template">
@@ -317,8 +348,12 @@ export default function PageEditor() {
           {!isNew && (
             <Button
               variant="danger-outline"
-              onClick={() => {
-                if (confirm(`Delete "${title || path}"?`)) del.mutate();
+              onClick={async () => {
+                const ok = await confirmDelete({
+                  title: 'Delete page',
+                  message: `Delete "${title || path}"? This cannot be undone.`,
+                });
+                if (ok) del.mutate();
               }}
               disabled={del.isPending}
               className="mt-3"
@@ -327,6 +362,7 @@ export default function PageEditor() {
             </Button>
           )}
         </div>
+        <ConfirmDialog {...confirmProps} />
 
         <PageFields
           folder={folder}
@@ -364,32 +400,21 @@ export default function PageEditor() {
   );
 }
 
-// Three-way segmented control for the editor view. Toast UI's own bottom-right
-// switcher is hidden via `hideModeSwitch: true`; this is the single source of
-// truth for which surface the user is editing in.
+// Editor view selector. Toast UI's own bottom-right switcher is hidden via
+// `hideModeSwitch: true`; this is the single source of truth for which
+// surface the user is editing in.
 function ModeToggle({ mode, onChange }) {
-  const modes = [
-    { value: 'wysiwyg',  label: 'WYSIWYG'  },
-    { value: 'markdown', label: 'Markdown' },
-    { value: 'html',     label: 'HTML'     },
-  ];
   return (
-    <div className="inline-flex items-center gap-1 rounded-md border border-zinc-200 bg-white p-1">
-      {modes.map(m => (
-        <button
-          key={m.value}
-          type="button"
-          onClick={() => onChange(m.value)}
-          className={`rounded px-2.5 py-1 text-[12px] font-medium transition-colors ${
-            mode === m.value
-              ? 'bg-zinc-900 text-white'
-              : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900'
-          }`}
-        >
-          {m.label}
-        </button>
-      ))}
-    </div>
+    <SegmentedControl
+      ariaLabel="Editor mode"
+      value={mode}
+      onChange={onChange}
+      options={[
+        { value: 'wysiwyg',  label: 'WYSIWYG'  },
+        { value: 'markdown', label: 'Markdown' },
+        { value: 'html',     label: 'HTML'     },
+      ]}
+    />
   );
 }
 

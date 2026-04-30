@@ -1,7 +1,6 @@
 import { NavLink, useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { api } from '../lib/api.js';
 import { useAuth } from '../lib/auth.jsx';
+import { useFolders } from '../lib/hooks.js';
 import { cap } from '../lib/utils.js';
 import SidebarLink from './SidebarLink.jsx';
 import { IconBackup, IconCog, IconFolder, IconImage } from './icons.jsx';
@@ -10,11 +9,7 @@ import { IconBackup, IconCog, IconFolder, IconImage } from './icons.jsx';
 // backup), and a simple "Hi {user} — Log out" footer. No group labels.
 export default function Sidebar() {
   const { user, logout } = useAuth();
-  const { data } = useQuery({
-    queryKey: ['pages'],
-    queryFn: () => api.get('/pages'),
-  });
-  const folders = data?.folders || [];
+  const { folders } = useFolders();
 
   return (
     <aside className="flex w-60 shrink-0 flex-col border-r border-zinc-200 bg-white">
@@ -80,6 +75,7 @@ function FolderLink({ folder }) {
   return (
     <NavLink
       to={`/${encodeURIComponent(folder)}`}
+      aria-current={active ? 'page' : undefined}
       className={`flex items-center gap-2 rounded-md px-3 py-2 text-[13px] font-medium transition-colors ${
         active
           ? 'bg-zinc-900 text-white'

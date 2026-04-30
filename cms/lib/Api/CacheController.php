@@ -48,7 +48,11 @@ class CacheController
         }
 
         if ($action === 'rebuild') {
-            $result = $cache->rebuild();
+            // `?warm=1` opts into the synchronous re-parse of every page;
+            // without it we just rebuild the index and let the HTML cache
+            // refill lazily as pages are visited.
+            $warm   = (string)($_GET['warm'] ?? '') === '1';
+            $result = $cache->rebuild($warm);
             \json_response($result);
         }
 
@@ -68,7 +72,6 @@ class CacheController
     /** @param array<string, mixed> $config */
     private static function cache(array $config): CacheService
     {
-        $paths = new PathResolver($config['contentDir'], $config['uploadsDir'], $config['cacheDir'], $config['themesDir']);
-        return new CacheService($paths, $config['contentDir'], $config['cacheDir']);
+        return ServiceFactory::cache($config);
     }
 }

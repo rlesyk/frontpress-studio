@@ -12,12 +12,12 @@
   <div class="login-error">
     No admin credentials are configured.
   </div>
-  <p>Create <code><?= e($envFile) ?></code> with at least:</p>
+  <p>Create <code><?= e($envFile) ?></code> with:</p>
   <pre><code>ADMIN_USER=admin
-ADMIN_PASS=change-me</code></pre>
-  <p>Or generate a bcrypt hash for production:</p>
+ADMIN_PASS_HASH=</code></pre>
+  <p>Generate a bcrypt hash for the password:</p>
   <pre><code>php -r "echo password_hash('yourpassword', PASSWORD_BCRYPT);"</code></pre>
-  <p>Paste the output into <code>.env</code> as <code>ADMIN_PASS_HASH</code>.</p>
+  <p>Paste the output as the value of <code>ADMIN_PASS_HASH</code>.</p>
   <p>Full instructions: <a href="https://krstivoja.github.io/mdframework/admin/" target="_blank" rel="noopener">Admin docs</a>.</p>
 </div>
 </body>

@@ -39,47 +39,63 @@ Production deployments need the prebuilt `public/cms/dist/` directory present; e
 
 ```
 app/
-├── bootstrap.php          # Autoloader, shared globals, render() helper
-├── composer.json
-├── .env                   # Git-ignored — admin credentials
+├── bootstrap.php             # Autoloader, shared globals, render() / posts() helpers
+├── .env                      # Git-ignored — admin credentials
 ├── .env.example
 │
-├── content/               # All your Markdown content
-│   ├── pages/             # Flat pages — /about, /contact, etc.
-│   │   └── index.md       # Homepage (if present)
-│   ├── blog/              # A content folder — /blog and /blog/my-post
-│   └── <folder>/          # Any folder becomes a collection
+├── public/                   # Web root — point your DocumentRoot here
+│   ├── index.php             # Public front controller
+│   ├── admin.php             # Admin SPA shell
+│   ├── assets/               # Symlinked → site/themes/<active>/assets
+│   └── cms/dist/             # Built admin SPA bundle (Vite manifest + hashed assets)
 │
-├── lib/                   # Core classes (namespace MD\)
-│   ├── Content.php        # Markdown parser + HTML cache
-│   ├── Index.php          # Post index builder + filter
-│   ├── Router.php         # URL → route resolver
-│   └── Env.php            # .env loader
+├── cms/                      # Framework code + admin app
+│   ├── composer.json
+│   ├── lib/                  # Core PHP (namespace MD\)
+│   │   ├── Content.php       # Markdown parser + HTML cache
+│   │   ├── Index.php         # Post index builder + filter
+│   │   ├── Router.php        # URL → route resolver
+│   │   ├── CacheService.php  # Cache clear/rebuild
+│   │   ├── ThemeService.php  # Active theme, template resolution
+│   │   ├── TemplateRenderer.php  # Twig wrapper
+│   │   ├── ScssCompiler.php  # Auto-compile theme SCSS
+│   │   ├── template_helpers.php  # e(), partial(), asset_url(), paginate(), slug_url()
+│   │   └── Api/              # /admin/api/* JSON controllers
+│   ├── starters/             # Bundled starter themes (blank-twig, blank-php)
+│   └── templates/            # Admin SPA shell + setup-required gate
 │
-├── templates/             # PHP templates
-│   ├── _layout.php        # Site layout wrapper
-│   ├── page.php           # Single page
-│   ├── post.php           # Single post
-│   ├── archive.php        # Folder listing
-│   ├── 404.php
-│   └── admin/             # Admin UI templates
+├── src/                      # Admin SPA source (React 18 + Vite + Tailwind)
+│   ├── App.jsx, main.jsx
+│   ├── screens/              # Route-level screens
+│   ├── components/           # Shared UI components
+│   ├── styles.css
+│   └── vite.config.js
 │
-├── public/                # Web root
-│   ├── index.php          # Front controller
-│   ├── uploads/           # Uploaded images (PHP execution blocked)
-│   └── admin/             # Admin front controller
-│       └── index.php
-│
-└── cache/                 # Auto-generated, safe to delete
-    ├── index.php          # Compiled post index
-    └── html/              # Per-page HTML cache
+└── site/                     # Site-owned data (back this up)
+    ├── config.json           # Site settings, taxonomies, upload limits
+    ├── content/              # Markdown content
+    │   ├── pages/            # Flat pages — /about, /contact, etc.
+    │   │   └── index.md      # Homepage (if present)
+    │   ├── blog/             # Folder → /blog archive + /blog/<slug> posts
+    │   └── <folder>/         # Any folder becomes a collection
+    ├── themes/               # Installed themes
+    │   └── <slug>/
+    │       ├── theme.json
+    │       ├── templates/    # post.twig | post.php, archive.*, taxonomy.*, etc.
+    │       └── assets/       # CSS / JS / images, served at /assets/
+    ├── uploads/              # Shared media library (image-only public serving)
+    └── cache/                # Auto-generated, safe to delete
+        ├── index.json        # Compiled post index
+        ├── index.mtime       # O(1) rebuild marker
+        ├── html/             # Per-page HTML cache (.json files)
+        └── twig/             # Compiled Twig templates
 ```
 
 ## Next steps
 
-- [Content]({{ '/content' | relative_url }}) — front matter, routing, filtering
-- [Templates]({{ '/templates' | relative_url }}) — layout pattern and variables
-- [Caching]({{ '/caching' | relative_url }})
-- [Admin]({{ '/admin' | relative_url }}) — editor, uploads, auth
-- [Extending]({{ '/extending' | relative_url }}) — collections, custom templates
+- [Content]({{ '/content' | relative_url }}) — front matter, routing, pagination, taxonomy archives
+- [Templates]({{ '/templates' | relative_url }}) — full theming guide for Twig **and** PHP, with helpers, pagination, taxonomy filtering, querying, and a debug/inspect helper
+- [Caching]({{ '/caching' | relative_url }}) — what's cached, how it invalidates, when to clear it manually
+- [Admin]({{ '/admin' | relative_url }}) — editor, uploads, settings, backup, auth
+- [Extending]({{ '/extending' | relative_url }}) — collections, custom templates, custom helpers, taxonomies
 - [Changelog]({{ '/changelog' | relative_url }})

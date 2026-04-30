@@ -30,6 +30,19 @@ export function publicUrl(path) {
   return '/' + p;
 }
 
+// Whether a media file should be rendered as an image preview. Mirrors
+// MediaService::IMAGE_EXTS on the PHP side — keep them in sync.
+export function isImageFile(file) {
+  const name = typeof file === 'string' ? file : (file?.name || '');
+  return /\.(jpe?g|png|gif|webp|svg)$/i.test(name);
+}
+
+// Uppercased extension from a filename, e.g. "report.pdf" → "PDF".
+export function extLabel(name) {
+  const m = /\.([^.]+)$/.exec(name || '');
+  return m ? m[1].toUpperCase() : 'FILE';
+}
+
 export function formatBytes(bytes) {
   if (!bytes) return '0 B';
   const u = ['B', 'KB', 'MB', 'GB'];

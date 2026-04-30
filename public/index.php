@@ -46,6 +46,13 @@ if (str_starts_with($url, '/uploads/')) {
         header('Content-Type: ' . ($mimes[$ext] ?? 'application/octet-stream'));
         header('Content-Length: ' . filesize($real));
         header('Cache-Control: public, max-age=31536000, immutable');
+        // Defence-in-depth alongside SVG sanitisation: refuse to let browsers
+        // re-sniff the type and ensure SVGs render in an isolated context so an
+        // unexpected script payload can't reach the page that embeds them.
+        header('X-Content-Type-Options: nosniff');
+        if ($ext === 'svg') {
+            header("Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; sandbox");
+        }
         readfile($real);
         exit;
     }

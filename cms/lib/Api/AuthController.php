@@ -32,7 +32,7 @@ class AuthController
         }
 
         $ok = $username === $config['ADMIN_USER']
-            && \passwordCheck($password, $config['ADMIN_PASS_HASH'] ?? '', $config['ADMIN_PASS'] ?? '');
+            && \passwordCheck($password, $config['ADMIN_PASS_HASH'] ?? '');
 
         if (!$ok) {
             \json_response(['ok' => false, 'error' => 'Invalid credentials'], 401);

@@ -7,6 +7,7 @@ namespace MD\Api;
 use MD\MediaService;
 use MD\PathResolver;
 
+
 class MediaController
 {
     /**
@@ -18,11 +19,11 @@ class MediaController
         Router::requireAuth();
 
         $name  = isset($pathParts[0]) ? basename($pathParts[0]) : '';
-        $paths = new PathResolver($config['contentDir'], $config['uploadsDir'], $config['cacheDir'], $config['themesDir']);
-        $media = new MediaService($config['uploadsDir'], $paths, $config['config']->get('uploads', []));
+        $paths = ServiceFactory::paths($config);
+        $media = ServiceFactory::media($config);
 
         if ($method === 'GET' && $name === '') {
-            self::list($media, $config);
+            self::list($media, $paths, $config);
             return;
         }
 
@@ -45,7 +46,7 @@ class MediaController
     }
 
     /** @param array<string, mixed> $config */
-    private static function list(MediaService $media, array $config): void
+    private static function list(MediaService $media, PathResolver $paths, array $config): void
     {
         $files = array_map(static function ($f) {
             $f['source'] = 'media';
@@ -57,31 +58,70 @@ class MediaController
         // `/uploads/<pagePath>/<file>` — the route in `public/index.php`
         // resolves that URL back to the content dir on disk.
         $pagePath = trim((string)($_GET['page_path'] ?? ''), '/');
-        if ($pagePath !== '' && preg_match('#^[a-z0-9][a-z0-9/_-]*$#', $pagePath)) {
-            $pageDir = $config['contentDir'] . '/' . $pagePath;
-            if (is_dir($pageDir)) {
-                $imgExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
-                foreach (array_diff(scandir($pageDir), ['.', '..']) as $file) {
-                    if (str_contains($file, '.thumb.') || str_ends_with($file, '.meta.json')) continue;
-                    $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
-                    if (!in_array($ext, $imgExts, true)) continue;
-                    $stem      = pathinfo($file, PATHINFO_FILENAME);
-                    $thumbFile = $pageDir . '/' . $stem . '.thumb.' . $ext;
-                    $metaFile  = $pageDir . '/' . $stem . '.meta.json';
-                    $meta      = is_file($metaFile) ? (json_decode((string)file_get_contents($metaFile), true) ?? []) : [];
-                    $files[]   = [
-                        'name'      => $file,
-                        'url'       => '/uploads/' . $pagePath . '/' . $file,
-                        'thumb_url' => is_file($thumbFile) ? '/uploads/' . $pagePath . '/' . $stem . '.thumb.' . $ext : null,
-                        'alt'       => $meta['alt']     ?? '',
-                        'caption'   => $meta['caption'] ?? '',
-                        'source'    => 'page',
-                    ];
+        if ($pagePath !== '' && $paths->isValidRelPath($pagePath)) {
+            $pageDir   = $config['contentDir'] . '/' . $pagePath;
+            $realDir   = is_dir($pageDir) ? realpath($pageDir) : false;
+            $contentBs = realpath($config['contentDir']);
+            $insideContent = $realDir && $contentBs && str_starts_with($realDir . '/', $contentBs . '/');
+            if ($insideContent) {
+                foreach (self::pageImages($pagePath, $pageDir, $config['cacheDir']) as $row) {
+                    $files[] = $row;
                 }
             }
         }
 
         \json_response(['ok' => true, 'files' => $files]);
+    }
+
+    /**
+     * List the images sitting next to a post's .md file. Cached at
+     * `site/cache/page-images/<md5(pagePath)>.json`; the cache is invalidated
+     * on a directory mtime mismatch (file added, removed, or replaced) so a
+     * stale entry self-heals on the next request.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private static function pageImages(string $pagePath, string $pageDir, string $cacheDir): array
+    {
+        $cacheRoot = $cacheDir . '/page-images';
+        $cacheFile = $cacheRoot . '/' . md5($pagePath) . '.json';
+        $dirMtime  = (int)@filemtime($pageDir);
+
+        if (is_file($cacheFile)) {
+            $cached = json_decode((string)file_get_contents($cacheFile), true);
+            if (is_array($cached) && ($cached['dir_mtime'] ?? 0) === $dirMtime) {
+                return $cached['files'] ?? [];
+            }
+        }
+
+        $rows = [];
+        foreach (array_diff(scandir($pageDir) ?: [], ['.', '..']) as $file) {
+            if (str_contains($file, '.thumb.') || str_ends_with($file, '.meta.json')) continue;
+            if (!MediaService::isImageFile($file)) continue;
+            $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+            $stem      = pathinfo($file, PATHINFO_FILENAME);
+            $thumbFile = $pageDir . '/' . $stem . '.thumb.' . $ext;
+            $metaFile  = $pageDir . '/' . $stem . '.meta.json';
+            $meta      = is_file($metaFile) ? (json_decode((string)file_get_contents($metaFile), true) ?? []) : [];
+            $rows[]    = [
+                'name'      => $file,
+                'url'       => '/uploads/' . $pagePath . '/' . $file,
+                'thumb_url' => is_file($thumbFile) ? '/uploads/' . $pagePath . '/' . $stem . '.thumb.' . $ext : null,
+                'alt'       => $meta['alt']     ?? '',
+                'caption'   => $meta['caption'] ?? '',
+                'source'    => 'page',
+            ];
+        }
+
+        if (!is_dir($cacheRoot)) {
+            @mkdir($cacheRoot, 0755, true);
+        }
+        @file_put_contents($cacheFile, json_encode([
+            'dir_mtime' => $dirMtime,
+            'files'     => $rows,
+        ]));
+
+        return $rows;
     }
 
     private static function upload(MediaService $media): void

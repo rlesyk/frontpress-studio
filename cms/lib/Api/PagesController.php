@@ -9,6 +9,7 @@ use MD\Content;
 use MD\ContentRepository;
 use MD\Index;
 use MD\PathResolver;
+use MD\ThemeService;
 
 class PagesController
 {
@@ -43,7 +44,7 @@ class PagesController
             return;
         }
         if ($method === 'DELETE' && $relPath !== '') {
-            self::delete($relPath, $services);
+            self::delete($relPath, $services, $config);
             return;
         }
 
@@ -56,11 +57,11 @@ class PagesController
      */
     private static function services(array $config): array
     {
-        $paths   = new PathResolver($config['contentDir'], $config['uploadsDir'], $config['cacheDir'], $config['themesDir']);
-        $content = new Content($config['contentDir'], $config['cacheDir']);
-        $cache   = new CacheService($paths, $config['contentDir'], $config['cacheDir']);
-        $repo    = new ContentRepository($config['contentDir'], $cache, $content);
-        $index   = new Index($config['contentDir'], $config['cacheDir'], $content);
+        $paths   = ServiceFactory::paths($config);
+        $content = ServiceFactory::content($config);
+        $cache   = ServiceFactory::cache($config);
+        $repo    = ServiceFactory::repository($config);
+        $index   = ServiceFactory::index($config, $content);
         return compact('paths', 'content', 'cache', 'repo', 'index');
     }
 
@@ -145,12 +146,19 @@ class PagesController
 
         // Per-post template override — empty string clears the key so the
         // public renderer falls back to the route-type default (post / page).
+        // The submitted name must match a real, user-selectable template in the
+        // active theme; otherwise we reject the save instead of silently
+        // dropping the field, so the caller knows the value was invalid.
         if (array_key_exists('template', $input)) {
             $tpl = preg_replace('/[^a-z0-9_-]/', '', strtolower(trim((string)$input['template'])));
-            if ($tpl !== '') {
-                $meta['template'] = $tpl;
-            } else {
+            if ($tpl === '') {
                 unset($meta['template']);
+            } else {
+                $themes = ServiceFactory::themes($config);
+                if (!in_array($tpl, $themes->listTemplates(), true)) {
+                    \json_response(['ok' => false, 'error' => "Unknown template: $tpl"], 400);
+                }
+                $meta['template'] = $tpl;
             }
         }
 
@@ -188,17 +196,26 @@ class PagesController
         }
 
         $svc['repo']->save($relPath, $meta, $body);
+        ServiceFactory::audit($config)->record(
+            $isNew ? 'page.create' : 'page.update',
+            $relPath,
+            ['title' => $title, 'draft' => !empty($meta['draft'])],
+        );
         \json_response(['ok' => true, 'path' => $relPath]);
     }
 
-    /** @param array{paths: PathResolver, repo: ContentRepository} $svc */
-    private static function delete(string $relPath, array $svc): void
+    /**
+     * @param array{paths: PathResolver, repo: ContentRepository} $svc
+     * @param array<string, mixed>                                $config
+     */
+    private static function delete(string $relPath, array $svc, array $config): void
     {
         $abs = $svc['paths']->contentFile($relPath);
         if (!$abs) {
             \json_response(['ok' => false, 'error' => 'Not found'], 404);
         }
         $svc['repo']->delete($relPath, $abs);
+        ServiceFactory::audit($config)->record('page.delete', $relPath);
         \json_response(['ok' => true]);
     }
 }

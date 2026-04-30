@@ -60,9 +60,14 @@ export default function App() {
 }
 
 function Lazy({ children }) {
+  return <Suspense fallback={<RouteSkeleton />}>{children}</Suspense>;
+}
+
+function RouteSkeleton() {
   return (
-    <Suspense fallback={<div className="text-sm text-zinc-500">Loading…</div>}>
-      {children}
-    </Suspense>
+    <div className="space-y-4 p-6" aria-hidden="true" data-testid="route-skeleton">
+      <div className="h-8 w-48 animate-pulse rounded-md bg-zinc-200" />
+      <div className="h-64 w-full animate-pulse rounded-lg bg-zinc-100" />
+    </div>
   );
 }

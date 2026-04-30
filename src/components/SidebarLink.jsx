@@ -14,8 +14,15 @@ export default function SidebarLink({ to, children, icon, end }) {
         }`
       }
     >
-      {icon && <span className="text-current opacity-80">{icon}</span>}
-      {children}
+      {({ isActive }) => (
+        // `aria-current="page"` — exposed via the inner span so AT users
+        // hear the current item without the visual styling carrying the
+        // semantics on its own.
+        <span className="contents" aria-current={isActive ? 'page' : undefined}>
+          {icon && <span className="text-current opacity-80">{icon}</span>}
+          {children}
+        </span>
+      )}
     </NavLink>
   );
 }

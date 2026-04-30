@@ -20,6 +20,11 @@ $CONTENT_DIR = $ROOT . '/site/content';
 $CACHE_DIR   = $ROOT . '/site/cache';
 $UPLOADS_DIR = $ROOT . '/site/uploads';
 
+// Load .env once for both the admin and public-site entry points so any
+// runtime-toggleable behaviour (e.g. APP_ENV-gated SCSS compilation) sees the
+// same values. Env::load is idempotent.
+MD\Env::load($ROOT . '/.env');
+
 $config = new MD\Config($ROOT . '/site/config.json');
 $GLOBALS['md_config'] = $config;
 
@@ -27,13 +32,12 @@ $themes       = new MD\ThemeService($ROOT, $config);
 $TEMPLATE_DIR = $themes->templateDir();
 $GLOBALS['md_themes'] = $themes;
 
-// Auto-compile the active theme's SCSS if any source is newer than the
-// matching CSS. The check is cheap (a few stat() calls); compilation only
-// runs when something actually changed. Themes without `assets/` are
-// no-ops. Triggered here so both the public site and the admin shell pick
-// up edits without a manual rebuild step.
+// Auto-compile the active theme's SCSS in development. Even though the
+// freshness check is just a few stat() calls, paying it on every public-site
+// request in production is pure overhead — there is nothing to recompile.
+// `.env` ships APP_ENV=dev locally; in production omit it (or set =prod).
 $themeDir = dirname($TEMPLATE_DIR);
-if (is_dir($themeDir . '/assets')) {
+if (MD\Env::get('APP_ENV', 'dev') === 'dev' && is_dir($themeDir . '/assets')) {
     (new MD\ScssCompiler())->compileTheme($themeDir);
 }
 

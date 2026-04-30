@@ -5,9 +5,6 @@ declare(strict_types=1);
 namespace MD\Api;
 
 use MD\BackupService;
-use MD\CacheService;
-use MD\Content;
-use MD\PathResolver;
 
 class BackupController
 {
@@ -19,7 +16,7 @@ class BackupController
     {
         Router::requireAuth();
 
-        $backup = new BackupService($config['appRoot'], $config['uploadsDir']);
+        $backup = ServiceFactory::backup($config);
         $action = $pathParts[0] ?? '';
 
         if ($method === 'GET' && $action === '') {
@@ -85,8 +82,7 @@ class BackupController
         }
         $result = $backup->restore($file['tmp_name']);
         if (!empty($result['ok'])) {
-            $paths = new PathResolver($config['contentDir'], $config['uploadsDir'], $config['cacheDir'], $config['themesDir']);
-            $cache = new CacheService($paths, $config['contentDir'], $config['cacheDir']);
+            $cache = ServiceFactory::cache($config);
             $cache->clearAllHtml();
             $cache->clearIndex();
             \json_response(['ok' => true]);
