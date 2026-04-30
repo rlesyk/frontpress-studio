@@ -52,9 +52,11 @@ export function usePageMutations({
       }
       const body = edRef.current?.getMarkdown?.() ?? '';
       const relPath = [folder, slug].filter(Boolean).join('/');
-      const payload = { title, body, status, template, taxonomies: taxValues };
+      // `path` is the *target* — for an update it doubles as the rename
+      // request when it differs from the URL path; for a create it's the
+      // location to write to.
+      const payload = { title, body, status, template, taxonomies: taxValues, path: relPath };
       if (isNew) {
-        payload.path = relPath;
         return api.post('/pages', payload);
       }
       return api.put(`/pages/${encodePath(path)}`, payload);
@@ -62,9 +64,16 @@ export function usePageMutations({
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['pages'] });
       qc.invalidateQueries({ queryKey: ['page', res.path] });
+      // Stale cache under the old key — the page editor reads `['page', path]`
+      // on next mount and would otherwise show the previous content briefly.
+      if (path && res.path && res.path !== path) {
+        qc.removeQueries({ queryKey: ['page', path] });
+      }
       setDirty(false);
       toast.show(`Saved at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
-      if (isNew) {
+      // Navigate when the path changed — covers both initial create and
+      // renames of an existing page.
+      if (res.path && res.path !== path) {
         const rest = (res.path || '').split('/').slice(1).join('/');
         navigate(`/${encodeURIComponent(folder)}/${encodePath(rest)}`, { replace: true });
       }

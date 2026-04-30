@@ -57,4 +57,53 @@ class ContentRepository
         $this->cache->clearPage($relPath);
         $this->cache->clearIndex();
     }
+
+    /**
+     * Move a content file from one relPath to another. Also moves the
+     * matching per-post upload directory (`site/content/<oldPath>/`) when it
+     * exists, so attachments referenced by the post stay alongside it.
+     *
+     * Caller is responsible for path validation; this method assumes both
+     * paths are already inside the content dir.
+     *
+     * @return array{ok: true}|array{ok: false, error: string}
+     */
+    public function rename(string $oldRelPath, string $newRelPath): array
+    {
+        if ($oldRelPath === $newRelPath) {
+            return ['ok' => true];
+        }
+        $oldFile = $this->contentDir . '/' . $oldRelPath . '.md';
+        $newFile = $this->contentDir . '/' . $newRelPath . '.md';
+        if (!is_file($oldFile)) {
+            return ['ok' => false, 'error' => 'Source file not found'];
+        }
+        if (file_exists($newFile)) {
+            return ['ok' => false, 'error' => 'A page already exists at the new path'];
+        }
+
+        $newDir = dirname($newFile);
+        if (!is_dir($newDir) && !@mkdir($newDir, 0755, true)) {
+            return ['ok' => false, 'error' => 'Could not create destination directory'];
+        }
+        if (!@rename($oldFile, $newFile)) {
+            return ['ok' => false, 'error' => 'Could not move content file'];
+        }
+
+        // Per-post attachments live in `site/content/<oldRelPath>/`. Move the
+        // whole directory so URLs like `/uploads/<oldRelPath>/cover.jpg`
+        // continue to resolve under the new path. (The post's own body still
+        // references `/uploads/<oldRelPath>/...` URLs — the user is expected
+        // to update those if they care; we don't rewrite body content here.)
+        $oldAttachDir = $this->contentDir . '/' . $oldRelPath;
+        $newAttachDir = $this->contentDir . '/' . $newRelPath;
+        if (is_dir($oldAttachDir) && !is_dir($newAttachDir)) {
+            @rename($oldAttachDir, $newAttachDir);
+        }
+
+        $this->cache->clearPage($oldRelPath);
+        $this->cache->clearPage($newRelPath);
+        $this->cache->clearIndex();
+        return ['ok' => true];
+    }
 }

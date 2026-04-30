@@ -57,25 +57,29 @@ export default function PageEditorSidebar({
         )}
 
         <Field label="Slug">
-          {isNew ? (
-            <div className="flex h-9 w-full overflow-hidden rounded-md border border-zinc-200 bg-white transition-colors focus-within:border-zinc-900 focus-within:ring-2 focus-within:ring-zinc-900/15">
-              <span className="inline-flex select-none items-center border-r border-zinc-200 bg-zinc-50 px-2 font-mono text-xs text-zinc-500">
-                {folder}/
-              </span>
-              <input
-                value={slug}
-                onChange={e => {
-                  setSlugTouched(true);
-                  markDirty(setSlug)(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''));
-                }}
-                placeholder="my-post"
-                className="min-w-0 flex-1 border-0 bg-transparent px-2 font-mono text-xs text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-0"
-              />
-            </div>
-          ) : (
-            // Saved pages have a frozen slug — the URL is in the wild.
-            // Visually dim the field so it's obvious it isn't editable.
-            <Input mono value={path} readOnly className="cursor-not-allowed bg-zinc-50 text-zinc-500" />
+          {/* Slug is editable on both new and saved pages. For saved pages we
+              show only the slug-after-folder (everything past the first
+              segment) so the user edits the same field they did at create
+              time. The save mutation sends the rebuilt `folder/slug` as the
+              target `path` and the backend renames the file when it differs. */}
+          <div className="flex h-9 w-full overflow-hidden rounded-md border border-zinc-200 bg-white transition-colors focus-within:border-zinc-900 focus-within:ring-2 focus-within:ring-zinc-900/15">
+            <span className="inline-flex select-none items-center border-r border-zinc-200 bg-zinc-50 px-2 font-mono text-xs text-zinc-500">
+              {folder}/
+            </span>
+            <input
+              value={slug}
+              onChange={(e) => {
+                setSlugTouched(true);
+                markDirty(setSlug)(e.target.value.toLowerCase().replace(/[^a-z0-9/-]/g, ''));
+              }}
+              placeholder="my-post"
+              className="min-w-0 flex-1 border-0 bg-transparent px-2 font-mono text-xs text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-0"
+            />
+          </div>
+          {!isNew && (
+            <p className="mt-1 text-[11px] text-zinc-500">
+              Editing the slug renames the file and changes the URL.
+            </p>
           )}
         </Field>
 

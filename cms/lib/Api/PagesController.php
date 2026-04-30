@@ -110,12 +110,23 @@ class PagesController
     {
         $input   = Router::jsonBody();
         $isNew   = $existingPath === null;
-        $relPath = trim((string)($input['path'] ?? $existingPath ?? ''), '/');
+        // For an update, the URL path identifies the file; the optional
+        // top-level `path` in the body is the *target* path for a rename.
+        // For a create, the body's `path` is the only source.
+        $relPath = $isNew
+            ? trim((string)($input['path'] ?? ''), '/')
+            : ($existingPath ?? '');
+        $newRelPath = $isNew
+            ? null
+            : trim((string)($input['path'] ?? $existingPath), '/');
         $title   = trim((string)($input['title'] ?? ''));
         $body    = (string)($input['body'] ?? '');
 
         if (!$svc['paths']->isValidRelPath($relPath)) {
             \json_response(['ok' => false, 'error' => 'Invalid path'], 400);
+        }
+        if (!$isNew && $newRelPath !== null && !$svc['paths']->isValidRelPath($newRelPath)) {
+            \json_response(['ok' => false, 'error' => 'Invalid new path'], 400);
         }
         if ($title === '') {
             \json_response(['ok' => false, 'error' => 'Title is required'], 400);
@@ -132,6 +143,21 @@ class PagesController
                 \json_response(['ok' => false, 'error' => 'Not found'], 404);
             }
             $existing = $svc['repo']->parseMeta($abs);
+
+            // Rename happens before the write so we serialise the new content
+            // straight to the destination — avoids a momentary state where
+            // the old file still holds the previous body after a rename.
+            if ($newRelPath !== null && $newRelPath !== $relPath) {
+                if ($svc['paths']->resolveNewContentFile($newRelPath) === null) {
+                    \json_response(['ok' => false, 'error' => 'Cannot move to this path'], 400);
+                }
+                $renamed = $svc['repo']->rename($relPath, $newRelPath);
+                if (!$renamed['ok']) {
+                    \json_response(['ok' => false, 'error' => $renamed['error']], 400);
+                }
+                ServiceFactory::audit($config)->record('page.rename', $relPath, ['to' => $newRelPath]);
+                $relPath = $newRelPath;
+            }
         }
 
         $incomingMeta = is_array($input['meta'] ?? null) ? $input['meta'] : [];

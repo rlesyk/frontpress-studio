@@ -10,11 +10,13 @@ import { getCsrf } from './api.js';
  * to give Toast UI a host element, and reads `edRef.current` when it needs
  * to call commands (`getMarkdown`, `setHTML`, `exec('addImage', …)`, …).
  *
- * Initialisation is deferred until `bodyReady` flips so the editor seeds
- * itself from the loaded page body exactly once. `data` is intentionally not
- * a dep on the underlying effect — refetches after a save must not tear the
- * editor down and remount it, which would dump cursor focus back to the top
- * of the document.
+ * The editor is initialised exactly once per mount and **never** re-created
+ * mid-life. Refetches after save must not tear the editor down (cursor focus
+ * would jump to the top), and renames must not tear it down either (the
+ * latest body lives in the editor's internal state, not in `initialBody`).
+ *
+ * `pagePath` flows through a ref so per-post image uploads always carry the
+ * current path without forcing a re-init.
  */
 export function useToastUiEditor({
   isNew,
@@ -27,6 +29,16 @@ export function useToastUiEditor({
   const editorElRef = useRef(null);
   const edRef = useRef(null);
   const initializedRef = useRef(false);
+
+  // Hot refs — values that the editor's hooks need to read at *call time*,
+  // not at *init time*. Updating a ref doesn't re-run effects, so we get
+  // fresh values without recreating the editor.
+  const pagePathRef = useRef(pagePath);
+  const onOpenMediaPickerRef = useRef(onOpenMediaPicker);
+  const onDirtyRef = useRef(onDirty);
+  pagePathRef.current = pagePath;
+  onOpenMediaPickerRef.current = onOpenMediaPicker;
+  onDirtyRef.current = onDirty;
 
   useEffect(() => {
     if (!editorElRef.current) return undefined;
@@ -41,7 +53,7 @@ export function useToastUiEditor({
     imageButton.style.margin = '0';
     imageButton.setAttribute('aria-label', 'Insert image');
     imageButton.setAttribute('type', 'button');
-    imageButton.addEventListener('click', () => onOpenMediaPicker());
+    imageButton.addEventListener('click', () => onOpenMediaPickerRef.current());
 
     const ed = new Editor({
       el: editorElRef.current,
@@ -66,7 +78,8 @@ export function useToastUiEditor({
         addImageBlobHook(blob, callback) {
           const fd = new FormData();
           fd.append('file', blob);
-          if (pagePath) fd.append('page_path', pagePath);
+          const path = pagePathRef.current;
+          if (path) fd.append('page_path', path);
           fetch('/admin/api/media', {
             method: 'POST',
             credentials: 'same-origin',
@@ -81,7 +94,7 @@ export function useToastUiEditor({
         },
       },
     });
-    ed.on('change', () => onDirty(true));
+    ed.on('change', () => onDirtyRef.current(true));
     edRef.current = ed;
     initializedRef.current = true;
 
@@ -90,11 +103,11 @@ export function useToastUiEditor({
       edRef.current = null;
       initializedRef.current = false;
     };
-    // Same trade-off as before: omit `data`/`initialBody`/callbacks so a
-    // post-save refetch doesn't tear the editor down. The init runs once per
-    // mount; everything after that goes through the returned ref.
+    // Init runs once per mount on `bodyReady`; `pagePath` and the callbacks
+    // are read through refs above so changing them doesn't tear the editor
+    // down. `initialBody` is captured via closure on first init only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isNew, pagePath, bodyReady]);
+  }, [isNew, bodyReady]);
 
   return { edRef, editorElRef };
 }
