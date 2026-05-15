@@ -4,16 +4,22 @@ declare(strict_types=1);
 
 namespace MD\Api;
 
+use MD\Env;
+
 class AuthController
 {
     public static function me(): void
     {
         $user = $_SESSION['admin_user'] ?? null;
         \json_response([
-            'ok'            => true,
-            'authenticated' => $user !== null,
-            'user'          => $user,
-            'csrf'          => \csrf_token(),
+            'ok'                => true,
+            'authenticated'     => $user !== null,
+            'user'              => $user,
+            'csrf'              => \csrf_token(),
+            // Surfaced so the admin shell can render the "rotate the default
+            // password" banner; safe to expose pre-auth since it's a boolean,
+            // not a credential.
+            'passwordIsDefault' => Env::isPasswordDefault(),
         ]);
     }
 
@@ -45,6 +51,48 @@ class AuthController
             'user' => $_SESSION['admin_user'],
             'csrf' => \csrf_token(),
         ]);
+    }
+
+    /**
+     * Rotate the admin password. Requires an authenticated session, CSRF,
+     * and the current password as a second factor (so a hijacked session
+     * can't quietly lock the operator out).
+     *
+     * @param array<string, mixed> $config
+     */
+    public static function password(string $method, array $config): void
+    {
+        if ($method !== 'POST') {
+            \json_response(['ok' => false, 'error' => 'Method not allowed'], 405);
+        }
+        Router::requireAuth();
+        Router::requireCsrf();
+
+        $body    = Router::jsonBody();
+        $current = (string)($body['current'] ?? '');
+        $next    = (string)($body['next'] ?? '');
+
+        if ($next === '') {
+            \json_response(['ok' => false, 'error' => 'Choose a new password.'], 400);
+        }
+        if (strlen($next) < 8) {
+            \json_response(['ok' => false, 'error' => 'New password should be at least 8 characters.'], 400);
+        }
+        if ($next === 'admin') {
+            \json_response(['ok' => false, 'error' => 'Pick something other than the default.'], 400);
+        }
+
+        $hash = (string)($config['ADMIN_PASS_HASH'] ?? '');
+        if (!\passwordCheck($current, $hash)) {
+            \json_response(['ok' => false, 'error' => 'The current password doesn\'t match.'], 401);
+        }
+
+        $envFile = (string)($config['ENV_FILE'] ?? '');
+        if ($envFile === '' || !Env::changePassword($envFile, $next)) {
+            \json_response(['ok' => false, 'error' => 'Could not write to .env. Check file permissions.'], 500);
+        }
+
+        \json_response(['ok' => true]);
     }
 
     public static function logout(string $method): void

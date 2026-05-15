@@ -56,6 +56,23 @@ When `ADMIN_PASS_HASH` is set, the auto-hash step is skipped — `ADMIN_PASS` is
 
 If the web server can't rewrite `.env` (read-only filesystem, wrong file owner), the in-memory hash still works for the current request and login succeeds — but the next request will see the plaintext again and re-hash it. The error is logged via `error_log()`. Fix file permissions or set `ADMIN_PASS_HASH` directly to break the cycle.
 
+### First-run banner
+
+When the active password still verifies against the default (`admin`), the admin shell renders a persistent banner across the top of every screen:
+
+> Set a strong admin password to finish setup. **Open Security settings**
+
+It does not dismiss — the only way to clear it is to rotate the password under **Settings → Security**. The check is `password_verify('admin', $ADMIN_PASS_HASH)` in [`MD\Env::isPasswordDefault()`](app/cms/lib/Env.php), surfaced via `/admin/api/me` as `passwordIsDefault`. A custom password that happens to also be `admin` triggers the banner — that's intentional; you should pick something else.
+
+### Changing the password from the admin
+
+**Settings → Security** has a three-field form: current password, new password, confirm. On submit:
+
+- The endpoint (`POST /admin/api/password`) requires an authenticated session, CSRF, and the current password — a hijacked session can't quietly rotate credentials without the second factor.
+- New password must be at least 8 characters; literal `admin` is rejected.
+- `.env` is atomically rewritten so only the hash is on disk.
+- The auth context refreshes, so the first-run banner disappears in the same turn.
+
 ## Admin features
 
 - **Three-column layout** — primary nav (Folders / Media / Settings / Backup) on the left, a sibling-list column in the middle when a folder is open, and the active screen on the right

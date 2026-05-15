@@ -4,16 +4,16 @@ import { api, setCsrf } from './api.js';
 const AuthCtx = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [state, setState] = useState({ status: 'loading', user: null });
+  const [state, setState] = useState({ status: 'loading', user: null, passwordIsDefault: false });
 
   const refresh = useCallback(async () => {
     try {
       const me = await api.get('/me');
       setCsrf(me.csrf);
-      setState({ status: 'ready', user: me.user });
+      setState({ status: 'ready', user: me.user, passwordIsDefault: !!me.passwordIsDefault });
     } catch {
       setCsrf('');
-      setState({ status: 'ready', user: null });
+      setState({ status: 'ready', user: null, passwordIsDefault: false });
     }
   }, []);
 
@@ -22,13 +22,16 @@ export function AuthProvider({ children }) {
   const login = useCallback(async (username, password) => {
     const res = await api.post('/login', { username, password });
     setCsrf(res.csrf);
-    setState({ status: 'ready', user: res.user });
-  }, []);
+    // After login, re-read /me to pick up passwordIsDefault from the server
+    // (the login response doesn't carry it, and we want the banner to render
+    // immediately rather than after the next reload).
+    await refresh();
+  }, [refresh]);
 
   const logout = useCallback(async () => {
     try { await api.post('/logout'); } catch { /* ignore */ }
     setCsrf('');
-    setState({ status: 'ready', user: null });
+    setState({ status: 'ready', user: null, passwordIsDefault: false });
     await refresh();
   }, [refresh]);
 

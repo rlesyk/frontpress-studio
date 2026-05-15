@@ -32,6 +32,9 @@ class Router
                 case 'logout':
                     AuthController::logout($method);
                     return;
+                case 'password':
+                    AuthController::password($method, $config);
+                    return;
                 case 'pages':
                     PagesController::handle($rest, $method, $config);
                     return;

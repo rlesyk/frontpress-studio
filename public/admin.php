@@ -134,6 +134,7 @@ if (preg_match('#^/admin/api/(.*)$#', $uri, $apiMatch)) {
         'config'          => $config,
         'ADMIN_USER'      => $ADMIN_USER,
         'ADMIN_PASS_HASH' => $ADMIN_PASS_HASH,
+        'ENV_FILE'        => $appRoot . '/.env',
     ]);
     exit;
 }
