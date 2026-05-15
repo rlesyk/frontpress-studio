@@ -38,7 +38,7 @@ class MediaController
             return;
         }
         if ($method === 'DELETE' && $name !== '') {
-            self::delete($media, $name);
+            self::delete($media, $name, $config);
             return;
         }
 
@@ -157,9 +157,17 @@ class MediaController
         \json_response(['ok' => true]);
     }
 
-    private static function delete(MediaService $media, string $name): void
+    /** @param array<string, mixed> $config */
+    private static function delete(MediaService $media, string $name, array $config): void
     {
-        if (!$media->delete($name)) {
+        // When the caller knows the file is a per-post attachment, they pass
+        // page_path so we delete from `site/content/<pagePath>/` rather than
+        // the global uploads dir. Falls back to the global delete otherwise.
+        $pagePath = trim((string)($_GET['page_path'] ?? ''), '/');
+        $ok = $pagePath !== ''
+            ? $media->deletePostAttachment($pagePath, $name, (string)$config['contentDir'])
+            : $media->delete($name);
+        if (!$ok) {
             \json_response(['ok' => false, 'error' => 'Not found'], 404);
         }
         \json_response(['ok' => true]);

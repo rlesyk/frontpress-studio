@@ -143,7 +143,32 @@ class MediaService
         if (!$target) {
             return false;
         }
+        return $this->deleteAt($target, $name);
+    }
 
+    /**
+     * Delete a per-post attachment (file lives at `site/content/<pagePath>/`).
+     * Returns true if the file existed and was removed alongside its sidecars.
+     */
+    public function deletePostAttachment(string $pagePath, string $name, string $contentDir): bool
+    {
+        if (!$this->paths->isValidRelPath($pagePath)) {
+            return false;
+        }
+        $baseDir = realpath($contentDir);
+        $pageDir = realpath($contentDir . '/' . $pagePath);
+        if (!$baseDir || !$pageDir || !str_starts_with($pageDir . '/', $baseDir . '/')) {
+            return false;
+        }
+        $target = $pageDir . '/' . basename($name);
+        if (!is_file($target)) {
+            return false;
+        }
+        return $this->deleteAt($target, $name);
+    }
+
+    private function deleteAt(string $target, string $name): bool
+    {
         $dir  = dirname($target);
         $stem = pathinfo($name, PATHINFO_FILENAME);
         $ext  = strtolower(pathinfo($name, PATHINFO_EXTENSION));
