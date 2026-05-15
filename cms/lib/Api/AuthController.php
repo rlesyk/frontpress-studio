@@ -34,14 +34,16 @@ class AuthController
         $password = (string)($body['password'] ?? '');
 
         if ($username === '' || $password === '') {
-            \json_response(['ok' => false, 'error' => 'Missing credentials'], 400);
+            \json_response(['ok' => false, 'error' => 'Fill in both the username and password.'], 400);
         }
 
         $ok = $username === $config['ADMIN_USER']
             && \passwordCheck($password, $config['ADMIN_PASS_HASH'] ?? '');
 
         if (!$ok) {
-            \json_response(['ok' => false, 'error' => 'Invalid credentials'], 401);
+            // Don't reveal which field is wrong — prevents username enumeration
+            // and matches the conversational form in Yifrah Ch. 7.
+            \json_response(['ok' => false, 'error' => "The username or password doesn't match. Try again, or check your .env credentials."], 401);
         }
 
         session_regenerate_id(true);

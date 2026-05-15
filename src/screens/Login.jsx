@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/auth.jsx';
-import { Alert, Button, Field, Input } from '../components/ui/index.js';
+import { Button, Field, Input } from '../components/ui/index.js';
+
+const DEFAULT_TITLE = 'Sign in — MD Admin';
 
 export default function Login() {
   const { user, login } = useAuth();
@@ -10,6 +12,22 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
+  const usernameRef = useRef(null);
+  const summaryRef = useRef(null);
+
+  // Reflect error state in <title> so screen-reader users (and tab-strip
+  // scanners) hear/see the change without inspecting the form. Reset on
+  // unmount in case the user navigates away mid-error.
+  useEffect(() => {
+    document.title = error ? `(1 problem) ${DEFAULT_TITLE}` : DEFAULT_TITLE;
+    return () => { document.title = DEFAULT_TITLE; };
+  }, [error]);
+
+  // On error, move focus into the summary so screen-reader users land on
+  // the announcement and sighted users see it before reaching the form.
+  useEffect(() => {
+    if (error) summaryRef.current?.focus();
+  }, [error]);
 
   const from = location.state?.from;
   const redirectTo = from ? `${from.pathname || '/'}${from.search || ''}${from.hash || ''}` : '/';
@@ -18,21 +36,33 @@ export default function Login() {
 
   async function onSubmit(e) {
     e.preventDefault();
+    // Prevent double-submit while a request is in flight without disabling
+    // the button (which would lose the focus ring and confuse SR users).
+    if (busy) return;
     setError(null);
     setBusy(true);
     try {
       await login(username, password);
     } catch (err) {
-      setError(err.message || 'Login failed');
+      // Server returns a user-perspective string already; this fallback
+      // covers network failures and unexpected shapes.
+      setError(err.message || "Something went wrong. Try again in a moment.");
     } finally {
       setBusy(false);
     }
+  }
+
+  function focusUsername(e) {
+    e.preventDefault();
+    usernameRef.current?.focus();
   }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-100 px-4">
       <form
         onSubmit={onSubmit}
+        noValidate
+        aria-describedby={error ? 'login-error-summary' : undefined}
         className="w-full max-w-sm space-y-4 rounded-lg border border-zinc-200 bg-white p-6 shadow-card"
       >
         <div className="flex items-center gap-2">
@@ -40,17 +70,55 @@ export default function Login() {
           <h1 className="text-base font-semibold">MD Admin</h1>
         </div>
 
-        {error && <Alert tone="error">{error}</Alert>}
+        {error && (
+          <div
+            id="login-error-summary"
+            ref={summaryRef}
+            tabIndex={-1}
+            role="alert"
+            aria-live="polite"
+            className="rounded-md border border-red-200 bg-red-50 p-3 text-[13px] text-red-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/30"
+          >
+            <p className="font-semibold">There's a problem with your sign-in</p>
+            <p className="mt-1 text-red-700">{error}</p>
+            <p className="mt-2">
+              <a
+                href="#login-username"
+                onClick={focusUsername}
+                className="font-medium underline decoration-red-300 underline-offset-2 hover:decoration-red-700"
+              >
+                Go to username
+              </a>
+            </p>
+          </div>
+        )}
 
         <Field label="Username">
-          <Input autoFocus required value={username} onChange={e => setUsername(e.target.value)} />
+          <Input
+            id="login-username"
+            ref={usernameRef}
+            autoFocus
+            required
+            autoComplete="username"
+            aria-invalid={!!error}
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+          />
         </Field>
 
         <Field label="Password">
-          <Input type="password" required value={password} onChange={e => setPassword(e.target.value)} />
+          <Input
+            id="login-password"
+            type="password"
+            required
+            autoComplete="current-password"
+            aria-invalid={!!error}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
         </Field>
 
-        <Button type="submit" disabled={busy} className="w-full">
+        <Button type="submit" aria-busy={busy} className="w-full">
           {busy ? 'Signing in…' : 'Sign in'}
         </Button>
       </form>
