@@ -107,5 +107,6 @@ app/
   - [Templates — PHP]({{ '/templates-php' | relative_url }}) — same cookbook in plain PHP, with escaping rules and the legacy output-buffer layout
 - [Caching]({{ '/caching' | relative_url }}) — what's cached, how it invalidates, when to clear it manually
 - [Admin]({{ '/admin' | relative_url }}) — editor, uploads, settings, backup, auth
+- [Accessibility]({{ '/accessibility' | relative_url }}) — keyboard + screen-reader guarantees the admin SPA makes
 - [Extending]({{ '/extending' | relative_url }}) — collections, custom templates, custom helpers, taxonomies
 - [Changelog]({{ '/changelog' | relative_url }})

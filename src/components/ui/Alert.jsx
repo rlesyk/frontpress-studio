@@ -6,9 +6,25 @@ const tones = {
   info:    'border-zinc-200 bg-zinc-50 text-zinc-700',
 };
 
-export default function Alert({ tone = 'info', children, className = '' }) {
+// Errors and warnings are announced assertively (role=alert); success/info
+// are polite (role=status). Override via `role` if you need to silence an
+// alert that's only ever visible because the user just acted on it.
+const tonePoliteness = {
+  error:   { role: 'alert',  'aria-live': 'assertive' },
+  warning: { role: 'alert',  'aria-live': 'assertive' },
+  success: { role: 'status', 'aria-live': 'polite' },
+  info:    { role: 'status', 'aria-live': 'polite' },
+};
+
+export default function Alert({ tone = 'info', children, className = '', role, ...rest }) {
+  const a11y = tonePoliteness[tone] || tonePoliteness.info;
   return (
-    <div className={`rounded-md border px-3 py-2.5 text-[13px] ${tones[tone] || tones.info} ${className}`}>
+    <div
+      role={role || a11y.role}
+      aria-live={a11y['aria-live']}
+      className={`rounded-md border px-3 py-2.5 text-[13px] ${tones[tone] || tones.info} ${className}`}
+      {...rest}
+    >
       {children}
     </div>
   );

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 /**
@@ -10,6 +10,12 @@ import { createPortal } from 'react-dom';
  *
  * Editing markdown is delegated back to the parent via `onReplace(url)` and
  * `onDelete()`; this component is purely presentational.
+ *
+ * Accessibility: rendered as `role="toolbar"`; focus moves to Replace when
+ * the toolbar appears and is returned to the editor surface on close (Esc,
+ * outside click, or after an action). Keyboard users can reach the toolbar
+ * once a click has surfaced it; pure-keyboard discovery still depends on the
+ * Toast UI image insertion flow (see app/docs/accessibility.md).
  */
 export default function EditorImageMenu({
   containerRef,
@@ -18,6 +24,8 @@ export default function EditorImageMenu({
   onDelete,
 }) {
   const [target, setTarget] = useState(null); // { rect, url, alt }
+  const firstActionRef = useRef(null);
+  const previousFocusRef = useRef(null);
 
   useEffect(() => {
     if (!enabled) return undefined;
@@ -62,9 +70,14 @@ export default function EditorImageMenu({
   }, [containerRef, enabled]);
 
   // Close on Esc + outside click. Pointerdown so we don't fight the click
-  // delegate above when the user clicks a different image.
+  // delegate above when the user clicks a different image. Move focus to
+  // the first action on appear; restore it to whatever the editor had on
+  // close so keyboard users return to where they were.
   useEffect(() => {
     if (!target) return undefined;
+    previousFocusRef.current = document.activeElement;
+    const id = requestAnimationFrame(() => firstActionRef.current?.focus());
+
     function onKey(e) { if (e.key === 'Escape') setTarget(null); }
     function onPointer(e) {
       if (e.target.closest('[data-editor-image-menu]')) return;
@@ -74,8 +87,11 @@ export default function EditorImageMenu({
     window.addEventListener('keydown', onKey);
     window.addEventListener('pointerdown', onPointer, true);
     return () => {
+      cancelAnimationFrame(id);
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('pointerdown', onPointer, true);
+      const prev = previousFocusRef.current;
+      if (prev instanceof HTMLElement && document.body.contains(prev)) prev.focus();
     };
   }, [target]);
 
@@ -95,18 +111,19 @@ export default function EditorImageMenu({
       aria-label="Image actions"
     >
       <button
+        ref={firstActionRef}
         type="button"
         onClick={() => { onReplace(target); setTarget(null); }}
-        className="rounded px-2 py-1 text-[12px] font-medium text-zinc-700 hover:bg-zinc-100"
+        className="rounded px-2 py-1 text-[12px] font-medium text-zinc-700 hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900/20"
       >
-        Replace
+        Replace image
       </button>
       <button
         type="button"
         onClick={() => { onDelete(target); setTarget(null); }}
-        className="rounded px-2 py-1 text-[12px] font-medium text-red-600 hover:bg-red-50"
+        className="rounded px-2 py-1 text-[12px] font-medium text-red-600 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/30"
       >
-        Delete
+        Delete image
       </button>
     </div>,
     document.body,

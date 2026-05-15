@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import MultiCheckboxControl from './taxonomy/MultiCheckboxControl.jsx';
 import MultiSelectControl from './taxonomy/MultiSelectControl.jsx';
 import MultiTagsControl from './taxonomy/MultiTagsControl.jsx';
@@ -40,10 +41,11 @@ function pickControl({ isArray, multiple, value, choices, widget, onChange }) {
 
 function FieldShell({ label, slug, children }) {
   const showSlug = slug && slug.toLowerCase() !== (label || '').toLowerCase();
+  const labelId = useId();
   return (
-    <div className="space-y-2">
+    <div role="group" aria-labelledby={labelId} className="space-y-2">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="text-[13px] font-semibold text-zinc-900">{label}</span>
+        <span id={labelId} className="text-[13px] font-semibold text-zinc-900">{label}</span>
         {showSlug && (
           <span className="font-mono text-[10px] uppercase tracking-wider text-zinc-400">
             {slug}
