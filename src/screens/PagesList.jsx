@@ -179,29 +179,31 @@ export default function PagesList() {
             <option value="live">Live</option>
             <option value="draft">Draft</option>
           </Select>
-          <Button variant="secondary" onClick={exportPages}>
-            {folder ? `Download ${folder}` : 'Download all'}
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() => importInputRef.current?.click()}
-            disabled={importMut.isPending}
-            aria-busy={importMut.isPending}
-          >
-            {importMut.isPending ? 'Importing…' : 'Import'}
-          </Button>
-          <input
-            ref={importInputRef}
-            type="file"
-            accept=".md,.zip,application/zip,text/markdown"
-            multiple
-            hidden
-            onChange={(e) => { onImportFiles(e.target.files); e.target.value = ''; }}
-          />
           {folder && (
-            <Button onClick={() => navigate(`/new/${encodeURIComponent(folder)}`)}>
-              New page
-            </Button>
+            <>
+              <Button variant="secondary" onClick={exportPages}>
+                Download
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => importInputRef.current?.click()}
+                disabled={importMut.isPending}
+                aria-busy={importMut.isPending}
+              >
+                {importMut.isPending ? 'Importing…' : 'Import'}
+              </Button>
+              <input
+                ref={importInputRef}
+                type="file"
+                accept=".md,.zip,application/zip,text/markdown"
+                multiple
+                hidden
+                onChange={(e) => { onImportFiles(e.target.files); e.target.value = ''; }}
+              />
+              <Button onClick={() => navigate(`/new/${encodeURIComponent(folder)}`)}>
+                New page
+              </Button>
+            </>
           )}
         </div>
       </header>
