@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace MD;
 
+defined('MD_BOOT') || exit;
+
 /**
  * Tiny grab-bag of generic recursive filesystem helpers shared by services that
  * have no business owning their own copy (theme install, backup restore, etc.).

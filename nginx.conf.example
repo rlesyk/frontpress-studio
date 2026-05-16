@@ -1,0 +1,28 @@
+# mdframework — nginx rules.
+#
+# Pairs with .htaccess (which Apache reads). The framework PHP files live
+# in the webroot but guard themselves with `defined('MD_BOOT') || exit;`,
+# and config.php is plain PHP that emits nothing on direct hit — so the
+# webserver only needs the minimal set of rules below.
+#
+# Drop the block below inside your `server { ... }` after `root` is set,
+# or save this file as e.g. /etc/nginx/snippets/mdframework.conf and
+# `include /etc/nginx/snippets/mdframework.conf;` from your server block.
+#
+# Assumes a PHP-FPM `location ~ \.php$ { ... }` is already configured.
+
+# Block raw markdown source (the framework parses these server-side).
+location ~ \.md$ { return 404; }
+
+# Belt-and-braces: block PHP execution under any uploads path.
+location ~* /uploads/.*\.(php[0-9]?|phtml|phar)$ { return 403; }
+
+# Admin SPA: virtual URLs under /admin/ route to admin/index.php.
+location /admin {
+    try_files $uri $uri/ /admin/index.php?$args;
+}
+
+# Front controller for everything else.
+location / {
+    try_files $uri $uri/ /index.php?$args;
+}

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace MD;
 
+defined('MD_BOOT') || exit;
+
 /**
  * Append-only audit log of admin writes. One JSON object per line, written to
  * `site/cache/audit.log`. Intentionally cache-located (not under `site/`) so a

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace MD;
 
+defined('MD_BOOT') || exit;
+
 class Config
 {
     private string $file;

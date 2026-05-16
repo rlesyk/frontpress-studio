@@ -1,4 +1,6 @@
 <?php
+
+defined('MD_BOOT') || exit;
 /**
  * Template helpers — usable from PHP and Twig templates.
  *

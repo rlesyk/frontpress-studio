@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace MD;
 
+defined('MD_BOOT') || exit;
+
 class Router
 {
     private string $contentDir;

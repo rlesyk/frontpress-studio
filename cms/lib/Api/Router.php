@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace MD\Api;
 
+defined('MD_BOOT') || exit;
+
 /**
  * Dispatches /admin/api/* requests to controllers.
  *

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace MD;
 
+defined('MD_BOOT') || exit;
+
 /**
  * Restores a validated backup ZIP onto the live install with an atomic-rename
  * dance per backup root. Lives in its own class so {@see BackupService} can

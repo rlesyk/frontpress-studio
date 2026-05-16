@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace MD;
 
+defined('MD_BOOT') || exit;
+
 /**
  * Renders Vite dev or production asset tags for the React admin shell.
  *

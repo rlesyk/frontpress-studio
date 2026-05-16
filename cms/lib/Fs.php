@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace MD;
 
+defined('MD_BOOT') || exit;
+
 /**
  * Filesystem primitives. The one thing you should never do is call
  * file_put_contents() directly for any file the application reads back later —

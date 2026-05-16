@@ -4,32 +4,50 @@ declare(strict_types=1);
 
 namespace MD;
 
+defined('MD_BOOT') || exit;
+
+/**
+ * Reads runtime config from PHP constants defined in `config.php`.
+ *
+ * The constant-backed model (vs the older `.env` parser) mirrors WordPress's
+ * `wp-config.php`: a real PHP file with no top-level output, safe to live in
+ * the webroot. Direct HTTP access just `exit`s on the `MD_BOOT` guard.
+ *
+ * Constants are named `MD_<KEY>`; the legacy `Env::get('KEY')` API is kept
+ * so call sites in controllers and bootstrap don't have to know about the
+ * `MD_` prefix.
+ */
 class Env
 {
+    /** @var array<int, string> Keys mirrored from MD_* constants. */
+    private const KEYS = [
+        'ADMIN_USER',
+        'ADMIN_PASS',
+        'ADMIN_PASS_HASH',
+        'APP_ENV',
+        'APP_DEBUG',
+        'SESSION_IDLE_SECONDS',
+    ];
+
     /** @var array<string, string> */
     private static array $loaded = [];
 
+    /**
+     * Load config.php (or any PHP file that `define()`s `MD_*` constants)
+     * and mirror those constants into the in-memory cache. Idempotent:
+     * `require_once` skips a second include and missing constants are
+     * silently treated as "unset".
+     */
     public static function load(string $file): void
     {
-        if (!is_file($file)) {
-            return;
+        if (is_file($file)) {
+            require_once $file;
         }
-        foreach (file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
-            $line = trim($line);
-            if ($line === '' || str_starts_with($line, '#')) {
-                continue;
+        foreach (self::KEYS as $key) {
+            $const = 'MD_' . $key;
+            if (defined($const)) {
+                self::$loaded[$key] = (string)constant($const);
             }
-            if (!str_contains($line, '=')) {
-                continue;
-            }
-            [$k, $v] = explode('=', $line, 2);
-            $k       = trim($k);
-            $v       = trim($v);
-            // Strip surrounding quotes if present
-            if ((str_starts_with($v, '"') && str_ends_with($v, '"')) || (str_starts_with($v, "'") && str_ends_with($v, "'"))) {
-                $v = substr($v, 1, -1);
-            }
-            self::$loaded[$k] = $v;
         }
     }
 
@@ -39,15 +57,13 @@ class Env
     }
 
     /**
-     * Replace the plaintext `ADMIN_PASS=` line in .env with a hashed
-     * `ADMIN_PASS_HASH=`. Used by the admin shell on first request when a
-     * fresh install was unzipped with the friendly default `.env.example`
-     * (`ADMIN_PASS=admin`).
+     * Rewrite `config.php` so `MD_ADMIN_PASS_HASH` holds the given bcrypt
+     * hash and any plaintext `MD_ADMIN_PASS` define is removed. Used on
+     * first request when a fresh install was unzipped with the friendly
+     * default `MD_ADMIN_PASS = 'admin'` line still present.
      *
-     * The plaintext is removed from disk; subsequent requests see only the
-     * hash. The atomic-write guarantees readers never see a half-rewritten
-     * file. Returns true on success — caller can decide whether a failure
-     * (read-only .env, etc.) is fatal or just a warning.
+     * The atomic-write guarantees readers never see a half-rewritten file.
+     * Returns true on success — caller decides whether failure is fatal.
      */
     public static function upgradePlaintextPassword(string $file, string $hash): bool
     {
@@ -55,54 +71,49 @@ class Env
             return false;
         }
 
-        $lines  = file($file, FILE_IGNORE_NEW_LINES) ?: [];
-        $out    = [];
-        $hashed = false;
+        $src = (string)file_get_contents($file);
 
-        foreach ($lines as $line) {
-            $trim = trim($line);
-
-            // Drop the plaintext line entirely.
-            if (preg_match('/^ADMIN_PASS\s*=/', $trim)) {
-                continue;
-            }
-
-            // Replace an existing (empty) hash line in place to keep ordering.
-            if (preg_match('/^ADMIN_PASS_HASH\s*=/', $trim)) {
-                $out[]  = 'ADMIN_PASS_HASH=' . $hash;
-                $hashed = true;
-                continue;
-            }
-
-            $out[] = $line;
+        // Replace the hash define. The value side is matched as "anything up
+        // to the closing paren" so both `'literal'` and the getenv-fallback
+        // form `getenv('MD_ADMIN_PASS_HASH') ?: '…'` are recognised.
+        $hashLine = "define('MD_ADMIN_PASS_HASH', '" . addslashes($hash) . "');";
+        $count    = 0;
+        $out      = preg_replace(
+            '/define\(\s*[\'"]MD_ADMIN_PASS_HASH[\'"]\s*,\s*[^)]*(?:\([^)]*\))?[^)]*\);/',
+            $hashLine,
+            $src,
+            1,
+            $count,
+        );
+        if (!is_string($out)) {
+            return false;
+        }
+        if ($count === 0) {
+            $out = rtrim($out) . "\n" . $hashLine . "\n";
         }
 
-        // Nothing existing to replace — append at the end.
-        if (!$hashed) {
-            $out[] = 'ADMIN_PASS_HASH=' . $hash;
+        // Drop the plaintext define entirely (line and trailing newline).
+        $out = preg_replace(
+            '/^[ \t]*define\(\s*[\'"]MD_ADMIN_PASS[\'"]\s*,\s*[^)]*(?:\([^)]*\))?[^)]*\);[ \t]*\r?\n?/m',
+            '',
+            $out,
+        );
+        if (!is_string($out)) {
+            return false;
         }
 
-        $contents = implode("\n", $out);
-        if (!str_ends_with($contents, "\n")) {
-            $contents .= "\n";
-        }
-
-        // Reflect the change in the in-memory cache so the current request
-        // sees the new hash without re-reading the file.
+        // Reflect in the in-memory cache so the current request sees the
+        // new hash without re-reading the file.
         self::$loaded['ADMIN_PASS_HASH'] = $hash;
         unset(self::$loaded['ADMIN_PASS']);
 
-        return Fs::atomicWrite($file, $contents);
+        return Fs::atomicWrite($file, $out);
     }
 
     /**
      * True when the active admin password still verifies against the friendly
-     * default (`admin`) shipped in `.env.example`. The CMS uses this to render
-     * a persistent first-run banner until the operator rotates the password.
-     *
-     * Works regardless of whether the hash was just generated by
-     * `upgradePlaintextPassword()` or was written by hand — we always check
-     * the actual hash, never the (possibly stripped) plaintext line.
+     * default (`admin`) shipped in `config.example.php`. The CMS uses this to
+     * render a persistent first-run banner until the operator rotates it.
      */
     public static function isPasswordDefault(): bool
     {
@@ -114,9 +125,9 @@ class Env
     }
 
     /**
-     * Rotate the admin password: hash with bcrypt and rewrite `.env` so only
-     * the hash is on disk. Returns true on success. Validation (length, etc.)
-     * is the caller's job — this is a low-level write.
+     * Rotate the admin password: hash with bcrypt and rewrite `config.php`
+     * so only the hash is on disk. Validation (length, etc.) is the caller's
+     * job — this is a low-level write.
      */
     public static function changePassword(string $file, string $newPlaintext): bool
     {

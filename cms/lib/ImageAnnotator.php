@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace MD;
 
+defined('MD_BOOT') || exit;
+
 /**
  * Inject `width`, `height`, and `loading="lazy"` onto every local
  * `<img src="/uploads/…">` in rendered HTML so browsers can reserve layout

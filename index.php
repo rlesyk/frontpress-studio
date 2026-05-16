@@ -1,6 +1,9 @@
 <?php
 
 declare(strict_types=1);
+
+define('MD_BOOT', true);
+
 session_set_cookie_params(['lifetime' => 0, 'path' => '/', 'httponly' => true, 'samesite' => 'Strict']);
 session_start();
 

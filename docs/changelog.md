@@ -7,10 +7,21 @@ layout: default
 
 All notable changes to MD Framework are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.0.52] — 2026-05-16
 
 ### Changed
-- **Flat install layout: unzip directly into the webroot, WordPress-style.** Removed the `app/public/` subdirectory — `index.php`, `admin.php`, `router.php`, and `.htaccess` now sit at the framework root alongside `bootstrap.php`, `cms/`, and `site/`, mirroring how `wp-config.php` lives next to `wp-load.php`. Sensitive prefixes (`cms/`, `site/`, `src/`, `docs/`, `sql/`, `.env`, `bootstrap.php`, `composer.json`) are denied at the HTTP layer by `.htaccess` (`RedirectMatch 404`). Vite output moved from `public/cms/dist/` to `admin-assets/` so the entire `cms/` prefix can be blocked with one rule. `ThemeService::ensureAssetsLink()` now creates `assets → site/themes/<active>/assets` at the webroot instead of inside `public/`. **Dev migration:** point Local Sites' document root at `app/` instead of `app/public/`.
+- **Unzip-into-webroot install, WordPress-style.** The framework root (`app/public/`) is now also the document root — drop the release zip into your domain folder (`htdocs/<your-site>/`, `public_html/`, whatever) and visit `/admin`. No `DocumentRoot` configuration needed.
+- **`.env` replaced with `config.php`.** Credentials live in PHP constants like `wp-config.php`; the file `exit`s with zero bytes on direct HTTP access, so even if every webserver deny rule fails, nothing leaks. Each constant prefers an OS env var when present (`MD_ADMIN_PASS_HASH`, `MD_APP_ENV`, …) and falls back to the on-disk value — works the same on shared hosting (constants) or VPS/Docker/PaaS (env vars).
+- **`defined('MD_BOOT') || exit;` guards** added to every PHP file under `cms/lib/` and `cms/templates/`, plus `bootstrap.php` and `config.php` itself. Direct HTTP access to any internal file is a silent no-op — the same pattern WordPress uses with `ABSPATH`.
+- **Admin entry point moved to `admin/index.php`.** `/admin/` now resolves naturally via directory index; the SPA's virtual URLs route through one explicit rewrite. Bumps the count of files at the webroot down by one.
+- **Webserver rules slashed.** `.htaccess` and the new `nginx.conf.example` are ~3 functional rules each: block raw `.md` files, block PHP execution under uploads, route `/admin/*` and everything else to their front controllers. Down from ~25 lines of `RedirectMatch 404` deny rules that PHP-level boot guards now handle in code.
+
+### Added
+- **`nginx.conf.example`** ships at the framework root for nginx host operators. Equivalent to `.htaccess` for Apache.
+- **`scripts/build-release.sh`** mirrors the GitHub Actions release workflow so you can build the production zip locally to test before tagging. Restores the dev composer install at the end.
+
+### Migration
+- Existing dev installs: `cp config.example.php config.php`, copy your `ADMIN_PASS_HASH` value from the old `.env`, delete `.env`. Local Sites' nginx WordPress preset works zero-config; if you're on a custom nginx vhost copy the contents of `nginx.conf.example`.
 
 ### Documentation
 - Rewrote **SCSS auto-compile** section in `templates.md`. Now covers (1) the engine — `scssphp/scssphp` v2.x, pure PHP, no Node, with a note about limited `@use` / `@forward` support; (2) the two layout conventions the compiler scans (flat `assets/style.scss` → `assets/style.css` *and* nested `assets/scss/style.scss` → `assets/css/style.css`) — the nested layout was supported in code but never documented; (3) corrected stale claims that admin requests trigger compile (only public-site does); (4) the `APP_ENV=dev` gate is now front-and-center with explicit production deploy guidance; (5) where compile errors land (PHP error log, never crash the request).
@@ -137,5 +148,5 @@ All notable changes to MD Framework are documented here. The format is based on 
 - Admin UI at `/admin/` with EasyMDE editor, image uploads, CSRF protection, bcrypt-hashed credentials in `.env`.
 - PHP template system with `render()` helper and `_layout.php` output-buffer pattern.
 
-[Unreleased]: https://github.com/krstivoja/mdframework/compare/v1.0.0...HEAD
+[0.0.52]: https://github.com/krstivoja/mdframework/releases/tag/0.0.52
 [1.0.0]: https://github.com/krstivoja/mdframework/releases/tag/v1.0.0

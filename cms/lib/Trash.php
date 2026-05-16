@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace MD;
 
+defined('MD_BOOT') || exit;
+
 /**
  * Soft-delete store for content. Instead of `unlink()`ing pages outright,
  * callers move them here and get back a token; a follow-up request with the

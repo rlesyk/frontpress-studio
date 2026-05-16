@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
-$appRoot = __DIR__;
-$cmsRoot = __DIR__ . '/cms';
+define('MD_BOOT', true);
+
+$appRoot = dirname(__DIR__);
+$cmsRoot = $appRoot . '/cms';
 require_once $cmsRoot . '/vendor/autoload.php';
 require_once $cmsRoot . '/lib/template_helpers.php';
 
@@ -16,7 +18,7 @@ spl_autoload_register(function ($class) use ($cmsRoot) {
     }
 });
 
-MD\Env::load($appRoot . '/.env');
+MD\Env::load($appRoot . '/config.php');
 
 // First-run only: copy starter content / config / theme into /site if it's
 // empty. /site is gitignored — the defaults a user sees on a fresh install
@@ -56,19 +58,19 @@ header('Referrer-Policy: strict-origin-when-cross-origin');
 $ADMIN_USER      = MD\Env::get('ADMIN_USER', 'admin');
 $ADMIN_PASS_HASH = MD\Env::get('ADMIN_PASS_HASH', '');
 
-// First-run convenience: if .env ships a plaintext ADMIN_PASS (the friendly
-// default in .env.example), hash it now and rewrite .env so subsequent
-// requests see only the hash. Plaintext is removed from disk in a single
-// atomic write — see MD\Env::upgradePlaintextPassword().
+// First-run convenience: if config.php ships a plaintext MD_ADMIN_PASS
+// (the friendly default in config.example.php), hash it now and rewrite
+// config.php so subsequent requests see only the hash. Plaintext is
+// removed from disk in a single atomic write.
 if ($ADMIN_PASS_HASH === '') {
     $plain = (string)MD\Env::get('ADMIN_PASS', '');
     if ($plain !== '') {
         $ADMIN_PASS_HASH = password_hash($plain, PASSWORD_BCRYPT);
-        if (!MD\Env::upgradePlaintextPassword($appRoot . '/.env', $ADMIN_PASS_HASH)) {
+        if (!MD\Env::upgradePlaintextPassword($appRoot . '/config.php', $ADMIN_PASS_HASH)) {
             // Couldn't write — the in-memory hash still works for this
             // request, but next request will re-hash the same plaintext.
             // Surface in the error log so a permissions issue is visible.
-            error_log('admin: failed to rewrite .env with hashed password — check file permissions');
+            error_log('admin: failed to rewrite config.php with hashed password — check file permissions');
         }
     }
 }
@@ -112,7 +114,7 @@ function json_response(array $data, int $code = 200): never
 
 if ($ADMIN_PASS_HASH === '') {
     http_response_code(503);
-    $envFile = $appRoot . '/.env';
+    $configFile = $appRoot . '/config.php';
     require $TEMPLATE_DIR . '/setup-required.php';
     exit;
 }
@@ -134,7 +136,7 @@ if (preg_match('#^/admin/api/(.*)$#', $uri, $apiMatch)) {
         'config'          => $config,
         'ADMIN_USER'      => $ADMIN_USER,
         'ADMIN_PASS_HASH' => $ADMIN_PASS_HASH,
-        'ENV_FILE'        => $appRoot . '/.env',
+        'ENV_FILE'        => $appRoot . '/config.php',
     ]);
     exit;
 }

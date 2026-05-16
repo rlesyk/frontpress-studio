@@ -2,6 +2,8 @@
 
 namespace MD;
 
+defined('MD_BOOT') || exit;
+
 use Twig\Environment;
 use Twig\Loader\FilesystemLoader;
 use Twig\TwigFunction;

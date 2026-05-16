@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace MD\Api;
 
+defined('MD_BOOT') || exit;
+
 class AuditController
 {
     /** @param array<string, mixed> $config */

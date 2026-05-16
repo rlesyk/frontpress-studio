@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace MD;
 
+defined('MD_BOOT') || exit;
+
 /**
  * Absolute-URL generation. Centralizes the two decisions every generator used
  * to make ad-hoc: what is the site origin, and how do I turn a page record

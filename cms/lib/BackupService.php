@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace MD;
 
+defined('MD_BOOT') || exit;
+
 /**
  * Builds a ZIP archive of user-owned site state (content, config, themes,
  * uploads) for one-click backup. Caches are intentionally excluded — they

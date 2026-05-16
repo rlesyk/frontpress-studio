@@ -35,10 +35,14 @@ phpstan-baseline.neon
 # ──────────────────────────────────────────────────────────────────
 # Local config / runtime / secrets
 # ──────────────────────────────────────────────────────────────────
-.env
-.env.local
-.env.*.local
-site/cache/
+config.php
+
+# /site/ is user data, seeded from cms/starters/ on first request.
+# Excluded so a dev install's content/uploads doesn't ship in the zip.
+/site/
+
+# Local build / dev helpers
+/scripts/
 
 # ──────────────────────────────────────────────────────────────────
 # VCS + repo hygiene

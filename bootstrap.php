@@ -4,6 +4,8 @@
  * Sets up paths, autoloads, and instantiates Content/Index/Router.
  */
 
+defined('MD_BOOT') || exit;
+
 require_once __DIR__ . '/cms/vendor/autoload.php';
 require_once __DIR__ . '/cms/lib/template_helpers.php';
 
@@ -20,10 +22,10 @@ $CONTENT_DIR = $ROOT . '/site/content';
 $CACHE_DIR   = $ROOT . '/site/cache';
 $UPLOADS_DIR = $ROOT . '/site/uploads';
 
-// Load .env once for both the admin and public-site entry points so any
-// runtime-toggleable behaviour (e.g. APP_ENV-gated SCSS compilation) sees the
-// same values. Env::load is idempotent.
-MD\Env::load($ROOT . '/.env');
+// Load config.php once for both admin and public-site entry points so any
+// runtime-toggleable behaviour (e.g. APP_ENV-gated SCSS compilation) sees
+// the same values. Env::load is idempotent.
+MD\Env::load($ROOT . '/config.php');
 
 // First-run only: copy starter content / config / theme into /site if it's
 // empty. /site is gitignored — the defaults a user sees on a fresh install

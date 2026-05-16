@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace MD;
 
+defined('MD_BOOT') || exit;
+
 /**
  * GD-backed thumbnail rasteriser. Lives outside MediaService so the upload
  * pipeline reads as a sequence of small steps rather than one 200-line method

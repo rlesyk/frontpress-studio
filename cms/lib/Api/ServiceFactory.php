@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace MD\Api;
 
+defined('MD_BOOT') || exit;
+
 use MD\AuditLog;
 use MD\BackupService;
 use MD\CacheService;

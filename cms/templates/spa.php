@@ -1,4 +1,6 @@
 <?php
+
+defined('MD_BOOT') || exit;
 /** @var string $cmsRoot */
 $appRoot         = dirname(__DIR__, 2);
 $srcRoot         = $appRoot . '/src';
