@@ -1,0 +1,132 @@
+<?php
+
+declare(strict_types=1);
+
+use FrontPress\BlockRegistry;
+use FrontPress\BlockRenderer;
+use PHPUnit\Framework\TestCase;
+
+defined('FRONTPRESS_BOOT') || define('FRONTPRESS_BOOT', true);
+
+/**
+ * Covers the block-tree → HTML pipeline that backs the visual page
+ * builder. Uses the framework's actual built-in blocks (cms/blocks/) so
+ * the test exercises real templates, not stubs.
+ */
+class BlockRendererTest extends TestCase
+{
+    private BlockRegistry $registry;
+    private BlockRenderer $renderer;
+
+    protected function setUp(): void
+    {
+        $this->registry = new BlockRegistry(__DIR__ . '/../blocks');
+        $this->renderer = new BlockRenderer($this->registry);
+    }
+
+    public function testHeadingBlockRenders(): void
+    {
+        $out = $this->renderer->render([
+            ['type' => 'heading', 'data' => ['text' => 'Hello', 'level' => 'h1', 'align' => 'center']],
+        ]);
+        $this->assertStringContainsString('<h1 style="text-align:center">Hello</h1>', $out);
+    }
+
+    public function testParagraphBlockRenders(): void
+    {
+        $out = $this->renderer->render([
+            ['type' => 'paragraph', 'data' => ['text' => 'A test paragraph.']],
+        ]);
+        $this->assertStringContainsString('<p style="text-align:left">A test paragraph.</p>', $out);
+    }
+
+    public function testUnknownBlockRendersAsComment(): void
+    {
+        $out = $this->renderer->render([
+            ['type' => 'kitchen-sink', 'data' => []],
+        ]);
+        $this->assertStringContainsString('<!-- unknown block: kitchen-sink -->', $out);
+    }
+
+    public function testSectionRendersChildren(): void
+    {
+        $out = $this->renderer->render([
+            [
+                'type' => 'section',
+                'data' => ['padding' => 'sm', 'maxWidth' => 'narrow'],
+                'children' => [
+                    ['type' => 'heading',   'data' => ['text' => 'Nested', 'level' => 'h2']],
+                    ['type' => 'paragraph', 'data' => ['text' => 'Inside the section.']],
+                ],
+            ],
+        ]);
+        $this->assertStringContainsString('<section', $out);
+        $this->assertStringContainsString('Nested', $out);
+        $this->assertStringContainsString('Inside the section.', $out);
+    }
+
+    public function testColumnsRendersChildrenInGrid(): void
+    {
+        $out = $this->renderer->render([
+            [
+                'type' => 'columns',
+                'data' => ['count' => '3', 'gap' => 'lg'],
+                'children' => [
+                    ['type' => 'paragraph', 'data' => ['text' => 'A']],
+                    ['type' => 'paragraph', 'data' => ['text' => 'B']],
+                    ['type' => 'paragraph', 'data' => ['text' => 'C']],
+                ],
+            ],
+        ]);
+        $this->assertMatchesRegularExpression('/grid-template-columns:repeat\(3,/', $out);
+        $this->assertStringContainsString('>A</p>', $out);
+        $this->assertStringContainsString('>C</p>', $out);
+    }
+
+    public function testInterpolatesMetaPlaceholders(): void
+    {
+        $out = $this->renderer->render(
+            [['type' => 'heading', 'data' => ['text' => 'Hello, {{ meta.author }}!', 'level' => 'h2']]],
+            ['author' => 'Marko'],
+        );
+        $this->assertStringContainsString('Hello, Marko!', $out);
+        $this->assertStringNotContainsString('{{ meta.author }}', $out);
+    }
+
+    public function testMissingMetaPlaceholderRendersEmpty(): void
+    {
+        $out = $this->renderer->render(
+            [['type' => 'paragraph', 'data' => ['text' => 'Hi {{ meta.missing }}.']]],
+            [],
+        );
+        $this->assertStringContainsString('Hi .', $out);
+    }
+
+    public function testImageSkipsWhenSrcIsEmpty(): void
+    {
+        $out = $this->renderer->render([
+            ['type' => 'image', 'data' => ['src' => '', 'alt' => 'nothing']],
+        ]);
+        $this->assertStringNotContainsString('<img', $out);
+        $this->assertStringContainsString('<!-- image block: no src set -->', $out);
+    }
+
+    public function testRegistryListsAllBuiltInBlocks(): void
+    {
+        $blocks = $this->registry->all();
+        $slugs  = array_keys($blocks);
+        $this->assertContains('heading',   $slugs);
+        $this->assertContains('paragraph', $slugs);
+        $this->assertContains('image',     $slugs);
+        $this->assertContains('section',   $slugs);
+        $this->assertContains('columns',   $slugs);
+    }
+
+    public function testSectionAndColumnsAreContainerBlocks(): void
+    {
+        $blocks = $this->registry->all();
+        $this->assertTrue($blocks['section']['hasChildren']);
+        $this->assertTrue($blocks['columns']['hasChildren']);
+        $this->assertFalse($blocks['heading']['hasChildren']);
+    }
+}

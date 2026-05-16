@@ -61,6 +61,9 @@ class Router
                 case 'theme':
                     ThemeEditorController::handle($rest, $method, $config);
                     return;
+                case 'blocks':
+                    BlocksController::handle($rest, $method, $config);
+                    return;
                 case 'backup':
                     BackupController::handle($rest, $method, $config);
                     return;
