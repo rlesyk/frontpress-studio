@@ -52,7 +52,7 @@ export default function Security() {
         <header>
           <h2 className="text-base font-semibold text-zinc-900">Admin password</h2>
           <p className="mt-1 text-sm text-zinc-600">
-            Rotates the password stored in <code className="text-xs">.env</code>. Only the bcrypt hash is written to disk.
+            Rotates the password stored in <code className="text-xs">config.php</code>. Only the bcrypt hash is written to disk.
           </p>
         </header>
 

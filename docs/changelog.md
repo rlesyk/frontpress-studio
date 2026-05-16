@@ -7,6 +7,12 @@ layout: default
 
 All notable changes to MD Framework are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.56] — 2026-05-16
+
+### Fixed
+- **"Set a strong admin password" banner stayed visible after rotating the password.** `config.php` is a real PHP source file, and on hosts with OPcache (most production PHP-FPM stacks, including LocalWP), the next request after a rewrite still saw the cached bytecode with the OLD `define('MD_ADMIN_PASS_HASH', …)` literal until OPcache revalidated (~60s by default). `password_verify('admin', $oldHash)` kept returning true and the banner kept showing. `Fs::atomicWrite` now calls `opcache_invalidate($path, true)` after a successful rename, so changes to `config.php` (and any other PHP source the framework rewrites) take effect on the very next request. End-to-end test: `passwordIsDefault` flipped from `true` → `false` immediately after `POST /admin/api/password` on a real LocalWP nginx+FPM stack with OPcache enabled.
+- **Stale `.env` reference in the Security settings card.** Copy now says "Rotates the password stored in `config.php`."
+
 ## [0.0.55] — 2026-05-16
 
 ### Removed
@@ -170,6 +176,7 @@ All notable changes to MD Framework are documented here. The format is based on 
 - Admin UI at `/admin/` with EasyMDE editor, image uploads, CSRF protection, bcrypt-hashed credentials in `.env`.
 - PHP template system with `render()` helper and `_layout.php` output-buffer pattern.
 
+[0.0.56]: https://github.com/krstivoja/mdframework/releases/tag/0.0.56
 [0.0.55]: https://github.com/krstivoja/mdframework/releases/tag/0.0.55
 [0.0.54]: https://github.com/krstivoja/mdframework/releases/tag/0.0.54
 [0.0.53]: https://github.com/krstivoja/mdframework/releases/tag/0.0.53

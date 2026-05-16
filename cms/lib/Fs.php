@@ -56,6 +56,17 @@ class Fs
             @unlink($tmp);
             return false;
         }
+
+        // If the file is a PHP source OPcache has cached, the next request
+        // would still see the old bytecode (and therefore old `define()`
+        // literals) until OPcache revalidates. Invalidate proactively so
+        // changes to config.php and any other rewritten PHP source take
+        // effect on the very next request. No-op for non-PHP files and
+        // hosts where OPcache isn't loaded.
+        if (function_exists('opcache_invalidate')) {
+            @opcache_invalidate($path, true);
+        }
+
         return true;
     }
 }
