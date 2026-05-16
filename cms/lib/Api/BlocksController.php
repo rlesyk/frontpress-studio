@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace FrontPress\Api;
 
+use FrontPress\BlockImporter;
 use FrontPress\BlockRegistry;
 use FrontPress\BlockRenderer;
 
@@ -16,6 +17,8 @@ defined('FRONTPRESS_BOOT') || exit;
  *   POST /admin/api/blocks/render          - render a tree to HTML for the
  *                                            live preview pane. body:
  *                                            { blocks: [...], page: {...} }
+ *   POST /admin/api/blocks/import          - one-way Twig/HTML source →
+ *                                            block tree. body: { source }
  *
  * The registry sits in `cms/blocks/<slug>/`. Themes can't override yet —
  * that's a v2 concern; v1 keeps the registry framework-built-in.
@@ -43,8 +46,22 @@ class BlocksController
             self::render($config);
             return;
         }
+        if ($resource === 'import' && $method === 'POST') {
+            self::import();
+            return;
+        }
 
         \json_response(['ok' => false, 'error' => 'Method not allowed'], 405);
+    }
+
+    private static function import(): void
+    {
+        $body   = Router::jsonBody();
+        $source = (string)($body['source'] ?? '');
+        \json_response([
+            'ok'     => true,
+            'blocks' => (new BlockImporter())->importFromSource($source),
+        ]);
     }
 
     /** @param array<string, mixed> $config */

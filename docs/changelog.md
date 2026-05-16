@@ -7,6 +7,13 @@ layout: default
 
 All notable changes to FrontPress Studio are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.67] — 2026-05-17
+
+### Added
+- **Convert to visual** button in the Theme editor for `.twig` / `.php` / `.html` files. Parses the HTML structure of the current buffer via the new `FrontPress\BlockImporter` (`DOMDocument`-backed), writes a `.fp.json` sibling carrying the resulting block tree, and jumps the editor into it. Recognised HTML maps to first-class blocks (`<h1>`–`<h6>` → heading, `<p>` → paragraph, `<img>` and `<figure><img></figure>` → image, `<section>`/`<div>` → section); unknown elements fall back to `code` blocks with the verbatim outer HTML. Top-level Twig tags between siblings land in their own `code` block; Twig tags inside element text are preserved as part of that block's content. The original file is never touched — conversion is one-way and the new `.fp.json` is the source of truth from there.
+- `POST /admin/api/blocks/import` endpoint backing the conversion: `{ source }` → `{ blocks: [...] }`.
+- 10 new tests for `BlockImporter` covering headings, paragraphs, images, figures with captions, nested sections, id/class preservation, Twig top-level → code, unknown elements → code, and a mixed Twig fixture. Total suite now 175 tests / 364 assertions (1 pre-existing media failure unchanged).
+
 ## [0.0.66] — 2026-05-16
 
 ### Fixed

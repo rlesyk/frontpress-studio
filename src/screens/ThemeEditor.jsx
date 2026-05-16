@@ -95,6 +95,31 @@ export default function ThemeEditor() {
     onError: (err) => toast.show(err.message || "Couldn't create.", { tone: 'error' }),
   });
 
+  // One-way conversion: take the current .twig/.php/.html buffer, parse
+  // HTML structure into blocks via /admin/api/blocks/import, write a
+  // .fp.json sibling, jump into it. Original file untouched.
+  const convertToVisual = useMutation({
+    mutationFn: async () => {
+      const source = buffers[currentPath] ?? '';
+      const { blocks } = await api.post('/blocks/import', { source });
+      const newPath = currentPath.replace(/\.(twig|php|html)$/i, VISUAL_EXT);
+      if (newPath === currentPath) {
+        throw new Error("Couldn't derive a .fp.json path from this file.");
+      }
+      await api.put('/theme/file', {
+        path: newPath,
+        contents: JSON.stringify({ blocks }, null, 2),
+      });
+      return newPath;
+    },
+    onSuccess: (path) => {
+      qc.invalidateQueries({ queryKey: ['theme-tree'] });
+      setCurrentPath(path);
+      toast.show(`Converted to ${path}. Original kept.`, { duration: 2400 });
+    },
+    onError: (err) => toast.show(err.message || "Couldn't convert.", { tone: 'error' }),
+  });
+
   const dirtySet = useMemo(() => {
     const out = new Set();
     for (const p of Object.keys(buffers)) {
@@ -129,9 +154,21 @@ export default function ThemeEditor() {
             {hover && <span className="ml-2 font-mono text-[11px] text-amber-700">{hover}</span>}
           </p>
         </div>
-        <Button onClick={() => newVisual.mutate()} disabled={newVisual.isPending}>
-          {newVisual.isPending ? 'Creating…' : '+ New visual template'}
-        </Button>
+        <div className="flex items-center gap-2">
+          {/^.+\.(twig|php|html)$/i.test(currentPath) && (
+            <Button
+              variant="secondary"
+              onClick={() => convertToVisual.mutate()}
+              disabled={convertToVisual.isPending}
+              title="Parse the HTML structure of this file into blocks. Writes a .fp.json sibling; original file is untouched."
+            >
+              {convertToVisual.isPending ? 'Converting…' : 'Convert to visual'}
+            </Button>
+          )}
+          <Button onClick={() => newVisual.mutate()} disabled={newVisual.isPending}>
+            {newVisual.isPending ? 'Creating…' : '+ New visual template'}
+          </Button>
+        </div>
       </header>
 
       <div className={`grid min-h-0 flex-1 ${isVisualBlocks ? 'grid-cols-[240px_minmax(0,1fr)]' : isVisualHtml ? 'grid-cols-[240px_minmax(0,1fr)]' : 'grid-cols-[240px_minmax(0,1fr)_minmax(0,1fr)]'}`}>
