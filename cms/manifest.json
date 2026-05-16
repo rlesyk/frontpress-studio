@@ -34,6 +34,10 @@
     "cms/templates/setup-required.php",
     "cms/templates/spa.php",
     "cms/manifest.json",
-    "cms/VERSION"
+    "cms/VERSION",
+    "cms/starters/blank-twig/",
+    "cms/starters/blank-php/",
+    "cms/starters/debug-twig/",
+    "cms/starters/debug-php/"
   ]
 }

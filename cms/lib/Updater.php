@@ -142,27 +142,42 @@ class Updater
         $bak        = new \ZipArchive();
         if ($bak->open($backupFile, \ZipArchive::CREATE) === true) {
             foreach ($coreFiles as $rel) {
-                $full = $this->appRoot . '/' . $rel;
-                if (is_file($full)) {
-                    $bak->addFile($full, $rel);
+                if (str_ends_with($rel, '/')) {
+                    foreach ($this->localFilesUnder($rel) as $absPath => $entryRel) {
+                        $bak->addFile($absPath, $entryRel);
+                    }
+                } else {
+                    $full = $this->appRoot . '/' . $rel;
+                    if (is_file($full)) {
+                        $bak->addFile($full, $rel);
+                    }
                 }
             }
             $bak->close();
         }
 
-        // Extract only the whitelisted core files
+        // Extract whitelisted core files + directory prefixes.
+        //
+        // Manifest entries ending in `/` are recursive prefixes — every file
+        // inside the ZIP that starts with the prefix is extracted. Lets us
+        // ship multi-file payloads like `cms/starters/blank-twig/` without
+        // enumerating every template by name in the manifest.
         foreach ($coreFiles as $rel) {
-            $entry   = $prefix . $rel;
-            $content = $zip->getFromName($entry);
-            if ($content === false) {
-                continue;
+            if (str_ends_with($rel, '/')) {
+                $this->extractZipPrefix($zip, $prefix, $rel);
+            } else {
+                $entry   = $prefix . $rel;
+                $content = $zip->getFromName($entry);
+                if ($content === false) {
+                    continue;
+                }
+                $dest = $this->appRoot . '/' . $rel;
+                $dir  = dirname($dest);
+                if (!is_dir($dir)) {
+                    mkdir($dir, 0755, true);
+                }
+                file_put_contents($dest, $content);
             }
-            $dest = $this->appRoot . '/' . $rel;
-            $dir  = dirname($dest);
-            if (!is_dir($dir)) {
-                mkdir($dir, 0755, true);
-            }
-            file_put_contents($dest, $content);
         }
 
         $zip->close();
@@ -178,6 +193,54 @@ class Updater
             'backup'              => basename($backupFile),
             'pending_migrations'  => array_map('basename', $pending),
         ];
+    }
+
+    /**
+     * Walk a directory under appRoot and return [absPath => relEntry] pairs
+     * for every file. Used by the backup pass for directory-prefix entries.
+     *
+     * @return iterable<string, string>
+     */
+    private function localFilesUnder(string $relDir): iterable
+    {
+        $base = rtrim($this->appRoot . '/' . rtrim($relDir, '/'), '/');
+        if (!is_dir($base)) {
+            return;
+        }
+        $iter = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($base, \FilesystemIterator::SKIP_DOTS),
+        );
+        $rootLen = strlen($this->appRoot) + 1;
+        foreach ($iter as $file) {
+            if (!$file->isFile()) continue;
+            $abs = $file->getPathname();
+            yield $abs => substr($abs, $rootLen);
+        }
+    }
+
+    /**
+     * Extract every ZIP entry under `$prefix . $relDir`. Mirrors the
+     * single-file write path: creates parent directories, overwrites in
+     * place. Skips directory entries (ZIP includes them as empty `…/`).
+     */
+    private function extractZipPrefix(\ZipArchive $zip, string $zipPrefix, string $relDir): void
+    {
+        $needle = $zipPrefix . $relDir;
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $entry = $zip->getNameIndex($i);
+            if ($entry === false || !str_starts_with($entry, $needle) || str_ends_with($entry, '/')) {
+                continue;
+            }
+            $rel     = substr($entry, strlen($zipPrefix));
+            $content = $zip->getFromName($entry);
+            if ($content === false) continue;
+            $dest = $this->appRoot . '/' . $rel;
+            $dir  = dirname($dest);
+            if (!is_dir($dir)) {
+                mkdir($dir, 0755, true);
+            }
+            file_put_contents($dest, $content);
+        }
     }
 
     /** @return list<string> */

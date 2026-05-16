@@ -94,11 +94,22 @@ export function useToastUiEditor({
         },
       },
     });
-    ed.on('change', () => onDirtyRef.current(true));
+    // Toast UI emits a `change` event during initial-value setup. If we
+    // attach the dirty-marking listener synchronously the editor is born
+    // already dirty — every post switch then triggers a phantom
+    // "Discard unsaved changes?" prompt on the next nav click. Defer
+    // attachment to the next macrotask so any init-time emissions have
+    // already fired by the time we start listening.
+    let aborted = false;
+    setTimeout(() => {
+      if (aborted) return;
+      ed.on('change', () => onDirtyRef.current(true));
+    }, 0);
     edRef.current = ed;
     initializedRef.current = true;
 
     return () => {
+      aborted = true;
       try { ed.destroy?.(); } catch { /* ignore */ }
       edRef.current = null;
       initializedRef.current = false;

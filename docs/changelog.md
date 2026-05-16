@@ -7,6 +7,11 @@ layout: default
 
 All notable changes to MD Framework are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.66] — 2026-05-16
+
+### Fixed
+- **Phantom "Discard unsaved changes?" prompt every time you switched posts** (regression introduced by 0.0.60's editor remount-per-post). Toast UI emits a `change` event during its initial-value setup; the dirty-marking listener was attached synchronously after construction, so the editor was born dirty and clicking another post in the sidebar tripped `confirmLeave()`. Listener attachment is now deferred one macrotask via `setTimeout(…, 0)` so any init-time emissions have already fired by the time we start listening. User edits are caught normally on the next event loop tick.
+
 ## [0.0.65] — 2026-05-16
 
 ### Changed
@@ -225,6 +230,7 @@ All notable changes to MD Framework are documented here. The format is based on 
 - Admin UI at `/admin/` with EasyMDE editor, image uploads, CSRF protection, bcrypt-hashed credentials in `.env`.
 - PHP template system with `render()` helper and `_layout.php` output-buffer pattern.
 
+[0.0.66]: https://github.com/krstivoja/mdframework/releases/tag/0.0.66
 [0.0.65]: https://github.com/krstivoja/mdframework/releases/tag/0.0.65
 [0.0.64]: https://github.com/krstivoja/mdframework/releases/tag/0.0.64
 [0.0.63]: https://github.com/krstivoja/mdframework/releases/tag/0.0.63
