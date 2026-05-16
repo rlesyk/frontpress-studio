@@ -91,7 +91,7 @@ class Updater
     /** @return array<string, mixed> */
     public function apply(string $zipUrl, string $backupDir): array
     {
-        if (!self::isAllowedZipUrl($zipUrl)) {
+        if (!static::isAllowedZipUrl($zipUrl)) {
             return ['ok' => false, 'error' => 'ZIP URL host not allowed'];
         }
 
