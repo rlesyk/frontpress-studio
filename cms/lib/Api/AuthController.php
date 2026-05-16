@@ -45,7 +45,7 @@ class AuthController
         if (!$ok) {
             // Don't reveal which field is wrong — prevents username enumeration
             // and matches the conversational form in Yifrah Ch. 7.
-            \json_response(['ok' => false, 'error' => "The username or password doesn't match. Try again, or check your .env credentials."], 401);
+            \json_response(['ok' => false, 'error' => "The username or password doesn't match. Try again, or check your config.php credentials."], 401);
         }
 
         session_regenerate_id(true);

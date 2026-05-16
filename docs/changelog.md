@@ -7,6 +7,14 @@ layout: default
 
 All notable changes to MD Framework are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.55] — 2026-05-16
+
+### Removed
+- **"Go to username" link in the login error panel.** The link existed to move focus into the username field on error, but the field already has `autoFocus`/`aria-invalid` and gets re-focused on the next tab press — the link added a visible UI element with no real navigational value. The error summary still announces the problem via `role="alert"`; only the dead link is gone, along with its `usernameRef` and `focusUsername` handler.
+
+### Fixed
+- **Login error message referenced the old `.env` file.** AuthController said "check your .env credentials" on a failed login, but `.env` no longer exists — it was replaced by `config.php` in 0.0.52. Message now reads "check your config.php credentials".
+
 ## [0.0.54] — 2026-05-16
 
 ### Fixed
@@ -162,6 +170,7 @@ All notable changes to MD Framework are documented here. The format is based on 
 - Admin UI at `/admin/` with EasyMDE editor, image uploads, CSRF protection, bcrypt-hashed credentials in `.env`.
 - PHP template system with `render()` helper and `_layout.php` output-buffer pattern.
 
+[0.0.55]: https://github.com/krstivoja/mdframework/releases/tag/0.0.55
 [0.0.54]: https://github.com/krstivoja/mdframework/releases/tag/0.0.54
 [0.0.53]: https://github.com/krstivoja/mdframework/releases/tag/0.0.53
 [0.0.52]: https://github.com/krstivoja/mdframework/releases/tag/0.0.52

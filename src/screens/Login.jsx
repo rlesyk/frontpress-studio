@@ -12,7 +12,6 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
-  const usernameRef = useRef(null);
   const summaryRef = useRef(null);
 
   // Reflect error state in <title> so screen-reader users (and tab-strip
@@ -52,11 +51,6 @@ export default function Login() {
     }
   }
 
-  function focusUsername(e) {
-    e.preventDefault();
-    usernameRef.current?.focus();
-  }
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-100 px-4">
       <form
@@ -81,22 +75,12 @@ export default function Login() {
           >
             <p className="font-semibold">There's a problem with your sign-in</p>
             <p className="mt-1 text-red-700">{error}</p>
-            <p className="mt-2">
-              <a
-                href="#login-username"
-                onClick={focusUsername}
-                className="font-medium underline decoration-red-300 underline-offset-2 hover:decoration-red-700"
-              >
-                Go to username
-              </a>
-            </p>
           </div>
         )}
 
         <Field label="Username">
           <Input
             id="login-username"
-            ref={usernameRef}
             autoFocus
             required
             autoComplete="username"
