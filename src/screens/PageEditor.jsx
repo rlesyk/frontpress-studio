@@ -222,6 +222,7 @@ export default function PageEditor() {
           <EditorModeToggle
             mode={editorMode === 'files' ? lastEditorSurfaceRef.current : editorMode}
             onChange={(next) => switchEditorMode(next, editorMode, edRef, htmlValue, setHtmlValue, setEditorMode)}
+            disabledValues={editorMode === 'files' ? ['html'] : []}
           />
           {!isNew && (
             <Button
@@ -237,6 +238,7 @@ export default function PageEditor() {
             <Button
               variant="secondary"
               size="sm"
+              className="ml-auto"
               onClick={() => {
                 const formatted = beautifyHtml(htmlValue || '', {
                   indent_size: 2,

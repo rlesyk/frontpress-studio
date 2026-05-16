@@ -7,6 +7,12 @@ layout: default
 
 All notable changes to MD Framework are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.64] — 2026-05-16
+
+### Changed
+- **Format button now sits on the right of the editor toolbar** (still HTML-mode-only), with the Files button kept on the left alongside the editor-surface segmented control. `ml-auto` on the Button pushes it to the far edge regardless of how many siblings are present.
+- **HTML option in the editor toggle is disabled while Files view is active.** Entering HTML mode re-seeds the textarea from Toast UI's current state, which is misleading when the user was just looking at the file grid. The segmented control greys out the HTML segment until the user picks WYSIWYG or Markdown (or clicks Files again to return). `SegmentedControl` gained a per-option `disabled` flag for this.
+
 ## [0.0.63] — 2026-05-16
 
 ### Changed
@@ -214,6 +220,7 @@ All notable changes to MD Framework are documented here. The format is based on 
 - Admin UI at `/admin/` with EasyMDE editor, image uploads, CSRF protection, bcrypt-hashed credentials in `.env`.
 - PHP template system with `render()` helper and `_layout.php` output-buffer pattern.
 
+[0.0.64]: https://github.com/krstivoja/mdframework/releases/tag/0.0.64
 [0.0.63]: https://github.com/krstivoja/mdframework/releases/tag/0.0.63
 [0.0.62]: https://github.com/krstivoja/mdframework/releases/tag/0.0.62
 [0.0.61]: https://github.com/krstivoja/mdframework/releases/tag/0.0.61
