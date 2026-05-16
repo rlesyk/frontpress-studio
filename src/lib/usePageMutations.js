@@ -26,6 +26,7 @@ export function usePageMutations({
   edRef,
   htmlValue,
   setDirty,
+  blocks,
 }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
@@ -78,8 +79,16 @@ export function usePageMutations({
       const relPath = [folder, slug].filter(Boolean).join('/');
       // `path` is the *target* — for an update it doubles as the rename
       // request when it differs from the URL path; for a create it's the
-      // location to write to.
+      // location to write to. When the editor is in Blocks mode we send
+      // `mode: 'blocks'` + the tree so PagesController persists them into
+      // front matter; otherwise the page falls back to markdown.
       const payload = { title, body, status, template, taxonomies: taxValues, path: relPath };
+      if (editorMode === 'blocks') {
+        payload.mode   = 'blocks';
+        payload.blocks = blocks || [];
+      } else {
+        payload.mode = '';
+      }
       if (isNew) {
         return api.post('/pages', payload);
       }
