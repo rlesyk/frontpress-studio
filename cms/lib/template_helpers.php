@@ -52,15 +52,18 @@ if (!function_exists('partial')) {
         }
         $dir = $GLOBALS['fp_template_dir'];
         $candidates = [
-            ["components/{$name}.php",  'php'],
-            ["components/{$name}.twig", 'twig'],
-            ["components/{$name}.html", 'html'],
-            ["_{$name}.php",            'php'],
-            ["{$name}.php",             'php'],
-            ["_{$name}.twig",           'twig'],
-            ["{$name}.twig",            'twig'],
-            ["_{$name}.html",           'html'],
-            ["{$name}.html",            'html'],
+            ["components/{$name}.php",     'php'],
+            ["components/{$name}.twig",    'twig'],
+            ["components/{$name}.html",    'html'],
+            ["components/{$name}.fp.json", 'blocks'],
+            ["_{$name}.php",               'php'],
+            ["{$name}.php",                'php'],
+            ["_{$name}.twig",              'twig'],
+            ["{$name}.twig",               'twig'],
+            ["_{$name}.html",              'html'],
+            ["{$name}.html",               'html'],
+            ["_{$name}.fp.json",           'blocks'],
+            ["{$name}.fp.json",            'blocks'],
         ];
         foreach ($candidates as [$rel, $kind]) {
             $path = "$dir/$rel";
@@ -69,6 +72,14 @@ if (!function_exists('partial')) {
                 FrontPress\TemplateRenderer::instance()->render($rel, $vars);
             } elseif ($kind === 'html') {
                 readfile($path);
+            } elseif ($kind === 'blocks') {
+                // Visual-builder template: parse JSON tree + run through
+                // BlockRenderer with the host page's meta in scope.
+                $json = json_decode((string)file_get_contents($path), true);
+                $blocks = is_array($json['blocks'] ?? null) ? $json['blocks'] : [];
+                $page   = is_array($vars['meta'] ?? null) ? $vars['meta'] : [];
+                $registry = new FrontPress\BlockRegistry(dirname(__DIR__) . '/blocks');
+                echo (new FrontPress\BlockRenderer($registry))->render($blocks, $page);
             } else {
                 extract($vars, EXTR_SKIP);
                 require $path;
