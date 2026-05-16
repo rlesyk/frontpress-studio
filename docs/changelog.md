@@ -7,6 +7,11 @@ layout: default
 
 All notable changes to FrontPress Studio are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.68] — 2026-05-17
+
+### Added
+- **Visual / Code toggle on the `.fp.json` editor pane.** The block builder and a raw JSON CodeMirror view now share the same buffer — edit a block in the visual inspector, flip to Code to tweak something the inspector doesn't expose, flip back. Invalid JSON pins the view to Code (the Visual segment greys out) and surfaces a warning instead of silently handing the composer an empty tree. Cmd/Ctrl + S saves from either view. `VisualBlocksPane` moved out of `screens/ThemeEditor.jsx` into its own component under `components/ThemeEditor/` to stay within the 300-line budget.
+
 ## [0.0.67] — 2026-05-17
 
 ### Added

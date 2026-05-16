@@ -6,7 +6,7 @@ import { Button } from '../components/ui/index.js';
 import FileTree from '../components/ThemeEditor/FileTree.jsx';
 import EditorPane from '../components/ThemeEditor/EditorPane.jsx';
 import PreviewPane from '../components/ThemeEditor/PreviewPane.jsx';
-import BlockComposer from '../components/BlockComposer/index.jsx';
+import VisualBlocksPane from '../components/ThemeEditor/VisualBlocksPane.jsx';
 
 // GrapesJS pulls in a 15MB dependency tree — only load it when the user
 // opens a `.html` file. Twig / PHP / CSS workflows never pay for it.
@@ -225,57 +225,3 @@ export default function ThemeEditor() {
   );
 }
 
-// Wrapper that translates between the BlockComposer's tree-state and the
-// JSON string the file buffer carries on disk. Save flow: parse buffer →
-// hand tree to composer → composer emits new tree → re-stringify into the
-// buffer. Save button writes the buffer string to disk.
-function VisualBlocksPane({ currentPath, buffer, saved, loading, saving, error, onChange, onSave }) {
-  const tree = useMemo(() => parseTree(buffer), [buffer]);
-
-  const handleTreeChange = useCallback((next) => {
-    onChange(JSON.stringify({ blocks: next }, null, 2));
-  }, [onChange]);
-
-  const dirty = buffer !== saved;
-
-  if (loading) {
-    return <div className="p-6 text-sm text-zinc-500">Loading {currentPath}…</div>;
-  }
-
-  return (
-    <div className="flex min-h-0 flex-col">
-      <div className="flex items-center justify-between gap-3 border-b border-zinc-200 bg-zinc-50 px-4 py-2">
-        <div className="flex items-center gap-2 truncate">
-          <code className="truncate font-mono text-[12px] text-zinc-800">{currentPath}</code>
-          <span className="rounded bg-zinc-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-700">Visual</span>
-          {dirty && <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800">Unsaved</span>}
-        </div>
-        <Button onClick={onSave} disabled={!dirty || saving}>
-          {saving ? 'Saving…' : 'Save (⌘S)'}
-        </Button>
-      </div>
-      {error && (
-        <div className="border-b border-red-100 bg-red-50 px-4 py-2 text-[13px] text-red-700">
-          {error}
-        </div>
-      )}
-      <div className="min-h-0 flex-1">
-        <BlockComposer
-          tree={tree}
-          onChange={handleTreeChange}
-          pageMeta={{}}
-        />
-      </div>
-    </div>
-  );
-}
-
-function parseTree(buffer) {
-  if (!buffer) return [];
-  try {
-    const json = JSON.parse(buffer);
-    return Array.isArray(json?.blocks) ? json.blocks : [];
-  } catch {
-    return [];
-  }
-}
