@@ -1,7 +1,6 @@
 import { publicUrl } from '../lib/utils.js';
 import { Button, Field, Input, SegmentedControl, Select } from './ui/index.js';
 import FeaturedImageField from './FeaturedImageField.jsx';
-import FilesPanel from './FilesPanel.jsx';
 import PageFields from './PageFields.jsx';
 
 /**
@@ -124,12 +123,6 @@ export default function PageEditorSidebar({
             ))}
           </Select>
         </Field>
-
-        {!isNew && (
-          <Field label="Files">
-            <FilesPanel pagePath={path} />
-          </Field>
-        )}
 
         {!isNew && (
           // Soft delete: clicking Delete trashes the page and surfaces an

@@ -12,6 +12,7 @@ import { useToastUiEditor } from '../lib/useToastUiEditor.js';
 import CodeEditor from '../components/CodeEditor.jsx';
 import EditorImageMenu from '../components/EditorImageMenu.jsx';
 import EditorModeToggle, { switchEditorMode } from '../components/EditorModeToggle.jsx';
+import FilesPanel from '../components/FilesPanel.jsx';
 import MediaPicker from '../components/MediaPicker.jsx';
 import PageEditorSidebar from '../components/PageEditorSidebar.jsx';
 
@@ -58,8 +59,18 @@ export default function PageEditor() {
     }
   });
   useEffect(() => {
+    // Files is a transient surface (per-post), not a preferred editing
+    // mode — don't persist it so refreshing the page or opening a new
+    // post lands the user back in their actual editor of choice.
+    if (editorMode === 'files') return;
     try { localStorage.setItem('mdframework:editor-mode', editorMode); } catch { /* private mode etc. */ }
   }, [editorMode]);
+
+  // /new/* has no folder yet → Files tab would render an empty grid +
+  // useless upload box. Force the toggle back to an editor surface.
+  useEffect(() => {
+    if (isNew && editorMode === 'files') setEditorMode('wysiwyg');
+  }, [isNew, editorMode]);
   const [htmlValue, setHtmlValue] = useState('');
 
   // Media picker — opened from the editor's toolbar Image button (Toast UI's
@@ -202,6 +213,7 @@ export default function PageEditor() {
           <EditorModeToggle
             mode={editorMode}
             onChange={(next) => switchEditorMode(next, editorMode, edRef, htmlValue, setHtmlValue, setEditorMode)}
+            withFiles={!isNew}
           />
           {editorMode === 'html' && (
             <Button
@@ -227,11 +239,12 @@ export default function PageEditor() {
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-zinc-200 bg-white">
           {/* Toast UI surface stays mounted in every mode so its internal
               markdown/HTML state survives mode switches. We just hide it
-              with display: none when the user is editing raw HTML. */}
+              with display: none when the user is on a non-editor surface
+              (raw HTML or the Files grid). */}
           <div
             ref={editorElRef}
             className="min-h-0 flex-1"
-            style={{ display: editorMode === 'html' ? 'none' : 'flex' }}
+            style={{ display: (editorMode === 'html' || editorMode === 'files') ? 'none' : 'flex' }}
           />
           {editorMode === 'html' && (
             <CodeEditor
@@ -239,6 +252,11 @@ export default function PageEditor() {
               onChange={(next) => { setHtmlValue(next); setDirty(true); }}
               className="min-h-0 flex-1"
             />
+          )}
+          {editorMode === 'files' && (
+            <div className="min-h-0 flex-1 overflow-y-auto p-4">
+              <FilesPanel pagePath={path} />
+            </div>
           )}
         </div>
       </section>

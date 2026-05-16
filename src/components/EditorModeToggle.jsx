@@ -4,17 +4,26 @@ import { SegmentedControl } from './ui/index.js';
 // Editor view selector. Toast UI's own bottom-right switcher is hidden via
 // `hideModeSwitch: true`; this is the single source of truth for which
 // surface the user is editing in.
-export default function EditorModeToggle({ mode, onChange }) {
+//
+// `withFiles=true` appends a "Files" tab that the parent renders as the
+// per-post attachments grid in place of an editor surface — handy for
+// dragging in / managing the post's images without being stuck in the
+// sidebar's narrow column. Hidden on /new/* (no path = no folder yet).
+export default function EditorModeToggle({ mode, onChange, withFiles = false }) {
+  const options = [
+    { value: 'wysiwyg',  label: 'WYSIWYG'  },
+    { value: 'markdown', label: 'Markdown' },
+    { value: 'html',     label: 'HTML'     },
+  ];
+  if (withFiles) {
+    options.push({ value: 'files', label: 'Files' });
+  }
   return (
     <SegmentedControl
       ariaLabel="Editor mode"
       value={mode}
       onChange={onChange}
-      options={[
-        { value: 'wysiwyg',  label: 'WYSIWYG'  },
-        { value: 'markdown', label: 'Markdown' },
-        { value: 'html',     label: 'HTML'     },
-      ]}
+      options={options}
     />
   );
 }
@@ -39,7 +48,10 @@ export function switchEditorMode(next, current, edRef, htmlValue, setHtmlValue, 
     try { ed.setHTML(htmlValue); } catch { /* ignore */ }
   }
 
-  if (next === 'html') {
+  if (next === 'files') {
+    // Files view is a sibling surface, not an editor mode. No Toast UI
+    // call needed — the parent hides the editor and shows FilesPanel.
+  } else if (next === 'html') {
     // Entering HTML view → seed the editor from Toast UI's current HTML,
     // pretty-printed via js-beautify. Toast UI emits everything on one line,
     // which is unreadable for anything past a paragraph or two.

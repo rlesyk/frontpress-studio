@@ -69,7 +69,14 @@ export default function FilesPanel({ pagePath }) {
           No files yet — drop images below to attach them to this post.
         </p>
       ) : (
-        <ul role="list" className="grid list-none grid-cols-3 gap-2">
+        // auto-fill keeps tiles ~120px wide regardless of container width.
+        // In a narrow column the grid renders 2-3 columns; in the main
+        // editor area it fans out to as many as fit. One layout, both places.
+        <ul
+          role="list"
+          className="grid list-none gap-2"
+          style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))' }}
+        >
           {files.map((f) => (
             <li
               key={f.name + (f.url || '')}

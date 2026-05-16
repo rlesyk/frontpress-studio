@@ -7,6 +7,12 @@ layout: default
 
 All notable changes to MD Framework are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.62] — 2026-05-16
+
+### Changed
+- **Per-post Files panel moved from the editor sidebar to the main editor area.** The post-attachments grid was in a narrow sidebar column where each tile was ~80px wide and only three fit per row. There's now a fourth tab in the editor surface toggle — **WYSIWYG / Markdown / HTML / Files** — that hands the whole main pane over to the attachments grid when selected. Same dropzone, same delete-on-hover tile, same backing API; just a much bigger canvas to drag images into and browse them. The grid uses `auto-fill, minmax(120px, 1fr)` so the same component still gives a sensible 2–3-column layout in any narrow context that might use it elsewhere.
+- The "Files" tab is hidden on `/new/*` (no folder until the post is saved). Switching to Files is also non-persistent — refreshing or opening a different post returns you to your last editing surface (WYSIWYG / Markdown / HTML) rather than dumping you on the file grid.
+
 ## [0.0.61] — 2026-05-16
 
 ### Fixed
@@ -202,6 +208,7 @@ All notable changes to MD Framework are documented here. The format is based on 
 - Admin UI at `/admin/` with EasyMDE editor, image uploads, CSRF protection, bcrypt-hashed credentials in `.env`.
 - PHP template system with `render()` helper and `_layout.php` output-buffer pattern.
 
+[0.0.62]: https://github.com/krstivoja/mdframework/releases/tag/0.0.62
 [0.0.61]: https://github.com/krstivoja/mdframework/releases/tag/0.0.61
 [0.0.60]: https://github.com/krstivoja/mdframework/releases/tag/0.0.60
 [0.0.59]: https://github.com/krstivoja/mdframework/releases/tag/0.0.59
