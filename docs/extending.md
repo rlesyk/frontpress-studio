@@ -37,7 +37,7 @@ Then create `site/themes/<active>/templates/landing.twig` (or `landing.php`). Th
 **Per-folder.** Conventionally, all posts in `content/products/*.md` get rendered through the active theme's `post.twig`. To diverge, either:
 
 1. Set `template:` on each post in that folder, or
-2. Customise the public renderer at `public/index.php` to switch on `$route['folder']` before calling `render()`.
+2. Customise the public renderer at `index.php` to switch on `$route['folder']` before calling `render()`.
 
 The first option is normal usage; the second is for forks.
 

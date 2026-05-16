@@ -13,7 +13,8 @@ class ThemeService
     public function __construct(string $appRoot, Config $config)
     {
         $this->themesDir = $appRoot . '/site/themes';
-        $this->publicDir = $appRoot . '/public';
+        // The framework root IS the webroot; `assets` is symlinked here.
+        $this->publicDir = $appRoot;
         $this->config    = $config;
     }
 
@@ -124,12 +125,11 @@ class ThemeService
     }
 
     /**
-     * Ensure `public/assets` is a symlink to the active theme's assets dir.
+     * Ensure `<webroot>/assets` is a symlink to the active theme's assets dir.
      * Idempotent and cheap — a couple of stat() calls when the link is
      * already correct. Called from bootstrap.php on every public-site
-     * request so a fresh install (where `public/assets` was dereferenced
-     * by `unzip` into a real directory of stale files) self-heals on the
-     * first hit.
+     * request so a fresh install (where `assets` was dereferenced by `unzip`
+     * into a real directory of stale files) self-heals on the first hit.
      *
      * Returns true when the link is correct on exit, false if the host
      * disallows symlinks or the active theme has no assets directory.
@@ -138,7 +138,7 @@ class ThemeService
     {
         $slug   = $this->active();
         $link   = $this->publicDir . '/assets';
-        $target = '../site/themes/' . $slug . '/assets';
+        $target = 'site/themes/' . $slug . '/assets';
 
         // Active theme has no assets dir — nothing to link.
         if (!is_dir($this->themesDir . '/' . $slug . '/assets')) {
@@ -229,7 +229,7 @@ class ThemeService
     }
 
     /**
-     * Swap public/assets to point at the given theme's assets.
+     * Swap `<webroot>/assets` to point at the given theme's assets.
      *
      * Returns ok=false when the filesystem refuses the swap (restricted host,
      * no symlink privilege on Windows, permission denied). On failure, any
@@ -241,7 +241,7 @@ class ThemeService
     private function relinkAssets(string $slug): array
     {
         $link   = $this->publicDir . '/assets';
-        $target = '../site/themes/' . $slug . '/assets';
+        $target = 'site/themes/' . $slug . '/assets';
 
         $assetsDir = $this->themesDir . '/' . $slug . '/assets';
         if (!is_dir($assetsDir) && !@mkdir($assetsDir, 0755, true) && !is_dir($assetsDir)) {

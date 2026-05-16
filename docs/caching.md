@@ -20,7 +20,7 @@ Three caches live under `app/site/cache/`:
 | Post index | `site/cache/index.json` | Compiled list of every post (slug, folder, URL, dates, tags, categories, full meta) — backs `posts()`, archives, taxonomy archives, feeds, sitemap | `cache/index.mtime` marker is newer than `index.json` |
 | Twig compiled templates | `site/cache/twig/` | PHP code Twig emits from `.twig` files | Source `.twig` file edited (`auto_reload: true`) |
 
-There is **no** full-page response cache — every request still runs through `public/index.php`. Caching only skips the expensive bits: parsing Markdown and walking the content tree.
+There is **no** full-page response cache — every request still runs through `index.php`. Caching only skips the expensive bits: parsing Markdown and walking the content tree.
 
 ## How invalidation works
 

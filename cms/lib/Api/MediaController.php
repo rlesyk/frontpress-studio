@@ -55,7 +55,7 @@ class MediaController
 
         // Per-post images live next to the post's .md file under
         // `site/content/<pagePath>/`. The browser still fetches them at
-        // `/uploads/<pagePath>/<file>` — the route in `public/index.php`
+        // `/uploads/<pagePath>/<file>` — the route in `index.php`
         // resolves that URL back to the content dir on disk.
         $pagePath = trim((string)($_GET['page_path'] ?? ''), '/');
         if ($pagePath !== '' && $paths->isValidRelPath($pagePath)) {

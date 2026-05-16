@@ -93,7 +93,7 @@ class PathResolver
      *   - **Per-post** (`$pagePath = "blog/hello-world"`): files land next
      *     to the post's `.md` file in `site/content/blog/hello-world/`.
      *     Public URL stays under `/uploads/<pagePath>/<file>`; the
-     *     `/uploads/*` route in `public/index.php` resolves it back to the
+     *     `/uploads/*` route in `index.php` resolves it back to the
      *     content dir on disk.
      *   - **Global** (no pagePath): files land directly in `site/uploads/`,
      *     served at `/uploads/<file>`.

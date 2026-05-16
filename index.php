@@ -4,7 +4,7 @@ declare(strict_types=1);
 session_set_cookie_params(['lifetime' => 0, 'path' => '/', 'httponly' => true, 'samesite' => 'Strict']);
 session_start();
 
-require __DIR__ . '/../bootstrap.php';
+require __DIR__ . '/bootstrap.php';
 
 $GLOBALS['admin_logged_in'] = !empty($_SESSION['admin_user']);
 $GLOBALS['admin_edit_path'] = null;

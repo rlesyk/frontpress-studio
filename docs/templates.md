@@ -75,7 +75,7 @@ Plus three globals defined in `bootstrap.php`:
 | Helper | Purpose |
 |--------|---------|
 | `posts(array $args = [])` | Query the post index. See [posts() API](#posts-api). |
-| `render(string $template, array $vars = [])` | Render a named template (PHP wins, Twig fallback). Used by `public/index.php` to dispatch routes. |
+| `render(string $template, array $vars = [])` | Render a named template (PHP wins, Twig fallback). Used by `index.php` to dispatch routes. |
 | `not_found(?string $url = null)` | Send a 404 + render the active theme's `404` template. |
 | `csrf_token()` | Current session's CSRF token. |
 
@@ -94,7 +94,7 @@ Convention: prefix shared layout chunks with `_` (`_header`, `_footer`, `_nav`).
 
 ## Variables per route
 
-Each route in `public/index.php` calls `render($template, $vars)` with a different shape:
+Each route in `index.php` calls `render($template, $vars)` with a different shape:
 
 ### `post` / `page`
 For URLs like `/blog/my-post` and `/about`.
@@ -247,7 +247,7 @@ The admin's editor sidebar exposes the same choice as a **Template** dropdown â€
 
 ## Theme assets
 
-`site/themes/<active>/assets/` is symlinked into `public/assets/` on theme activation. Reference files via `asset_url()`:
+`site/themes/<active>/assets/` is symlinked into the webroot as `assets/` on theme activation, so the browser can fetch them directly. Reference files via `asset_url()`:
 
 ```twig
 <link rel="stylesheet" href="{{ asset_url('style.css') }}">

@@ -19,7 +19,6 @@ class ThemeServiceTest extends TestCase
         mkdir($this->appRoot . '/site/themes/default/assets', 0755, true);
         mkdir($this->appRoot . '/site/themes/fancy/templates', 0755, true);
         mkdir($this->appRoot . '/site/themes/fancy/assets', 0755, true);
-        mkdir($this->appRoot . '/public', 0755, true);
 
         file_put_contents(
             $this->appRoot . '/site/config.json',
@@ -55,7 +54,7 @@ class ThemeServiceTest extends TestCase
         $result = $this->svc->activate('fancy');
         $this->assertTrue($result['ok']);
         $this->assertSame('fancy', $this->svc->active());
-        $this->assertTrue(is_link($this->appRoot . '/public/assets'));
+        $this->assertTrue(is_link($this->appRoot . '/assets'));
     }
 
     public function testActivateRejectsMissingTheme(): void
@@ -67,16 +66,16 @@ class ThemeServiceTest extends TestCase
 
     public function testActivateLeavesConfigUntouchedWhenRelinkFails(): void
     {
-        // Make public/ read-only so symlink() fails; config must not change.
-        $publicDir = $this->appRoot . '/public';
+        // Make the webroot read-only so symlink() fails; config must not change.
+        $webroot = $this->appRoot;
         // Pre-create a link to 'default' so "fancy" would be the switch target.
-        symlink('../site/themes/default/assets', $publicDir . '/assets');
+        symlink('site/themes/default/assets', $webroot . '/assets');
 
-        chmod($publicDir, 0500);
+        chmod($webroot, 0500);
         try {
             $result = $this->svc->activate('fancy');
         } finally {
-            chmod($publicDir, 0755);
+            chmod($webroot, 0755);
         }
 
         $this->assertFalse($result['ok'], 'relink failure must surface as ok=false');

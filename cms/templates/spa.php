@@ -1,8 +1,9 @@
 <?php
 /** @var string $cmsRoot */
-$srcRoot       = dirname(__DIR__, 2) . '/src';
-$publicCmsRoot = dirname(__DIR__, 2) . '/public/cms';
-$vite          = new MD\Vite($srcRoot, $publicCmsRoot);
+$appRoot         = dirname(__DIR__, 2);
+$srcRoot         = $appRoot . '/src';
+$adminAssetsRoot = $appRoot . '/admin-assets';
+$vite            = new MD\Vite($srcRoot, $adminAssetsRoot);
 ?><!DOCTYPE html>
 <html lang="en">
 <head>

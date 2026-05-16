@@ -37,9 +37,9 @@ function phpHotFile() {
 
 export default defineConfig(({ command }) => ({
   plugins: [react(), tailwindcss(), phpHotFile()],
-  base: command === 'build' ? '/cms/dist/' : '/',
+  base: command === 'build' ? '/admin-assets/' : '/',
   build: {
-    outDir: path.resolve(__dirname, '../public/cms/dist'),
+    outDir: path.resolve(__dirname, '../admin-assets'),
     emptyOutDir: true,
     manifest: true,
     rollupOptions: {

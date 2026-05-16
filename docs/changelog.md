@@ -9,6 +9,9 @@ All notable changes to MD Framework are documented here. The format is based on 
 
 ## [Unreleased]
 
+### Changed
+- **Flat install layout: unzip directly into the webroot, WordPress-style.** Removed the `app/public/` subdirectory — `index.php`, `admin.php`, `router.php`, and `.htaccess` now sit at the framework root alongside `bootstrap.php`, `cms/`, and `site/`, mirroring how `wp-config.php` lives next to `wp-load.php`. Sensitive prefixes (`cms/`, `site/`, `src/`, `docs/`, `sql/`, `.env`, `bootstrap.php`, `composer.json`) are denied at the HTTP layer by `.htaccess` (`RedirectMatch 404`). Vite output moved from `public/cms/dist/` to `admin-assets/` so the entire `cms/` prefix can be blocked with one rule. `ThemeService::ensureAssetsLink()` now creates `assets → site/themes/<active>/assets` at the webroot instead of inside `public/`. **Dev migration:** point Local Sites' document root at `app/` instead of `app/public/`.
+
 ### Documentation
 - Rewrote **SCSS auto-compile** section in `templates.md`. Now covers (1) the engine — `scssphp/scssphp` v2.x, pure PHP, no Node, with a note about limited `@use` / `@forward` support; (2) the two layout conventions the compiler scans (flat `assets/style.scss` → `assets/style.css` *and* nested `assets/scss/style.scss` → `assets/css/style.css`) — the nested layout was supported in code but never documented; (3) corrected stale claims that admin requests trigger compile (only public-site does); (4) the `APP_ENV=dev` gate is now front-and-center with explicit production deploy guidance; (5) where compile errors land (PHP error log, never crash the request).
 

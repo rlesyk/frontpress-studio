@@ -10,19 +10,36 @@ Ultralight flat-file CMS built in PHP. No database. Content is Markdown files on
 ## Requirements
 
 - PHP 8.1+
-- Apache with `mod_rewrite`
-- Composer
+- Apache with `mod_rewrite` (or nginx with the equivalent rewrites)
+- Composer (for source installs)
 
 ## Installation
+
+### Shared hosting — unzip into your domain folder
+
+Download `mdframework-<version>.zip` from the [GitHub Releases](https://github.com/krstivoja/mdframework/releases) page and unzip its contents directly into your site's document root (the folder your domain points at — for example `htdocs/example.com/` or `public_html/`). It should sit alongside any existing files the way WordPress lives next to `wp-config.php`:
+
+```
+public_html/
+├── .htaccess
+├── index.php
+├── admin.php
+├── bootstrap.php
+├── cms/
+├── admin-assets/
+└── site/
+```
+
+Copy `.env.example` to `.env`, edit it to set your admin credentials, and visit `/admin` in your browser.
+
+### Source install (development)
 
 ```bash
 git clone https://github.com/krstivoja/mdframework.git
 cd mdframework/app
-composer install
+composer install --working-dir=cms
 cp .env.example .env
 ```
-
-Edit `.env` and set your admin credentials (see [Admin]({{ '/admin' | relative_url }}) for details).
 
 The admin UI is a React app built with Vite. To work on it locally:
 
@@ -30,26 +47,28 @@ The admin UI is a React app built with Vite. To work on it locally:
 cd src
 npm install
 npm run dev    # HMR on localhost:5173 — visit /admin/ on your PHP host
-npm run build  # production assets to public/cms/dist/
+npm run build  # production assets to ../admin-assets/
 ```
 
-Production deployments need the prebuilt `public/cms/dist/` directory present; either run `npm run build` before deploy or commit the built assets.
+Production deployments need the prebuilt `admin-assets/` directory present; the release zip ships it pre-built, so this only matters for source installs.
 
 ## Directory structure
 
+The framework root (`app/` in the source tree, your domain folder for a release unzip) is also the document root. Sensitive prefixes (`cms/`, `site/`, `bootstrap.php`, `.env`) are blocked at the HTTP layer by `.htaccess`, the same way WordPress protects `wp-config.php` while sitting next to `index.php`.
+
 ```
-app/
+app/                          # ← also the web root (DocumentRoot)
+├── .htaccess                 # Front controller + deny rules for private paths
+├── index.php                 # Public front controller
+├── admin.php                 # Admin SPA shell (HTTP layer)
+├── router.php                # PHP -S dev router (mirrors .htaccess)
 ├── bootstrap.php             # Autoloader, shared globals, render() / posts() helpers
-├── .env                      # Git-ignored — admin credentials
+├── .env                      # Git-ignored — admin credentials (DENIED via .htaccess)
 ├── .env.example
+├── assets/                   # Symlink → site/themes/<active>/assets
+├── admin-assets/             # Built admin SPA bundle (Vite manifest + hashed assets)
 │
-├── public/                   # Web root — point your DocumentRoot here
-│   ├── index.php             # Public front controller
-│   ├── admin.php             # Admin SPA shell
-│   ├── assets/               # Symlinked → site/themes/<active>/assets
-│   └── cms/dist/             # Built admin SPA bundle (Vite manifest + hashed assets)
-│
-├── cms/                      # Framework code + admin app + starter assets
+├── cms/                      # Framework code + admin app + starter assets (DENIED)
 │   ├── composer.json
 │   ├── lib/                  # Core PHP (namespace MD\)
 │   │   ├── Bootstrap.php     # First-run /site seeding from cms/starters/

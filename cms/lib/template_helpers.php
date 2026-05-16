@@ -69,7 +69,7 @@ if (!function_exists('partial')) {
 if (!function_exists('asset_url')) {
     /**
      * URL for a file under the active theme's `assets/` directory. The active
-     * theme's assets are symlinked into `public/assets/` by ThemeService.
+     * theme's assets are symlinked into the webroot as `assets/` by ThemeService.
      */
     function asset_url(string $path): string
     {

@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-$appRoot = dirname(__DIR__);
-$cmsRoot = dirname(__DIR__) . '/cms';
+$appRoot = __DIR__;
+$cmsRoot = __DIR__ . '/cms';
 require_once $cmsRoot . '/vendor/autoload.php';
 require_once $cmsRoot . '/lib/template_helpers.php';
 

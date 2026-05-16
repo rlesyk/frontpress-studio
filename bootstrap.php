@@ -38,11 +38,11 @@ $themes       = new MD\ThemeService($ROOT, $config);
 $TEMPLATE_DIR = $themes->templateDir();
 $GLOBALS['md_themes'] = $themes;
 
-// Ensure public/assets is symlinked to the active theme's assets dir. The
-// release-zip pipeline dereferences symlinks, so a fresh unzipped install
-// has a real public/assets/ directory with a stale snapshot — edits to
-// site/themes/<active>/assets don't take effect. Self-heal on first
-// public-site request. No-op when already correctly linked.
+// Ensure `<webroot>/assets` is symlinked to the active theme's assets dir.
+// The release-zip pipeline dereferences symlinks, so a fresh unzipped
+// install may end up with a real `assets/` directory full of stale files —
+// edits to site/themes/<active>/assets wouldn't take effect. Self-heal on
+// first public-site request. No-op when already correctly linked.
 $themes->ensureAssetsLink();
 
 // Auto-compile the active theme's SCSS in development. Even though the

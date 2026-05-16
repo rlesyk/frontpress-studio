@@ -6,7 +6,7 @@
 # while keeping vendor/ and the built admin SPA.
 
 # ──────────────────────────────────────────────────────────────────
-# Source code that's compiled into public/cms/dist/
+# Source code that's compiled into admin-assets/
 #
 # Patterns that match basenames anywhere in the tree (no leading `/`)
 # are dangerous: `src/` would also exclude `cms/vendor/twig/twig/src/`.

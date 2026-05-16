@@ -2,9 +2,10 @@
   "repo": "your-username/mdframework",
   "core": [
     "bootstrap.php",
-    "public/.htaccess",
-    "public/admin.php",
-    "public/index.php",
+    ".htaccess",
+    "admin.php",
+    "index.php",
+    "router.php",
     "cms/lib/Api/AuthController.php",
     "cms/lib/Api/BackupController.php",
     "cms/lib/Api/MediaController.php",

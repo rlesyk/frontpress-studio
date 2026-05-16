@@ -69,7 +69,7 @@ jobs:
             ./ "${OUT}/"
 
           # -y preserves symlinks (default zip behavior dereferences them,
-          # turning public/assets -> site/themes/blank/assets into a real
+          # turning assets -> site/themes/blank/assets into a real
           # directory of stale files). Modern unzip on macOS/Linux extracts
           # the link correctly. Windows users will see a regular file
           # containing the link target — bootstrap.php's

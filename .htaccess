@@ -1,0 +1,44 @@
+# mdframework — Apache rules for unzip-into-webroot deployments.
+#
+# The framework's PHP, content, cache, and tooling all live in the same
+# directory as the public entry points (just like WordPress's wp-config.php
+# next to index.php). These RedirectMatch rules turn the private prefixes
+# into HTTP 404s so nothing inside leaks even though the files exist on disk.
+
+# Required so the `assets` symlink → `site/themes/<active>/assets` resolves.
+Options +FollowSymLinks -Indexes
+
+# ── Deny direct access to framework internals ────────────────────────────────
+RedirectMatch 404 /\.env(\..*)?$
+RedirectMatch 404 /\.gitignore$
+RedirectMatch 404 /\.distignore$
+RedirectMatch 404 /\.htaccess$
+RedirectMatch 404 /bootstrap\.php$
+RedirectMatch 404 /router\.php$
+RedirectMatch 404 /phpstan(-baseline)?\.neon$
+RedirectMatch 404 /composer\.(json|lock)$
+RedirectMatch 404 ^/cms(/.*)?$
+RedirectMatch 404 ^/site(/.*)?$
+RedirectMatch 404 ^/src(/.*)?$
+RedirectMatch 404 ^/docs(/.*)?$
+RedirectMatch 404 ^/sql(/.*)?$
+
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteBase /
+
+# ── Belt-and-braces: block PHP execution inside any uploads tree ─────────────
+# (`/uploads/<rest>` URLs are handled by index.php's image proxy; this rule
+# only matters if a host serves `/site/uploads/x.php` despite the deny above.)
+RewriteRule ^site/uploads/.*\.(php[0-9]?|phtml|phar)$ - [F,L,NC]
+
+# ── Admin routes -> admin.php ────────────────────────────────────────────────
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^admin(/.*)?$ admin.php [L,QSA]
+
+# ── Frontend routes -> index.php ─────────────────────────────────────────────
+RewriteRule ^index\.php$ - [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /index.php [L]
+</IfModule>

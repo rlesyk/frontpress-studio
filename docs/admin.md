@@ -95,7 +95,7 @@ The admin is a React single-page application served from a thin PHP shell.
 
 | Layer | Stack |
 |-------|-------|
-| SPA shell | `app/public/admin.php` → `app/cms/templates/spa.php` (static HTML + Vite tags) |
+| SPA shell | `app/admin.php` → `app/cms/templates/spa.php` (static HTML + Vite tags) |
 | Frontend | React 18, React Router 6, TanStack Query, Tailwind CSS v4, Vite 5 |
 | Editor | Toast UI Editor v3 — markdown-native, WYSIWYG + markdown source modes (no HTML round-trip) |
 | Backend API | `MD\Api\Router` dispatches `/admin/api/*` to controllers under `app/cms/lib/Api/` |
@@ -166,10 +166,10 @@ npm run dev    # Vite dev server on :5173 with HMR
 Then load `http://<your-host>/admin/` in a browser. The PHP shell auto-detects the dev server (via the `app/src/.vite-hot` file Vite writes on listen) and injects script tags pointing to `localhost:5173`. React Fast Refresh + Tailwind hot-reload work without reload.
 
 ```bash
-npm run build  # Outputs hashed assets + manifest to app/public/cms/dist/
+npm run build  # Outputs hashed assets + manifest to app/admin-assets/
 ```
 
-In production (no dev server), PHP reads `app/public/cms/dist/.vite/manifest.json` and emits the hashed `<script>`/`<link>` tags.
+In production (no dev server), PHP reads `app/admin-assets/.vite/manifest.json` and emits the hashed `<script>`/`<link>` tags.
 
 If a stale `.vite-hot` file ever points to a dead dev server (e.g. after an ungraceful Vite shutdown), delete it: `rm app/src/.vite-hot`. The PHP shell will fall back to the production manifest.
 
@@ -192,7 +192,7 @@ There's no database — every media file is a plain file on disk under `site/upl
 ### Two locations
 
 - **Shared library** — `site/uploads/`. The global pool shown in the `/admin/media` page. Files are renamed to a 24-char hex stem on upload (e.g. `abc123…def.jpg`) to avoid collisions. URLs: `/uploads/<file>`.
-- **Per-post attachments** — co-located with the post itself in `site/content/<pagePath>/`, e.g. `site/content/blog/hello-world/cover.jpg`. Used when uploading directly from the editor for a specific post; original filename is preserved. URLs: `/uploads/<pagePath>/<file>`. Both shapes are served by the `/uploads/*` route in `public/index.php` (image extensions only — `.md` and other types return 404). There is **no** `public/uploads` symlink — `public/` only contains entry points.
+- **Per-post attachments** — co-located with the post itself in `site/content/<pagePath>/`, e.g. `site/content/blog/hello-world/cover.jpg`. Used when uploading directly from the editor for a specific post; original filename is preserved. URLs: `/uploads/<pagePath>/<file>`. Both shapes are served by the `/uploads/*` route in `index.php` (image extensions only — `.md` and other types return 404). There is **no** `uploads/` directory in the webroot — that URL is always handled by the front controller.
 
 ### What each upload produces
 

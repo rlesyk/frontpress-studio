@@ -29,7 +29,7 @@ Create `theme.json`:
 }
 ```
 
-Activate it under **Settings → Themes → Activate**, or via the admin API. The active theme's `assets/` is automatically symlinked into `public/assets/`.
+Activate it under **Settings → Themes → Activate**, or via the admin API. The active theme's `assets/` is automatically symlinked into the webroot as `assets/`.
 
 Fastest path: install the bundled **Blank (Twig)** starter under **Settings → Themes → Install starter** and edit it in place.
 
