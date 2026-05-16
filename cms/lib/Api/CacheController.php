@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace MD\Api;
+namespace FrontPress\Api;
 
-defined('MD_BOOT') || exit;
+defined('FRONTPRESS_BOOT') || exit;
 
-use MD\CacheService;
-use MD\Content;
-use MD\PathResolver;
-use MD\ScssCompiler;
-use MD\ThemeService;
+use FrontPress\CacheService;
+use FrontPress\Content;
+use FrontPress\PathResolver;
+use FrontPress\ScssCompiler;
+use FrontPress\ThemeService;
 
 /**
  * Cache management for the admin UI. Lets the user wipe rendered HTML, the

@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use MD\Content;
-use MD\Index;
+use FrontPress\Content;
+use FrontPress\Index;
 use PHPUnit\Framework\TestCase;
 
 class IndexTest extends TestCase
@@ -14,8 +14,8 @@ class IndexTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->contentDir = sys_get_temp_dir() . '/md_idx_' . uniqid();
-        $this->cacheDir   = sys_get_temp_dir() . '/md_idx_cache_' . uniqid();
+        $this->contentDir = sys_get_temp_dir() . '/fp_idx_' . uniqid();
+        $this->cacheDir   = sys_get_temp_dir() . '/fp_idx_cache_' . uniqid();
         mkdir($this->contentDir . '/blog', 0755, true);
         mkdir($this->cacheDir, 0755, true);
         $content     = new Content($this->contentDir, $this->cacheDir);

@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use MD\Config;
-use MD\Url;
+use FrontPress\Config;
+use FrontPress\Url;
 use PHPUnit\Framework\TestCase;
 
 class UrlTest extends TestCase
@@ -12,7 +12,7 @@ class UrlTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->cfgFile = sys_get_temp_dir() . '/md_url_' . uniqid() . '.json';
+        $this->cfgFile = sys_get_temp_dir() . '/fp_url_' . uniqid() . '.json';
     }
 
     protected function tearDown(): void

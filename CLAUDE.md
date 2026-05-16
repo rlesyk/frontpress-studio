@@ -1,4 +1,4 @@
-# mdframework — project rules
+# FrontPress Studio — project rules
 
 ## File size budget
 

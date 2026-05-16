@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api.js';
 import { Alert, Button, Card, Checkbox, Field, Input } from '../../components/ui/index.js';
 
-// Defaults must match MD\Seo's reads — keep in sync.
+// Defaults must match FrontPress\Seo's reads — keep in sync.
 const DEFAULTS = {
   enabled:        true,
   opengraph:      true,

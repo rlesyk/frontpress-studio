@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use MD\Router;
+use FrontPress\Router;
 use PHPUnit\Framework\TestCase;
 
 class RouterTest extends TestCase
@@ -12,7 +12,7 @@ class RouterTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->contentDir = sys_get_temp_dir() . '/md_router_' . uniqid();
+        $this->contentDir = sys_get_temp_dir() . '/fp_router_' . uniqid();
         mkdir($this->contentDir . '/pages', 0755, true);
         mkdir($this->contentDir . '/blog', 0755, true);
         $this->router = new Router($this->contentDir);

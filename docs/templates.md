@@ -149,7 +149,7 @@ Atom feed at `/feed` and `/<folder>/feed`.
 ### Globals everywhere
 
 - **Twig:** `config` is the full site config as an array — `{{ config.site.name }}`, `{{ config.taxonomies.categories.label }}`, `{{ config.uploads.max_mb }}`.
-- **PHP:** `$GLOBALS['md_config']` (a `MD\Config` instance — call `->all()` or `->get('key', $default)`), `$GLOBALS['md_index']` (a `MD\Index`), `$GLOBALS['md_router']`, `$GLOBALS['md_content']`. Use these from inside a template if you need to query the index for related/recent posts.
+- **PHP:** `$GLOBALS['fp_config']` (a `FrontPress\Config` instance — call `->all()` or `->get('key', $default)`), `$GLOBALS['fp_index']` (a `FrontPress\Index`), `$GLOBALS['fp_router']`, `$GLOBALS['fp_content']`. Use these from inside a template if you need to query the index for related/recent posts.
 
 ## posts() API
 
@@ -182,10 +182,10 @@ $page2      = posts(['folder' => 'blog', 'limit' => 10, 'offset' => 10]);
 
 ## Index — direct access
 
-For lookups beyond what `posts()` exposes, reach into `MD\Index` via `$GLOBALS['md_index']`:
+For lookups beyond what `posts()` exposes, reach into `FrontPress\Index` via `$GLOBALS['fp_index']`:
 
 ```php
-$index = $GLOBALS['md_index'];
+$index = $GLOBALS['fp_index'];
 
 // Slug-matched taxonomy lookup (case-insensitive)
 $result = $index->findByTaxonomyTerm('tags', 'php');
@@ -199,7 +199,7 @@ $drafts = $index->filter(['draft' => true], includeDrafts: true);
 $all = $index->get();
 
 // Slugify a label the same way URLs are matched
-$slug = MD\Index::slugify('News Flash'); // "news-flash"
+$slug = FrontPress\Index::slugify('News Flash'); // "news-flash"
 ```
 
 ## What a post record looks like
@@ -281,7 +281,7 @@ Files whose basename starts with `_` (`_tokens.scss`, `_forms.scss`) are treated
 
 #### When it runs
 
-With **`APP_ENV=dev`** (the default in `.env.example`), every **public-site** request runs `MD\ScssCompiler::compileTheme()`. The freshness check is the *newest mtime under the entire `assets/` tree* compared against each entry's compiled `.css` — touch any partial or import, every dependent entry recompiles. Cheap on hot cache: one `RecursiveDirectoryIterator` walk and one `stat()` per entry.
+With **`APP_ENV=dev`** (the default in `.env.example`), every **public-site** request runs `FrontPress\ScssCompiler::compileTheme()`. The freshness check is the *newest mtime under the entire `assets/` tree* compared against each entry's compiled `.css` — touch any partial or import, every dependent entry recompiles. Cheap on hot cache: one `RecursiveDirectoryIterator` walk and one `stat()` per entry.
 
 **Admin requests don't trigger SCSS compile** — `admin.php` doesn't run `bootstrap.php`. To pick up an `.scss` edit, refresh the public site (`/`) once; the admin sees the new CSS on its next reload because both surfaces serve from the same `/assets/style.css`.
 
@@ -291,7 +291,7 @@ To opt out entirely, just delete the `.scss` files — the framework leaves your
 
 #### Compile errors
 
-A malformed `.scss` file logs to PHP's `error_log` (`MD\ScssCompiler: failed compiling <path>: <message>`) and is skipped — the request still serves whatever `.css` is on disk, so a broken SCSS edit can't take down the public site. When CSS isn't updating as you expect, the PHP error log is the first place to look.
+A malformed `.scss` file logs to PHP's `error_log` (`FrontPress\ScssCompiler: failed compiling <path>: <message>`) and is skipped — the request still serves whatever `.css` is on disk, so a broken SCSS edit can't take down the public site. When CSS isn't updating as you expect, the PHP error log is the first place to look.
 
 ## Engine specifics
 

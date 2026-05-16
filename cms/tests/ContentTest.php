@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use MD\Content;
+use FrontPress\Content;
 use PHPUnit\Framework\TestCase;
 
 class ContentTest extends TestCase
@@ -13,8 +13,8 @@ class ContentTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->contentDir = sys_get_temp_dir() . '/md_content_' . uniqid();
-        $this->cacheDir   = sys_get_temp_dir() . '/md_cache_' . uniqid();
+        $this->contentDir = sys_get_temp_dir() . '/fp_content_' . uniqid();
+        $this->cacheDir   = sys_get_temp_dir() . '/fp_cache_' . uniqid();
         mkdir($this->contentDir, 0755, true);
         $this->content = new Content($this->contentDir, $this->cacheDir);
     }

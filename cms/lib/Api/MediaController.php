@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace MD\Api;
+namespace FrontPress\Api;
 
-defined('MD_BOOT') || exit;
+defined('FRONTPRESS_BOOT') || exit;
 
-use MD\MediaService;
-use MD\PathResolver;
+use FrontPress\MediaService;
+use FrontPress\PathResolver;
 
 
 class MediaController

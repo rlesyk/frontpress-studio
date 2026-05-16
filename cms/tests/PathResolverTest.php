@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use MD\PathResolver;
+use FrontPress\PathResolver;
 use PHPUnit\Framework\TestCase;
 
 class PathResolverTest extends TestCase
@@ -15,7 +15,7 @@ class PathResolverTest extends TestCase
 
     protected function setUp(): void
     {
-        $base             = sys_get_temp_dir() . '/md_paths_' . uniqid();
+        $base             = sys_get_temp_dir() . '/fp_paths_' . uniqid();
         $this->contentDir = $base . '/content';
         $this->uploadsDir = $base . '/uploads';
         $this->cacheDir   = $base . '/cache';

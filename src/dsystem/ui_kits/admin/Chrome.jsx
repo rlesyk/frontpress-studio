@@ -38,7 +38,7 @@ function AdminBar({ pageTitle }) {
     <nav className="admin-bar">
       <span className="admin-bar-logo">
         <span className="admin-bar-logo-mark">M</span>
-        MD Admin
+        FrontPress Admin
       </span>
       <span className="spacer" />
       <span className="admin-bar-page">{pageTitle}</span>

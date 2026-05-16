@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace MD;
+namespace FrontPress;
 
-defined('MD_BOOT') || exit;
+defined('FRONTPRESS_BOOT') || exit;
 
 /**
  * Renders Vite dev or production asset tags for the React admin shell.

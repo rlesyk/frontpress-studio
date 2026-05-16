@@ -29,7 +29,7 @@ function Login({ onSubmit }) {
           <span className="admin-bar-logo-mark">M</span>
           <div>
             <h1 className="login-title">Admin Login</h1>
-            <p className="login-subtitle">MD Framework — Ultralight flat-file CMS</p>
+            <p className="login-subtitle">FrontPress Studio — Ultralight flat-file CMS</p>
           </div>
         </div>
 

@@ -62,7 +62,7 @@ When the active password still verifies against the default (`admin`), the admin
 
 > Set a strong admin password to finish setup. **Open Security settings**
 
-It does not dismiss — the only way to clear it is to rotate the password under **Settings → Security**. The check is `password_verify('admin', $ADMIN_PASS_HASH)` in [`MD\Env::isPasswordDefault()`](app/cms/lib/Env.php), surfaced via `/admin/api/me` as `passwordIsDefault`. A custom password that happens to also be `admin` triggers the banner — that's intentional; you should pick something else.
+It does not dismiss — the only way to clear it is to rotate the password under **Settings → Security**. The check is `password_verify('admin', $ADMIN_PASS_HASH)` in [`FrontPress\Env::isPasswordDefault()`](app/cms/lib/Env.php), surfaced via `/admin/api/me` as `passwordIsDefault`. A custom password that happens to also be `admin` triggers the banner — that's intentional; you should pick something else.
 
 ### Changing the password from the admin
 
@@ -98,7 +98,7 @@ The admin is a React single-page application served from a thin PHP shell.
 | SPA shell | `app/admin.php` → `app/cms/templates/spa.php` (static HTML + Vite tags) |
 | Frontend | React 18, React Router 6, TanStack Query, Tailwind CSS v4, Vite 5 |
 | Editor | Toast UI Editor v3 — markdown-native, WYSIWYG + markdown source modes (no HTML round-trip) |
-| Backend API | `MD\Api\Router` dispatches `/admin/api/*` to controllers under `app/cms/lib/Api/` |
+| Backend API | `FrontPress\Api\Router` dispatches `/admin/api/*` to controllers under `app/cms/lib/Api/` |
 | Data | Plain `.md` files under `app/site/content/`, JSON config at `app/site/config.json`, media on disk |
 
 The PHP layer's only jobs are:

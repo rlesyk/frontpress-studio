@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use MD\Env;
+use FrontPress\Env;
 use PHPUnit\Framework\TestCase;
 
 class EnvTest extends TestCase
@@ -55,7 +55,7 @@ class EnvTest extends TestCase
     {
         file_put_contents($this->tmp, <<<'PHP'
 <?php
-defined('MD_BOOT') || exit;
+defined('FRONTPRESS_BOOT') || exit;
 define('MD_ADMIN_USER', 'admin');
 define('MD_ADMIN_PASS', 'admin');
 define('MD_ADMIN_PASS_HASH', '');
@@ -79,7 +79,7 @@ PHP);
         // them, mangling the hash so password_verify always failed.
         file_put_contents($this->tmp, <<<'PHP'
 <?php
-defined('MD_BOOT') || exit;
+defined('FRONTPRESS_BOOT') || exit;
 define('MD_ADMIN_PASS_HASH', '');
 PHP);
         // Real bcrypt hash for 'admin' — contains `$2y$10$` which is the
@@ -99,7 +99,7 @@ PHP);
         // duplicate `define()` (which PHP would warn about and ignore).
         file_put_contents($this->tmp, <<<'PHP'
 <?php
-defined('MD_BOOT') || exit;
+defined('FRONTPRESS_BOOT') || exit;
 define('MD_ADMIN_USER',      getenv('MD_ADMIN_USER')      ?: 'admin');
 define('MD_ADMIN_PASS',      getenv('MD_ADMIN_PASS')      ?: 'admin');
 define('MD_ADMIN_PASS_HASH', getenv('MD_ADMIN_PASS_HASH') ?: '');
@@ -118,7 +118,7 @@ PHP);
     {
         file_put_contents($this->tmp, <<<'PHP'
 <?php
-defined('MD_BOOT') || exit;
+defined('FRONTPRESS_BOOT') || exit;
 define('MD_ADMIN_USER', 'admin');
 PHP);
         $hash = '$2y$10$dummyhashvaluefortest1234567890123456789012';

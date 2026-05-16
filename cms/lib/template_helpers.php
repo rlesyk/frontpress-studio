@@ -1,6 +1,6 @@
 <?php
 
-defined('MD_BOOT') || exit;
+defined('FRONTPRESS_BOOT') || exit;
 /**
  * Template helpers — usable from PHP and Twig templates.
  *
@@ -30,7 +30,7 @@ if (!function_exists('partial')) {
      *   5. _<name>.twig         (legacy convention)
      *   6. <name>.twig          (legacy convention)
      *
-     * `.twig` partials are routed through `MD\TemplateRenderer`. PHP partials
+     * `.twig` partials are routed through `FrontPress\TemplateRenderer`. PHP partials
      * are required directly with `$vars` extracted into local scope.
      *
      * @param array<string, mixed> $vars
@@ -44,7 +44,7 @@ if (!function_exists('partial')) {
         if (!preg_match('#^[a-z0-9][a-z0-9_/-]*$#i', $name) || str_contains($name, '..')) {
             throw new RuntimeException("Invalid partial name: $name");
         }
-        $dir = $GLOBALS['md_template_dir'];
+        $dir = $GLOBALS['fp_template_dir'];
         $candidates = [
             ["components/{$name}.php",  'php'],
             ["components/{$name}.twig", 'twig'],
@@ -57,7 +57,7 @@ if (!function_exists('partial')) {
             $path = "$dir/$rel";
             if (!is_file($path)) continue;
             if ($kind === 'twig') {
-                MD\TemplateRenderer::instance()->render($rel, $vars);
+                FrontPress\TemplateRenderer::instance()->render($rel, $vars);
             } else {
                 extract($vars, EXTR_SKIP);
                 require $path;
@@ -111,12 +111,12 @@ if (!function_exists('paginate')) {
 if (!function_exists('slug_url')) {
     /**
      * URL for a taxonomy term archive, e.g. `/categories/php` for
-     * `slug_url('PHP', 'categories')`. Uses MD\Index::slugify() so the slug
+     * `slug_url('PHP', 'categories')`. Uses FrontPress\Index::slugify() so the slug
      * matches what the public router accepts.
      */
     function slug_url(string $term, string $taxonomy = 'categories'): string
     {
-        return '/' . e($taxonomy) . '/' . e(MD\Index::slugify($term));
+        return '/' . e($taxonomy) . '/' . e(FrontPress\Index::slugify($term));
     }
 }
 
@@ -133,13 +133,13 @@ if (!function_exists('seo_head')) {
      */
     function seo_head(): string
     {
-        $template = $GLOBALS['md_current_template'] ?? '';
-        $vars     = $GLOBALS['md_current_vars']     ?? [];
-        $config   = $GLOBALS['md_config'] ?? null;
+        $template = $GLOBALS['fp_current_template'] ?? '';
+        $vars     = $GLOBALS['fp_current_vars']     ?? [];
+        $config   = $GLOBALS['fp_config'] ?? null;
         $configArr = ($config && method_exists($config, 'all')) ? $config->all() : [];
         $url      = (string)($_SERVER['REQUEST_URI'] ?? '/');
-        $out      = MD\Seo::tagsFor($template, $vars, $configArr, parse_url($url, PHP_URL_PATH) ?: '/');
-        MD\Seo::markEmittedThisRequest();
+        $out      = FrontPress\Seo::tagsFor($template, $vars, $configArr, parse_url($url, PHP_URL_PATH) ?: '/');
+        FrontPress\Seo::markEmittedThisRequest();
         return $out;
     }
 }
@@ -168,7 +168,7 @@ if (!function_exists('inspect')) {
         $style = 'background:#0b0f19;color:#e5e7eb;border-radius:6px;padding:.75rem 1rem;'
                . 'margin:.5rem 0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;'
                . 'font-size:12px;line-height:1.45;overflow-x:auto;';
-        return '<details class="md-inspect" open style="' . $style . '">'
+        return '<details class="fp-inspect" open style="' . $style . '">'
              . '<summary style="cursor:pointer;color:#a7f3d0;margin-bottom:.5rem">'
              . $heading . '<code style="color:#fcd34d">' . $type . '</code>'
              . '</summary>'

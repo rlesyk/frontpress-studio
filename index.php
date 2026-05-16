@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-define('MD_BOOT', true);
+define('FRONTPRESS_BOOT', true);
 
 session_set_cookie_params(['lifetime' => 0, 'path' => '/', 'httponly' => true, 'samesite' => 'Strict']);
 session_start();
@@ -67,7 +67,7 @@ if (str_starts_with($url, '/uploads/')) {
 
 if ($url === '/robots.txt') {
     header('Content-Type: text/plain; charset=utf-8');
-    echo "User-agent: *\nDisallow: /admin/\nSitemap: " . MD\Url::absolute('/sitemap.xml', $config, $_SERVER) . "\n";
+    echo "User-agent: *\nDisallow: /admin/\nSitemap: " . FrontPress\Url::absolute('/sitemap.xml', $config, $_SERVER) . "\n";
     exit;
 }
 
@@ -82,7 +82,7 @@ if ($url === '/sitemap.xml') {
         if (!empty($page['draft'])) {
             continue;
         }
-        $loc     = htmlspecialchars(MD\Url::forPage($page, $config, $_SERVER));
+        $loc     = htmlspecialchars(FrontPress\Url::forPage($page, $config, $_SERVER));
         $lastmod = !empty($page['date']) ? date('Y-m-d', strtotime((string)$page['date'])) : date('Y-m-d');
         $xml .= "  <url><loc>{$loc}</loc><lastmod>{$lastmod}</lastmod></url>\n";
     }
@@ -124,12 +124,12 @@ switch ($route['type']) {
         $all      = array_values($folder ? $index->filter(['folder' => $folder]) : $index->get());
         $items    = array_slice($all, 0, 20);
         $title    = $folder ? ($siteName . ' — ' . ucfirst($folder)) : $siteName;
-        $feedUrl  = MD\Url::absolute($folder ? '/' . $folder . '/feed' : '/feed', $config, $_SERVER);
-        $siteUrl  = MD\Url::absolute('/', $config, $_SERVER);
+        $feedUrl  = FrontPress\Url::absolute($folder ? '/' . $folder . '/feed' : '/feed', $config, $_SERVER);
+        $siteUrl  = FrontPress\Url::absolute('/', $config, $_SERVER);
         $updated  = $items ? max(array_map(fn ($p) => (int)($p['mtime'] ?? 0), $items)) : time();
         // Resolve each item to an absolute URL up front so the template stays dumb.
         foreach ($items as &$it) {
-            $it['absolute_url'] = MD\Url::forPage($it, $config, $_SERVER);
+            $it['absolute_url'] = FrontPress\Url::forPage($it, $config, $_SERVER);
         }
         unset($it);
         header('Content-Type: application/atom+xml; charset=utf-8');

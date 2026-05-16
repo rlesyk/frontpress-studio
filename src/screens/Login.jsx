@@ -3,7 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/auth.jsx';
 import { Button, Field, Input } from '../components/ui/index.js';
 
-const DEFAULT_TITLE = 'Sign in — MD Admin';
+const DEFAULT_TITLE = 'Sign in — FrontPress Admin';
 
 export default function Login() {
   const { user, login } = useAuth();
@@ -61,7 +61,7 @@ export default function Login() {
       >
         <div className="flex items-center gap-2">
           <span className="flex h-8 w-8 items-center justify-center rounded-md bg-zinc-900 text-sm font-semibold text-white">M</span>
-          <h1 className="text-base font-semibold">MD Admin</h1>
+          <h1 className="text-base font-semibold">FrontPress Admin</h1>
         </div>
 
         {error && (

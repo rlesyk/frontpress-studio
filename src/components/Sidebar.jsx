@@ -17,7 +17,7 @@ export default function Sidebar() {
         <span className="flex h-7 w-7 items-center justify-center rounded-md bg-zinc-900 text-[12px] font-bold text-white">
           M
         </span>
-        <span className="text-[15px] font-semibold tracking-tight">MD Admin</span>
+        <span className="text-[15px] font-semibold tracking-tight">FrontPress Admin</span>
       </div>
       <Divider />
 

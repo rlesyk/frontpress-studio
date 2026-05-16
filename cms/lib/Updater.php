@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace MD;
+namespace FrontPress;
 
-defined('MD_BOOT') || exit;
+defined('FRONTPRESS_BOOT') || exit;
 
 class Updater
 {
@@ -42,7 +42,7 @@ class Updater
         }
 
         $ctx = stream_context_create(['http' => [
-            'header'  => "User-Agent: MDFramework\r\n",
+            'header'  => "User-Agent: FrontPressStudio\r\n",
             'timeout' => 6,
         ]]);
         $json = @file_get_contents("https://api.github.com/repos/{$repo}/releases/latest", false, $ctx);
@@ -96,9 +96,9 @@ class Updater
         }
 
         // Download ZIP to temp file
-        $tmpZip = tempnam(sys_get_temp_dir(), 'mdf_') . '.zip';
+        $tmpZip = tempnam(sys_get_temp_dir(), 'fp_') . '.zip';
         $ctx    = stream_context_create(['http' => [
-            'header'          => "User-Agent: MDFramework\r\n",
+            'header'          => "User-Agent: FrontPressStudio\r\n",
             'timeout'         => 60,
             'follow_location' => true,
         ]]);

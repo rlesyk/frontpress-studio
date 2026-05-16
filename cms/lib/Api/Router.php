@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace MD\Api;
+namespace FrontPress\Api;
 
-defined('MD_BOOT') || exit;
+defined('FRONTPRESS_BOOT') || exit;
 
 /**
  * Dispatches /admin/api/* requests to controllers.
@@ -80,7 +80,7 @@ class Router
             // Set APP_DEBUG=1 in `.env` to surface the message during local
             // development.
             error_log('[admin/api] ' . $e::class . ': ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
-            $debug = (\MD\Env::get('APP_DEBUG', '') === '1');
+            $debug = (\FrontPress\Env::get('APP_DEBUG', '') === '1');
             \json_response([
                 'ok'    => false,
                 'error' => $debug ? $e->getMessage() : 'Internal error',

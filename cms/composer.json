@@ -1,5 +1,5 @@
 {
-    "name": "marko/mdframework",
+    "name": "marko/frontpress-studio",
     "description": "Ultralight flat-file markdown framework",
     "type": "project",
     "require": {
@@ -12,7 +12,7 @@
     },
     "autoload": {
         "psr-4": {
-            "MD\\": "lib/"
+            "FrontPress\\": "lib/"
         }
     },
     "config": {

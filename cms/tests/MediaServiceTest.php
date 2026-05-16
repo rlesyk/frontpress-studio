@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use MD\MediaService;
-use MD\PathResolver;
+use FrontPress\MediaService;
+use FrontPress\PathResolver;
 use PHPUnit\Framework\TestCase;
 
 class MediaServiceTest extends TestCase
@@ -14,7 +14,7 @@ class MediaServiceTest extends TestCase
 
     protected function setUp(): void
     {
-        $base             = sys_get_temp_dir() . '/md_media_' . uniqid();
+        $base             = sys_get_temp_dir() . '/fp_media_' . uniqid();
         $this->uploadsDir = $base . '/uploads';
         $this->contentDir = $base . '/content';
         $cacheDir         = $base . '/cache';

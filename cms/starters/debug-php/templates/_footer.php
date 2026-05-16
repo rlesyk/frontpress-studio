@@ -8,7 +8,7 @@
       <li><code>inspect($value, $label)</code> <small>— this very block 👉</small></li>
     </ul>
     <p style="margin-top:2rem;color:#71717a;font-size:12px">
-      Globals: <code class="inline">$config</code> (MD\Config object — call <code class="inline">$config-&gt;get('key')</code> or <code class="inline">$config-&gt;all()</code>).
+      Globals: <code class="inline">$config</code> (FrontPress\Config object — call <code class="inline">$config-&gt;get('key')</code> or <code class="inline">$config-&gt;all()</code>).
       Each route also gets the variables shown above.
     </p>
   </main>

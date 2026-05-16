@@ -1,5 +1,5 @@
 {
-  "repo": "your-username/mdframework",
+  "repo": "krstivoja/frontpress-studio",
   "core": [
     "bootstrap.php",
     ".htaccess",

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use MD\Seo;
+use FrontPress\Seo;
 use PHPUnit\Framework\TestCase;
 
-defined('MD_BOOT') || define('MD_BOOT', true);
+defined('FRONTPRESS_BOOT') || define('FRONTPRESS_BOOT', true);
 
 class SeoTest extends TestCase
 {

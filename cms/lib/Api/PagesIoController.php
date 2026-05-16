@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace MD\Api;
+namespace FrontPress\Api;
 
-defined('MD_BOOT') || exit;
+defined('FRONTPRESS_BOOT') || exit;
 
-use MD\Fs;
+use FrontPress\Fs;
 
 /**
  * Bulk export / import for pages. Sibling to {@see PagesController}.

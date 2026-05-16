@@ -258,7 +258,7 @@ The framework auto-routes `/tags/<slug>`, `/categories/<slug>`, and pagination a
 
 ```php
 <?php
-$index = $GLOBALS['md_index'];
+$index = $GLOBALS['fp_index'];
 $tags  = [];
 foreach ($index->get() as $post) {
     foreach ($post['tags'] as $t) {
@@ -324,7 +324,7 @@ For a "related posts" partial, take the current post's tags and find others shar
 
 ```php
 <?php
-$index = $GLOBALS['md_index'];
+$index = $GLOBALS['fp_index'];
 $tags  = $tags  ?? [];
 $exclude = $exclude ?? '';
 $related = [];

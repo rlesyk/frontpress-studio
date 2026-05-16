@@ -1,8 +1,8 @@
-# MD Framework Design System
+# FrontPress Studio Design System
 
 > Ultralight, shadcn-flavored black & white design system for a flat-file PHP CMS.
 
-**Product:** MD Framework ("Docspages") — an ultralight flat-file CMS built in PHP. No database. Content is Markdown files on disk; the admin is a browser UI at `/admin`. Version 1.0.0 (public release 2026-04-23).
+**Product:** FrontPress Studio ("Docspages") — an ultralight flat-file CMS built in PHP. No database. Content is Markdown files on disk; the admin is a browser UI at `/admin`. Version 1.0.0 (public release 2026-04-23).
 
 ## Surfaces represented
 
@@ -283,7 +283,7 @@ See `ICONOGRAPHY` (below).
 
 ### Approach
 
-MD Framework uses **inline SVG icons authored by hand in each template**. There is no imported icon font, no Lucide/Heroicons CDN dependency, no `<img>` icons.
+FrontPress Studio uses **inline SVG icons authored by hand in each template**. There is no imported icon font, no Lucide/Heroicons CDN dependency, no `<img>` icons.
 
 ### Spec
 
@@ -328,12 +328,12 @@ These are never decorative; they're substitutes for thumbnails that don't exist.
 
 - `×` (0x00D7) — close button on modals (`.btn-icon` content).
 - `→` / `←` — pagination, "View →" link after the editor.
-- `—` — em-dash in labels ("Admin Login", "MD Framework — Ultralight flat-file CMS")
+- `—` — em-dash in labels ("Admin Login", "FrontPress Studio — Ultralight flat-file CMS")
 - `✓` — success state in "Applied ✓"
 
 ### Logo
 
-A 24×24 rounded-square mark (black, white "M") + wordmark "MD Admin". Reproduced in `assets/logo-mark.svg`. On the public site there is no logo — just the site name in plain text via the `site.name` config.
+A 24×24 rounded-square mark (black, white "M") + wordmark "FrontPress Admin". Reproduced in `assets/logo-mark.svg`. On the public site there is no logo — just the site name in plain text via the `site.name` config.
 
 ---
 

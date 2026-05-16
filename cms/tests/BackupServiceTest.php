@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use MD\BackupService;
+use FrontPress\BackupService;
 use PHPUnit\Framework\TestCase;
 
 class BackupServiceTest extends TestCase
@@ -12,7 +12,7 @@ class BackupServiceTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->appRoot = sys_get_temp_dir() . '/md_backup_' . uniqid();
+        $this->appRoot = sys_get_temp_dir() . '/fp_backup_' . uniqid();
         $this->uploads = $this->appRoot . '/site/uploads';
         mkdir($this->appRoot . '/site/content/blog', 0755, true);
         mkdir($this->appRoot . '/site/themes/default/templates', 0755, true);
@@ -52,7 +52,7 @@ class BackupServiceTest extends TestCase
     public function testContentScopeExcludesConfigAndThemes(): void
     {
         $service = new BackupService($this->appRoot, $this->uploads);
-        $zipPath = sys_get_temp_dir() . '/md_scope_content_' . uniqid() . '.zip';
+        $zipPath = sys_get_temp_dir() . '/fp_scope_content_' . uniqid() . '.zip';
         $this->assertTrue($service->writeZip($zipPath, 'content'));
 
         $zip = new ZipArchive();
@@ -75,7 +75,7 @@ class BackupServiceTest extends TestCase
     public function testSettingsScopeExcludesContentAndUploads(): void
     {
         $service = new BackupService($this->appRoot, $this->uploads);
-        $zipPath = sys_get_temp_dir() . '/md_scope_settings_' . uniqid() . '.zip';
+        $zipPath = sys_get_temp_dir() . '/fp_scope_settings_' . uniqid() . '.zip';
         $this->assertTrue($service->writeZip($zipPath, 'settings'));
 
         $zip = new ZipArchive();
@@ -110,7 +110,7 @@ class BackupServiceTest extends TestCase
     public function testZipContainsExpectedRootsAndEntries(): void
     {
         $service = new BackupService($this->appRoot, $this->uploads);
-        $zipPath = sys_get_temp_dir() . '/md_backup_test_' . uniqid() . '.zip';
+        $zipPath = sys_get_temp_dir() . '/fp_backup_test_' . uniqid() . '.zip';
 
         $this->assertTrue($service->writeZip($zipPath));
 
@@ -136,7 +136,7 @@ class BackupServiceTest extends TestCase
 
     public function testInspectZipRejectsPathTraversal(): void
     {
-        $zipPath = sys_get_temp_dir() . '/md_evil_' . uniqid() . '.zip';
+        $zipPath = sys_get_temp_dir() . '/fp_evil_' . uniqid() . '.zip';
         $zip     = new ZipArchive();
         $zip->open($zipPath, ZipArchive::CREATE);
         $zip->addFromString('site/config.json', '{}');
@@ -153,7 +153,7 @@ class BackupServiceTest extends TestCase
 
     public function testInspectZipRejectsEntryOutsideRoots(): void
     {
-        $zipPath = sys_get_temp_dir() . '/md_outside_' . uniqid() . '.zip';
+        $zipPath = sys_get_temp_dir() . '/fp_outside_' . uniqid() . '.zip';
         $zip     = new ZipArchive();
         $zip->open($zipPath, ZipArchive::CREATE);
         $zip->addFromString('site/config.json', '{}');
@@ -171,7 +171,7 @@ class BackupServiceTest extends TestCase
     public function testInspectZipAcceptsPartialBackup(): void
     {
         // Content-only ZIP (no config.json) should still validate.
-        $zipPath = sys_get_temp_dir() . '/md_partial_' . uniqid() . '.zip';
+        $zipPath = sys_get_temp_dir() . '/fp_partial_' . uniqid() . '.zip';
         $zip     = new ZipArchive();
         $zip->open($zipPath, ZipArchive::CREATE);
         $zip->addFromString('site/content/blog/hello.md', 'body');
@@ -188,7 +188,7 @@ class BackupServiceTest extends TestCase
 
     public function testInspectZipRejectsEmptyArchive(): void
     {
-        $zipPath = sys_get_temp_dir() . '/md_empty_' . uniqid() . '.zip';
+        $zipPath = sys_get_temp_dir() . '/fp_empty_' . uniqid() . '.zip';
         $zip     = new ZipArchive();
         $zip->open($zipPath, ZipArchive::CREATE);
         $zip->addFromString('readme.txt', 'not a backup');
@@ -206,7 +206,7 @@ class BackupServiceTest extends TestCase
     public function testRestoreRoundTrips(): void
     {
         $service = new BackupService($this->appRoot, $this->uploads);
-        $zipPath = sys_get_temp_dir() . '/md_roundtrip_' . uniqid() . '.zip';
+        $zipPath = sys_get_temp_dir() . '/fp_roundtrip_' . uniqid() . '.zip';
         $this->assertTrue($service->writeZip($zipPath));
 
         // Mutate live state so we can tell a restore happened.
@@ -226,7 +226,7 @@ class BackupServiceTest extends TestCase
     public function testRestoreLeavesNoBackupSiblings(): void
     {
         $service = new BackupService($this->appRoot, $this->uploads);
-        $zipPath = sys_get_temp_dir() . '/md_clean_' . uniqid() . '.zip';
+        $zipPath = sys_get_temp_dir() . '/fp_clean_' . uniqid() . '.zip';
         $service->writeZip($zipPath);
 
         $result = $service->restore($zipPath);

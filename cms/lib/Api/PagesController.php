@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace MD\Api;
+namespace FrontPress\Api;
 
-defined('MD_BOOT') || exit;
+defined('FRONTPRESS_BOOT') || exit;
 
-use MD\CacheService;
-use MD\Content;
-use MD\ContentRepository;
-use MD\Index;
-use MD\PathResolver;
-use MD\ThemeService;
+use FrontPress\CacheService;
+use FrontPress\Content;
+use FrontPress\ContentRepository;
+use FrontPress\Index;
+use FrontPress\PathResolver;
+use FrontPress\ThemeService;
 
 class PagesController
 {

@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use MD\Config;
-use MD\ThemeService;
+use FrontPress\Config;
+use FrontPress\ThemeService;
 use PHPUnit\Framework\TestCase;
 
 class ThemeServiceTest extends TestCase
@@ -14,7 +14,7 @@ class ThemeServiceTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->appRoot = sys_get_temp_dir() . '/md_theme_' . uniqid();
+        $this->appRoot = sys_get_temp_dir() . '/fp_theme_' . uniqid();
         mkdir($this->appRoot . '/site/themes/default/templates', 0755, true);
         mkdir($this->appRoot . '/site/themes/default/assets', 0755, true);
         mkdir($this->appRoot . '/site/themes/fancy/templates', 0755, true);

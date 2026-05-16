@@ -4,15 +4,15 @@
  * Sets up paths, autoloads, and instantiates Content/Index/Router.
  */
 
-defined('MD_BOOT') || exit;
+defined('FRONTPRESS_BOOT') || exit;
 
 require_once __DIR__ . '/cms/vendor/autoload.php';
 require_once __DIR__ . '/cms/lib/template_helpers.php';
 
 // Simple PSR-4 autoloader for our lib/ classes (in case composer dump-autoload wasn't run)
 spl_autoload_register(function ($class) {
-    if (str_starts_with($class, 'MD\\')) {
-        $path = __DIR__ . '/cms/lib/' . str_replace('\\', '/', substr($class, 3)) . '.php';
+    if (str_starts_with($class, 'FrontPress\\')) {
+        $path = __DIR__ . '/cms/lib/' . str_replace('\\', '/', substr($class, 11)) . '.php';
         if (is_file($path)) require $path;
     }
 });
@@ -25,20 +25,20 @@ $UPLOADS_DIR = $ROOT . '/site/uploads';
 // Load config.php once for both admin and public-site entry points so any
 // runtime-toggleable behaviour (e.g. APP_ENV-gated SCSS compilation) sees
 // the same values. Env::load is idempotent.
-MD\Env::load($ROOT . '/config.php');
+FrontPress\Env::load($ROOT . '/config.php');
 
 // First-run only: copy starter content / config / theme into /site if it's
 // empty. /site is gitignored — the defaults a user sees on a fresh install
 // live under cms/starters/ and are seeded here. Idempotent and cheap when
 // the directories already exist.
-MD\Bootstrap::ensureSiteDefaults($ROOT);
+FrontPress\Bootstrap::ensureSiteDefaults($ROOT);
 
-$config = new MD\Config($ROOT . '/site/config.json');
-$GLOBALS['md_config'] = $config;
+$config = new FrontPress\Config($ROOT . '/site/config.json');
+$GLOBALS['fp_config'] = $config;
 
-$themes       = new MD\ThemeService($ROOT, $config);
+$themes       = new FrontPress\ThemeService($ROOT, $config);
 $TEMPLATE_DIR = $themes->templateDir();
-$GLOBALS['md_themes'] = $themes;
+$GLOBALS['fp_themes'] = $themes;
 
 // Ensure `<webroot>/assets` is symlinked to the active theme's assets dir.
 // The release-zip pipeline dereferences symlinks, so a fresh unzipped
@@ -52,22 +52,22 @@ $themes->ensureAssetsLink();
 // request in production is pure overhead — there is nothing to recompile.
 // `.env` ships APP_ENV=dev locally; in production omit it (or set =prod).
 $themeDir = dirname($TEMPLATE_DIR);
-if (MD\Env::get('APP_ENV', 'dev') === 'dev' && is_dir($themeDir . '/assets')) {
-    (new MD\ScssCompiler())->compileTheme($themeDir);
+if (FrontPress\Env::get('APP_ENV', 'dev') === 'dev' && is_dir($themeDir . '/assets')) {
+    (new FrontPress\ScssCompiler())->compileTheme($themeDir);
 }
 
-$content = new MD\Content($CONTENT_DIR, $CACHE_DIR);
-$index = new MD\Index($CONTENT_DIR, $CACHE_DIR, $content);
-$router = new MD\Router($CONTENT_DIR);
+$content = new FrontPress\Content($CONTENT_DIR, $CACHE_DIR);
+$index = new FrontPress\Index($CONTENT_DIR, $CACHE_DIR, $content);
+$router = new FrontPress\Router($CONTENT_DIR);
 
 // Expose as globals for templates
-$GLOBALS['md_content'] = $content;
-$GLOBALS['md_index'] = $index;
-$GLOBALS['md_router'] = $router;
-$GLOBALS['md_template_dir'] = $TEMPLATE_DIR;
-$GLOBALS['md_content_dir'] = $CONTENT_DIR;
-$GLOBALS['md_cache_dir'] = $CACHE_DIR;
-$GLOBALS['md_uploads_dir'] = $UPLOADS_DIR;
+$GLOBALS['fp_content'] = $content;
+$GLOBALS['fp_index'] = $index;
+$GLOBALS['fp_router'] = $router;
+$GLOBALS['fp_template_dir'] = $TEMPLATE_DIR;
+$GLOBALS['fp_content_dir'] = $CONTENT_DIR;
+$GLOBALS['fp_cache_dir'] = $CACHE_DIR;
+$GLOBALS['fp_uploads_dir'] = $UPLOADS_DIR;
 
 /**
  * CSRF token — generates and stores a token in the session.
@@ -100,7 +100,7 @@ if (!function_exists('csrf_token')) {
  */
 function posts(array $args = []): array
 {
-    $index = $GLOBALS['md_index'];
+    $index = $GLOBALS['fp_index'];
 
     // Build filter criteria
     $criteria = $args['filter'] ?? [];
@@ -140,7 +140,7 @@ function posts(array $args = []): array
 /** @param array<string, mixed> $vars */
 function render(string $template, array $vars = []): void
 {
-    $dir = $GLOBALS['md_template_dir'];
+    $dir = $GLOBALS['fp_template_dir'];
     $php = "$dir/$template.php";
     $twig = "$dir/$template.twig";
 
@@ -152,22 +152,22 @@ function render(string $template, array $vars = []): void
     // before flushing. Templates that don't produce HTML (feed.* writes
     // Atom XML and sets its own Content-Type) won't contain `</head>` and
     // pass through untouched. A theme that calls seo_head() explicitly
-    // flips MD\Seo::markEmittedThisRequest() so we skip the implicit
+    // flips FrontPress\Seo::markEmittedThisRequest() so we skip the implicit
     // injection here and don't double-emit.
-    MD\Seo::resetForNextRequest();
-    $GLOBALS['md_current_template'] = $template;
-    $GLOBALS['md_current_vars']     = $vars;
+    FrontPress\Seo::resetForNextRequest();
+    $GLOBALS['fp_current_template'] = $template;
+    $GLOBALS['fp_current_vars']     = $vars;
 
     ob_start();
     if (is_file($php)) {
         extract($vars, EXTR_SKIP);
         require $php;
     } else {
-        MD\TemplateRenderer::instance()->render("$template.twig", $vars);
+        FrontPress\TemplateRenderer::instance()->render("$template.twig", $vars);
     }
     $body = (string)ob_get_clean();
 
-    if (!MD\Seo::wasEmittedThisRequest()) {
+    if (!FrontPress\Seo::wasEmittedThisRequest()) {
         $body = inject_seo($body, $template, $vars);
     }
 
@@ -187,10 +187,10 @@ function inject_seo(string $body, string $template, array $vars): string
     if ($headClose === false) {
         return $body;
     }
-    $config = $GLOBALS['md_config'] ?? null;
+    $config = $GLOBALS['fp_config'] ?? null;
     $configArr = ($config && method_exists($config, 'all')) ? $config->all() : [];
     $url       = (string)($_SERVER['REQUEST_URI'] ?? '/');
-    $tags      = MD\Seo::tagsFor($template, $vars, $configArr, parse_url($url, PHP_URL_PATH) ?: '/');
+    $tags      = FrontPress\Seo::tagsFor($template, $vars, $configArr, parse_url($url, PHP_URL_PATH) ?: '/');
     if ($tags === '') {
         return $body;
     }
@@ -220,7 +220,7 @@ function admin_edit_button(): void
     $href = htmlspecialchars($url, ENT_QUOTES);
     ?>
 <style>
-  .md-admin-edit-btn {
+  .fp-admin-edit-btn {
     position: fixed; right: 16px; bottom: 16px; z-index: 2147483000;
     display: inline-flex; align-items: center; gap: 6px;
     padding: 8px 14px; border-radius: 999px;
@@ -230,18 +230,18 @@ function admin_edit_button(): void
     box-shadow: 0 8px 24px rgba(0,0,0,.25), 0 0 0 1px rgba(255,255,255,.06) inset;
     transition: transform .15s ease, box-shadow .15s ease;
   }
-  .md-admin-edit-btn:hover, .md-admin-edit-btn:focus-visible {
+  .fp-admin-edit-btn:hover, .fp-admin-edit-btn:focus-visible {
     transform: translateY(-1px);
     box-shadow: 0 10px 28px rgba(0,0,0,.32), 0 0 0 1px rgba(255,255,255,.08) inset;
     color: #fafafa;
     outline: none;
   }
-  .md-admin-edit-btn:focus-visible {
+  .fp-admin-edit-btn:focus-visible {
     box-shadow: 0 10px 28px rgba(0,0,0,.32), 0 0 0 2px #fafafa, 0 0 0 4px #18181b;
   }
-  @media print { .md-admin-edit-btn { display: none; } }
+  @media print { .fp-admin-edit-btn { display: none; } }
 </style>
-<a class="md-admin-edit-btn" href="<?= $href ?>" rel="noopener">
+<a class="fp-admin-edit-btn" href="<?= $href ?>" rel="noopener">
   <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M12 20h9"></path>
     <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>

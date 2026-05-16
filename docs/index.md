@@ -3,7 +3,7 @@ title: Home
 layout: default
 ---
 
-# MD Framework
+# FrontPress Studio
 
 Ultralight flat-file CMS built in PHP. No database. Content is Markdown files on disk; the admin is a browser UI at `/admin`.
 
@@ -119,7 +119,7 @@ app/                          # ← also the web root (DocumentRoot)
         └── twig/             # Compiled Twig templates
 ```
 
-`/site` is **never tracked in git** — it's user data, populated by `MD\Bootstrap::ensureSiteDefaults()` on the first request after install. Editing content in the admin won't show up as a diff in the framework repo.
+`/site` is **never tracked in git** — it's user data, populated by `FrontPress\Bootstrap::ensureSiteDefaults()` on the first request after install. Editing content in the admin won't show up as a diff in the framework repo.
 
 ## Next steps
 

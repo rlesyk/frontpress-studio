@@ -1,7 +1,7 @@
 <?php
 
 /**
- * mdframework — site configuration.
+ * FrontPress Studio — site configuration.
  *
  * Copy this file to `config.php` and edit the values. It's a PHP file so
  * accessing it directly via HTTP runs it server-side but produces no
@@ -16,7 +16,7 @@
  * fallback values are what actually get used.
  */
 
-defined('MD_BOOT') || exit;
+defined('FRONTPRESS_BOOT') || exit;
 
 // ── Admin login ───────────────────────────────────────────────────────────
 define('MD_ADMIN_USER', getenv('MD_ADMIN_USER') ?: 'admin');

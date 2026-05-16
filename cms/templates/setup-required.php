@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Setup required — MD Framework</title>
+<title>Setup required — FrontPress Studio</title>
 <style>
   /* This template renders before the SPA exists (or when it can't load), so
      it carries its own minimal styles. Visual language mirrors Login.jsx —
@@ -123,7 +123,7 @@
 <main class="card" role="main">
   <div class="brand">
     <span class="logo" aria-hidden="true">M</span>
-    <h1>MD Admin</h1>
+    <h1>FrontPress Admin</h1>
   </div>
 
   <div class="alert" role="alert">
@@ -133,7 +133,7 @@
   <p>Create <code><?= e($configFile) ?></code> with:</p>
   <div class="code">
     <pre><code id="snippet-env">&lt;?php
-defined('MD_BOOT') || exit;
+defined('FRONTPRESS_BOOT') || exit;
 
 define('MD_ADMIN_USER', 'admin');
 define('MD_ADMIN_PASS_HASH', '');</code></pre>

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-define('MD_BOOT', true);
+define('FRONTPRESS_BOOT', true);
 
 $appRoot = dirname(__DIR__);
 $cmsRoot = $appRoot . '/cms';
@@ -18,13 +18,13 @@ spl_autoload_register(function ($class) use ($cmsRoot) {
     }
 });
 
-MD\Env::load($appRoot . '/config.php');
+FrontPress\Env::load($appRoot . '/config.php');
 
 // First-run only: copy starter content / config / theme into /site if it's
 // empty. /site is gitignored — the defaults a user sees on a fresh install
 // live under cms/starters/ and are seeded here. Idempotent on subsequent
 // requests (a few stat() calls when nothing's missing).
-MD\Bootstrap::ensureSiteDefaults($appRoot);
+FrontPress\Bootstrap::ensureSiteDefaults($appRoot);
 
 session_set_cookie_params([
     'lifetime' => 0,
@@ -36,7 +36,7 @@ session_start();
 
 // Idle-timeout: log the user out if there's been no admin activity for
 // `session_idle_seconds` (default: 2 hours). Refreshed on every request below.
-$idleLimit = (int)(MD\Env::get('SESSION_IDLE_SECONDS', '7200'));
+$idleLimit = (int)(FrontPress\Env::get('SESSION_IDLE_SECONDS', '7200'));
 if (!empty($_SESSION['admin_user']) && $idleLimit > 0) {
     $last = (int)($_SESSION['last_activity'] ?? 0);
     if ($last > 0 && (time() - $last) > $idleLimit) {
@@ -55,18 +55,18 @@ header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
 header('Referrer-Policy: strict-origin-when-cross-origin');
 
-$ADMIN_USER      = MD\Env::get('ADMIN_USER', 'admin');
-$ADMIN_PASS_HASH = MD\Env::get('ADMIN_PASS_HASH', '');
+$ADMIN_USER      = FrontPress\Env::get('ADMIN_USER', 'admin');
+$ADMIN_PASS_HASH = FrontPress\Env::get('ADMIN_PASS_HASH', '');
 
 // First-run convenience: if config.php ships a plaintext MD_ADMIN_PASS
 // (the friendly default in config.example.php), hash it now and rewrite
 // config.php so subsequent requests see only the hash. Plaintext is
 // removed from disk in a single atomic write.
 if ($ADMIN_PASS_HASH === '') {
-    $plain = (string)MD\Env::get('ADMIN_PASS', '');
+    $plain = (string)FrontPress\Env::get('ADMIN_PASS', '');
     if ($plain !== '') {
         $ADMIN_PASS_HASH = password_hash($plain, PASSWORD_BCRYPT);
-        if (!MD\Env::upgradePlaintextPassword($appRoot . '/config.php', $ADMIN_PASS_HASH)) {
+        if (!FrontPress\Env::upgradePlaintextPassword($appRoot . '/config.php', $ADMIN_PASS_HASH)) {
             // Couldn't write — the in-memory hash still works for this
             // request, but next request will re-hash the same plaintext.
             // Surface in the error log so a permissions issue is visible.
@@ -79,7 +79,7 @@ $CONTENT_DIR     = $appRoot . '/site/content';
 $UPLOADS_DIR     = $appRoot . '/site/uploads';
 $TEMPLATE_DIR    = $cmsRoot . '/templates';
 $CACHE_DIR       = $appRoot . '/site/cache';
-$config          = new MD\Config($appRoot . '/site/config.json');
+$config          = new FrontPress\Config($appRoot . '/site/config.json');
 
 // ── Helpers (used by API controllers via the global namespace) ───────────────
 
@@ -126,7 +126,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 // JSON API
 if (preg_match('#^/admin/api/(.*)$#', $uri, $apiMatch)) {
-    MD\Api\Router::dispatch($apiMatch[1], $method, [
+    FrontPress\Api\Router::dispatch($apiMatch[1], $method, [
         'appRoot'         => $appRoot,
         'cmsRoot'         => $cmsRoot,
         'contentDir'      => $CONTENT_DIR,

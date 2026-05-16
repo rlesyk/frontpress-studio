@@ -5,7 +5,7 @@ layout: default
 
 # Changelog
 
-All notable changes to MD Framework are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+All notable changes to FrontPress Studio are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.0.66] — 2026-05-16
 
@@ -79,7 +79,7 @@ All notable changes to MD Framework are documented here. The format is based on 
 
 ### Fixed
 - **Auto-hashed admin passwords got mangled, breaking first-time login.** `Env::upgradePlaintextPassword` used `preg_replace` to write the bcrypt hash into `config.php`, but PHP's replacement string interpreter treated the `$2`, `$10` segments of `$2y$10$…` as capture-group backreferences and stripped them — turning `$2y$10$AHxA…` into `y$AHxA…`. The stored hash was non-functional and `password_verify` always returned false. Switched to `preg_replace_callback` (which doesn't interpret `$<n>` in the replacement) and added two regression tests covering the bcrypt-`$` case and the `getenv() ?: …` line format from `config.example.php`.
-- **PHPUnit silently exited on the `MD_BOOT` guard.** Tests ran outside an HTTP entry point so `MD_BOOT` was never defined, and the `defined('MD_BOOT') || exit;` at the top of every `cms/lib/*.php` caused the test runner to bail before reporting anything. Added `cms/tests/bootstrap.php` that defines `MD_BOOT` before composer's autoload runs; `phpunit.xml` now points at it. All 10 Env tests pass.
+- **PHPUnit silently exited on the `FRONTPRESS_BOOT` guard.** Tests ran outside an HTTP entry point so `FRONTPRESS_BOOT` was never defined, and the `defined('FRONTPRESS_BOOT') || exit;` at the top of every `cms/lib/*.php` caused the test runner to bail before reporting anything. Added `cms/tests/bootstrap.php` that defines `FRONTPRESS_BOOT` before composer's autoload runs; `phpunit.xml` now points at it. All 10 Env tests pass.
 
 ### Migration
 - Existing 0.0.53 installs where you let `MD_ADMIN_PASS=admin` auto-upgrade have a corrupted `MD_ADMIN_PASS_HASH` in `config.php`. Easiest fix: edit `config.php`, restore the `getenv('MD_ADMIN_PASS_HASH') ?: ''` line and add `define('MD_ADMIN_PASS', 'admin');` back, then visit `/admin` once with the fixed framework to re-trigger the auto-upgrade. Or generate the hash by hand with `php -r "echo password_hash('admin', PASSWORD_BCRYPT);"` and paste it directly.
@@ -94,7 +94,7 @@ All notable changes to MD Framework are documented here. The format is based on 
 ### Changed
 - **Unzip-into-webroot install, WordPress-style.** The framework root (`app/public/`) is now also the document root — drop the release zip into your domain folder (`htdocs/<your-site>/`, `public_html/`, whatever) and visit `/admin`. No `DocumentRoot` configuration needed.
 - **`.env` replaced with `config.php`.** Credentials live in PHP constants like `wp-config.php`; the file `exit`s with zero bytes on direct HTTP access, so even if every webserver deny rule fails, nothing leaks. Each constant prefers an OS env var when present (`MD_ADMIN_PASS_HASH`, `MD_APP_ENV`, …) and falls back to the on-disk value — works the same on shared hosting (constants) or VPS/Docker/PaaS (env vars).
-- **`defined('MD_BOOT') || exit;` guards** added to every PHP file under `cms/lib/` and `cms/templates/`, plus `bootstrap.php` and `config.php` itself. Direct HTTP access to any internal file is a silent no-op — the same pattern WordPress uses with `ABSPATH`.
+- **`defined('FRONTPRESS_BOOT') || exit;` guards** added to every PHP file under `cms/lib/` and `cms/templates/`, plus `bootstrap.php` and `config.php` itself. Direct HTTP access to any internal file is a silent no-op — the same pattern WordPress uses with `ABSPATH`.
 - **Admin entry point moved to `admin/index.php`.** `/admin/` now resolves naturally via directory index; the SPA's virtual URLs route through one explicit rewrite. Bumps the count of files at the webroot down by one.
 - **Webserver rules slashed.** `.htaccess` and the new `nginx.conf.example` are ~3 functional rules each: block raw `.md` files, block PHP execution under uploads, route `/admin/*` and everything else to their front controllers. Down from ~25 lines of `RedirectMatch 404` deny rules that PHP-level boot guards now handle in code.
 

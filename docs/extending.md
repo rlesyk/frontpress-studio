@@ -104,7 +104,7 @@ Use:
 
 ## Hook into the index
 
-`MD\Index` is exposed at `$GLOBALS['md_index']`. Use it for custom queries that go beyond `posts()`:
+`FrontPress\Index` is exposed at `$GLOBALS['fp_index']`. Use it for custom queries that go beyond `posts()`:
 
 - `$index->get($includeDrafts = false)` — full index keyed by relative path.
 - `$index->filter($criteria, $includeDrafts = false)` — multi-key filter (scalars compare with `===`, arrays use `in_array`).

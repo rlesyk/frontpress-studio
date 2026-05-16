@@ -2,6 +2,6 @@
   "name": "Blank (PHP)",
   "version": "0.1.0",
   "description": "Minimal PHP scaffold — modern CSS reset + system font + readable max-width column. Same look as Blank (Twig), but templates use plain PHP.",
-  "author": "MD Framework",
+  "author": "FrontPress Studio",
   "engine": "php"
 }

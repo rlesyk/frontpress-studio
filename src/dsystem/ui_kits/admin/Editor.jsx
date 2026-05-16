@@ -98,7 +98,7 @@ Visit [the blog](/blog) for recent posts.
 
 ## What this is
 
-MD Framework is an ultralight flat-file CMS. No database — content lives in Markdown files on disk.
+FrontPress Studio is an ultralight flat-file CMS. No database — content lives in Markdown files on disk.
 
 - Edit here
 - Preview from the sidebar

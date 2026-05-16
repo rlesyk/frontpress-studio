@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use MD\Trash;
+use FrontPress\Trash;
 use PHPUnit\Framework\TestCase;
 
 class TrashTest extends TestCase
@@ -14,7 +14,7 @@ class TrashTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->root       = sys_get_temp_dir() . '/md_trash_' . uniqid();
+        $this->root       = sys_get_temp_dir() . '/fp_trash_' . uniqid();
         $this->contentDir = $this->root . '/site/content';
         $this->cacheDir   = $this->root . '/site/cache';
         mkdir($this->contentDir . '/blog', 0755, true);

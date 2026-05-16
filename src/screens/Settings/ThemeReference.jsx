@@ -13,7 +13,7 @@ import { ROUTES, META_KEYS, HELPERS, GLOBALS } from '../../lib/themeReference.js
 export default function ThemeReference() {
   const [engine, setEngine] = useState(() =>
     typeof window !== 'undefined'
-      ? (window.localStorage.getItem('md.themeReference.engine') || 'twig')
+      ? (window.localStorage.getItem('fp.themeReference.engine') || 'twig')
       : 'twig'
   );
 
@@ -26,7 +26,7 @@ export default function ThemeReference() {
 
   function pickEngine(v) {
     setEngine(v);
-    try { window.localStorage.setItem('md.themeReference.engine', v); } catch { /* ignore */ }
+    try { window.localStorage.setItem('fp.themeReference.engine', v); } catch { /* ignore */ }
   }
 
   return (

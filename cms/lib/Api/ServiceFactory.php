@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace MD\Api;
+namespace FrontPress\Api;
 
-defined('MD_BOOT') || exit;
+defined('FRONTPRESS_BOOT') || exit;
 
-use MD\AuditLog;
-use MD\BackupService;
-use MD\CacheService;
-use MD\Content;
-use MD\ContentRepository;
-use MD\Index;
-use MD\MediaService;
-use MD\PathResolver;
-use MD\ThemeService;
-use MD\Trash;
+use FrontPress\AuditLog;
+use FrontPress\BackupService;
+use FrontPress\CacheService;
+use FrontPress\Content;
+use FrontPress\ContentRepository;
+use FrontPress\Index;
+use FrontPress\MediaService;
+use FrontPress\PathResolver;
+use FrontPress\ThemeService;
+use FrontPress\Trash;
 
 /**
  * Single source of truth for the service graph that controllers need to

@@ -1,6 +1,6 @@
-# MD Admin — UI kit
+# FrontPress Admin — UI kit
 
-High-fidelity, interactive recreation of the MD Framework admin app (`cms/templates/*.php`).
+High-fidelity, interactive recreation of the FrontPress Studio admin app (`cms/templates/*.php`).
 
 ## What's here
 

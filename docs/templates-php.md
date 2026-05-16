@@ -40,7 +40,7 @@ Every route template wraps its body in `partial('header')` / `partial('footer')`
 
 ```php
 <?php
-$site = $GLOBALS['md_config']->get('site', []);
+$site = $GLOBALS['fp_config']->get('site', []);
 $siteName = $site['name'] ?? 'Site';
 ?>
 <!doctype html>
@@ -79,7 +79,7 @@ $siteName = $site['name'] ?? 'Site';
 ```php
     </main>
     <footer class="site-footer">
-      <p>© <?= date('Y') ?> <?= e($GLOBALS['md_config']->get('site', [])['name'] ?? '') ?></p>
+      <p>© <?= date('Y') ?> <?= e($GLOBALS['fp_config']->get('site', [])['name'] ?? '') ?></p>
     </footer>
   </div>
 </body>
@@ -297,7 +297,7 @@ $page2 = posts(['folder' => 'blog', 'limit' => 10, 'offset' => 10]);
 
 ```php
 <?php
-$index = $GLOBALS['md_index'];
+$index = $GLOBALS['fp_index'];
 $tags  = [];
 foreach ($index->get() as $post) {
     foreach ($post['tags'] as $t) {
@@ -350,7 +350,7 @@ Call from any template:
 
 ```php
 <?php
-$index   = $GLOBALS['md_index'];
+$index   = $GLOBALS['fp_index'];
 $tags    = $tags    ?? [];
 $exclude = $exclude ?? '';
 $related = [];
@@ -463,7 +463,7 @@ Drop this in `templates/_inspect.php`. Call from any template with `<?php partia
 
 ```php
 <?php
-$debug = $GLOBALS['md_config']->get('site', [])['debug'] ?? false;
+$debug = $GLOBALS['fp_config']->get('site', [])['debug'] ?? false;
 if (!$debug) return;
 
 $snapshot = [
@@ -488,7 +488,7 @@ $snapshot = [
   <pre><?= e(json_encode($snapshot, JSON_PRETTY_PRINT)) ?></pre>
 
   <h4 style="color:#ff8">Site config</h4>
-  <pre><?= e(json_encode($GLOBALS['md_config']->all(), JSON_PRETTY_PRINT)) ?></pre>
+  <pre><?= e(json_encode($GLOBALS['fp_config']->all(), JSON_PRETTY_PRINT)) ?></pre>
 
   <?php if (!empty($posts)): ?>
     <h4 style="color:#ff8">First post (full record)</h4>

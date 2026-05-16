@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace MD;
+namespace FrontPress;
 
-defined('MD_BOOT') || exit;
+defined('FRONTPRESS_BOOT') || exit;
 
 /**
  * Reads runtime config from PHP constants defined in `config.php`.
  *
  * The constant-backed model (vs the older `.env` parser) mirrors WordPress's
  * `wp-config.php`: a real PHP file with no top-level output, safe to live in
- * the webroot. Direct HTTP access just `exit`s on the `MD_BOOT` guard.
+ * the webroot. Direct HTTP access just `exit`s on the `FRONTPRESS_BOOT` guard.
  *
  * Constants are named `MD_<KEY>`; the legacy `Env::get('KEY')` API is kept
  * so call sites in controllers and bootstrap don't have to know about the

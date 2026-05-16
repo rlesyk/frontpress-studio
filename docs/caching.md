@@ -8,7 +8,7 @@ layout: default
 * TOC
 {:toc}
 
-MD Framework has no database, so the only thing worth caching is the Markdown → HTML parse and the front-matter scan that builds the post index. Both happen on disk, both invalidate themselves, and you almost never need to think about them.
+FrontPress Studio has no database, so the only thing worth caching is the Markdown → HTML parse and the front-matter scan that builds the post index. Both happen on disk, both invalidate themselves, and you almost never need to think about them.
 
 ## What gets cached
 
@@ -37,7 +37,7 @@ The index covers the *whole* content tree, so naive invalidation would mean re-s
 This is why a `git pull` or `rsync` deploy works without any cache clear: the source mtimes change, the per-page HTML invalidates per file, and the first archive request triggers a one-time full scan that rebuilds the index and writes a new marker.
 
 ### Twig cache
-Twig is configured with `auto_reload: true` (`MD\TemplateRenderer::__construct`), so editing a `.twig` template invalidates the compiled file on next render. You should never need to clear it by hand during development. Theme switching is the one case — handled automatically (see below).
+Twig is configured with `auto_reload: true` (`FrontPress\TemplateRenderer::__construct`), so editing a `.twig` template invalidates the compiled file on next render. You should never need to clear it by hand during development. Theme switching is the one case — handled automatically (see below).
 
 ## Automatic clears
 

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use MD\Updater;
+use FrontPress\Updater;
 use PHPUnit\Framework\TestCase;
 
-defined('MD_BOOT') || define('MD_BOOT', true);
+defined('FRONTPRESS_BOOT') || define('FRONTPRESS_BOOT', true);
 
 /**
  * Covers the directory-prefix path through Updater::apply() — exercising the
@@ -21,14 +21,14 @@ class UpdaterTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->root      = sys_get_temp_dir() . '/md_updater_' . uniqid();
+        $this->root      = sys_get_temp_dir() . '/fp_updater_' . uniqid();
         $this->backupDir = $this->root . '/site/backups';
         mkdir($this->root . '/cms', 0755, true);
         mkdir($this->backupDir, 0755, true);
 
         file_put_contents($this->root . '/cms/VERSION', '0.0.1');
         file_put_contents($this->root . '/cms/manifest.json', json_encode([
-            'repo' => 'krstivoja/mdframework',
+            'repo' => 'krstivoja/frontpress-studio',
             'core' => [
                 'cms/VERSION',
                 'cms/starters/debug-twig/',
@@ -55,19 +55,19 @@ class UpdaterTest extends TestCase
         $zipPath = $this->root . '/release.zip';
         $z = new ZipArchive();
         $z->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
-        $z->addEmptyDir('mdframework-1.0/');
-        $z->addFromString('mdframework-1.0/cms/VERSION', '1.0.0');
-        $z->addFromString('mdframework-1.0/cms/manifest.json', json_encode([
-            'repo' => 'krstivoja/mdframework',
+        $z->addEmptyDir('frontpress-studio-1.0/');
+        $z->addFromString('frontpress-studio-1.0/cms/VERSION', '1.0.0');
+        $z->addFromString('frontpress-studio-1.0/cms/manifest.json', json_encode([
+            'repo' => 'krstivoja/frontpress-studio',
             'core' => [
                 'cms/VERSION',
                 'cms/starters/debug-twig/',
             ],
         ]));
-        $z->addFromString('mdframework-1.0/cms/starters/debug-twig/theme.json', '{"name":"Debug (Twig)"}');
-        $z->addFromString('mdframework-1.0/cms/starters/debug-twig/templates/post.twig', 'NEW post');
-        $z->addFromString('mdframework-1.0/cms/starters/debug-twig/templates/page.twig', 'NEW page');
-        $z->addFromString('mdframework-1.0/cms/starters/debug-twig/templates/_header.twig', 'NEW header');
+        $z->addFromString('frontpress-studio-1.0/cms/starters/debug-twig/theme.json', '{"name":"Debug (Twig)"}');
+        $z->addFromString('frontpress-studio-1.0/cms/starters/debug-twig/templates/post.twig', 'NEW post');
+        $z->addFromString('frontpress-studio-1.0/cms/starters/debug-twig/templates/page.twig', 'NEW page');
+        $z->addFromString('frontpress-studio-1.0/cms/starters/debug-twig/templates/_header.twig', 'NEW header');
         $z->close();
 
         $updater = new class ($this->root) extends Updater {

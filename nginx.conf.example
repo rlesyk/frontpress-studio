@@ -1,7 +1,7 @@
-# mdframework — nginx rules.
+# FrontPress Studio — nginx rules.
 #
 # Pairs with .htaccess (which Apache reads). The framework PHP files live
-# in the webroot but guard themselves with `defined('MD_BOOT') || exit;`,
+# in the webroot but guard themselves with `defined('FRONTPRESS_BOOT') || exit;`,
 # and config.php is plain PHP that emits nothing on direct hit — so the
 # webserver only needs the minimal set of rules below.
 #

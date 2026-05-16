@@ -1,10 +1,10 @@
 ---
 name: mdframework-design
-description: Use this skill to generate well-branded interfaces and assets for MD Framework (the ultralight flat-file PHP CMS), either for production or throwaway prototypes/mocks. Contains essential design guidelines, colors, type, fonts, assets, and UI-kit components for prototyping both the admin app (shadcn-flavored B&W) and the default public theme (warm cream + purple link).
+description: Use this skill to generate well-branded interfaces and assets for FrontPress Studio (the ultralight flat-file PHP CMS), either for production or throwaway prototypes/mocks. Contains essential design guidelines, colors, type, fonts, assets, and UI-kit components for prototyping both the admin app (shadcn-flavored B&W) and the default public theme (warm cream + purple link).
 user-invocable: true
 ---
 
-# MD Framework design skill
+# FrontPress Studio design skill
 
 Read `README.md` in this skill for the full system: content fundamentals, visual foundations, iconography, and sources. It's the source of truth.
 
@@ -18,7 +18,7 @@ Then orient yourself to the other files:
 
 ## Two surfaces
 
-MD Framework has two distinct visual systems. **Pick the right one before you start.**
+FrontPress Studio has two distinct visual systems. **Pick the right one before you start.**
 
 | Surface              | When to use                                                  | Vibe                             |
 | -------------------- | ------------------------------------------------------------ | -------------------------------- |
@@ -47,7 +47,7 @@ Ask what they want to build:
 - "Is this a whole screen, or just a component?"
 - "Is this a prototype to look at, or code to ship?"
 
-Then ask a few problem-specific questions and act as an expert designer for MD Framework, producing either HTML artifacts or production code depending on the answer.
+Then ask a few problem-specific questions and act as an expert designer for FrontPress Studio, producing either HTML artifacts or production code depending on the answer.
 
 ## Substitutions to flag on the way in
 

@@ -1,8 +1,8 @@
 <?php
 
-namespace MD;
+namespace FrontPress;
 
-defined('MD_BOOT') || exit;
+defined('FRONTPRESS_BOOT') || exit;
 
 use Twig\Environment;
 use Twig\Loader\FilesystemLoader;
@@ -33,8 +33,8 @@ final class TemplateRenderer
         ]);
 
         // Expose config as a plain array — Twig's `config.site.name` resolves
-        // through array access, not the MD\Config class's get()/all() methods.
-        $cfg = $GLOBALS['md_config'] ?? null;
+        // through array access, not the FrontPress\Config class's get()/all() methods.
+        $cfg = $GLOBALS['fp_config'] ?? null;
         $this->twig->addGlobal('config', $cfg && method_exists($cfg, 'all') ? $cfg->all() : []);
 
         // Register helpers — names match the global PHP functions so a theme
@@ -56,8 +56,8 @@ final class TemplateRenderer
     public static function instance(): self
     {
         if (self::$instance === null) {
-            $templateDir = $GLOBALS['md_template_dir'];
-            $cacheDir    = ($GLOBALS['md_cache_dir'] ?? dirname($templateDir, 3) . '/cache') . '/twig';
+            $templateDir = $GLOBALS['fp_template_dir'];
+            $cacheDir    = ($GLOBALS['fp_cache_dir'] ?? dirname($templateDir, 3) . '/cache') . '/twig';
             self::$instance = new self($templateDir, $cacheDir);
         }
         return self::$instance;
