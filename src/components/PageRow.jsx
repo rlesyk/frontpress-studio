@@ -20,11 +20,15 @@ const PageRow = memo(function PageRow({ page, showStatus, selected, onToggle, on
         />
       </td>
       <td className="px-6 py-4">
-        <Link to={`/${page.path}`} className="font-semibold text-zinc-900 hover:underline">
-          {page.title || '(untitled)'}
+        <Link to={`/${page.path}`} className="block">
+          <span className="block font-semibold text-zinc-900 hover:underline">
+            {page.title || '(untitled)'}
+          </span>
+          <span className="mt-0.5 block font-mono text-[11px] text-zinc-500">
+            {page.path}
+          </span>
         </Link>
       </td>
-      <td className="px-6 py-4 font-mono text-[12px] text-zinc-500">{page.path}</td>
       {showStatus ? (
         <td className="px-6 py-4">
           <Badge tone={page.draft ? 'draft' : 'live'}>{page.draft ? 'Draft' : 'Live'}</Badge>

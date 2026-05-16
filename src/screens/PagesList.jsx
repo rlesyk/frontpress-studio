@@ -232,7 +232,6 @@ export default function PagesList() {
               />
             </th>
             <th className="px-6 py-3">Title</th>
-            <th className="px-6 py-3">Path</th>
             {folder ? (
               <th className="px-6 py-3">Status</th>
             ) : (
@@ -246,7 +245,7 @@ export default function PagesList() {
             <PagesListEmptyState
               folder={folder}
               filterActive={!!(query || statusFilter)}
-              columnSpan={5}
+              columnSpan={4}
               onNew={() => navigate(`/new/${encodeURIComponent(folder)}`)}
             />
           )}
