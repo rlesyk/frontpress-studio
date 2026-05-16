@@ -25,13 +25,19 @@ if (!function_exists('partial')) {
      * Render a partial from the active theme. Resolution order:
      *   1. components/<name>.php
      *   2. components/<name>.twig
-     *   3. _<name>.php          (legacy convention)
-     *   4. <name>.php           (legacy convention)
-     *   5. _<name>.twig         (legacy convention)
-     *   6. <name>.twig          (legacy convention)
+     *   3. components/<name>.html
+     *   4. _<name>.php          (legacy convention)
+     *   5. <name>.php           (legacy convention)
+     *   6. _<name>.twig         (legacy convention)
+     *   7. <name>.twig          (legacy convention)
+     *   8. _<name>.html         (visual editor — static block)
+     *   9. <name>.html          (visual editor — static block)
      *
-     * `.twig` partials are routed through `FrontPress\TemplateRenderer`. PHP partials
-     * are required directly with `$vars` extracted into local scope.
+     * `.twig` partials are routed through `FrontPress\TemplateRenderer`. PHP
+     * partials are required directly with `$vars` extracted into local scope.
+     * `.html` partials are emitted verbatim — they're authored in the visual
+     * editor (Theme editor → .html file) and contain no template logic, so
+     * `$vars` are ignored. Use `.twig` when you need dynamic content.
      *
      * @param array<string, mixed> $vars
      */
@@ -48,16 +54,21 @@ if (!function_exists('partial')) {
         $candidates = [
             ["components/{$name}.php",  'php'],
             ["components/{$name}.twig", 'twig'],
+            ["components/{$name}.html", 'html'],
             ["_{$name}.php",            'php'],
             ["{$name}.php",             'php'],
             ["_{$name}.twig",           'twig'],
             ["{$name}.twig",            'twig'],
+            ["_{$name}.html",           'html'],
+            ["{$name}.html",            'html'],
         ];
         foreach ($candidates as [$rel, $kind]) {
             $path = "$dir/$rel";
             if (!is_file($path)) continue;
             if ($kind === 'twig') {
                 FrontPress\TemplateRenderer::instance()->render($rel, $vars);
+            } elseif ($kind === 'html') {
+                readfile($path);
             } else {
                 extract($vars, EXTR_SKIP);
                 require $path;

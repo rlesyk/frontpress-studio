@@ -1,10 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api.js';
 import { useToast } from '../lib/toast.jsx';
 import FileTree from '../components/ThemeEditor/FileTree.jsx';
 import EditorPane from '../components/ThemeEditor/EditorPane.jsx';
 import PreviewPane from '../components/ThemeEditor/PreviewPane.jsx';
+
+// GrapesJS pulls in a 15MB dependency tree — only load it when the user
+// opens a `.html` file. Twig / PHP / CSS workflows never pay for it.
+const VisualEditorPane = lazy(() => import('../components/ThemeEditor/VisualEditorPane.jsx'));
 
 // Three-pane theme editor: file tree | code editor | live preview.
 //
@@ -81,6 +85,10 @@ export default function ThemeEditor() {
     setHover(className ? `<${tag} class="${className}">` : `<${tag}>`);
   }, []);
 
+  // Branch on extension — .html opens the GrapesJS visual editor + code
+  // split; everything else uses the code editor + iframe preview.
+  const isVisual = currentPath.toLowerCase().endsWith('.html');
+
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
       <header className="flex items-center justify-between gap-3 border-b border-zinc-200 bg-white px-6 py-3">
@@ -93,25 +101,43 @@ export default function ThemeEditor() {
         </div>
       </header>
 
-      <div className="grid min-h-0 flex-1 grid-cols-[240px_minmax(0,1fr)_minmax(0,1fr)]">
+      <div className={`grid min-h-0 flex-1 ${isVisual ? 'grid-cols-[240px_minmax(0,1fr)]' : 'grid-cols-[240px_minmax(0,1fr)_minmax(0,1fr)]'}`}>
         <FileTree
           entries={tree.data?.entries}
           currentPath={currentPath}
           dirty={dirtySet}
           onSelect={selectFile}
         />
-        <EditorPane
-          path={currentPath}
-          contents={buffers[currentPath] ?? ''}
-          loading={file.isLoading}
-          error={file.error?.message}
-          dirty={dirtySet.has(currentPath)}
-          saving={save.isPending}
-          saveError={save.error?.message}
-          onChange={updateBuffer}
-          onSave={() => save.mutate()}
-        />
-        <PreviewPane version={previewVersion} onHover={onHover} />
+        {isVisual ? (
+          <Suspense fallback={<div className="p-6 text-sm text-zinc-500">Loading visual editor…</div>}>
+            <VisualEditorPane
+              path={currentPath}
+              contents={buffers[currentPath] ?? ''}
+              loading={file.isLoading}
+              error={file.error?.message}
+              dirty={dirtySet.has(currentPath)}
+              saving={save.isPending}
+              saveError={save.error?.message}
+              onChange={updateBuffer}
+              onSave={() => save.mutate()}
+            />
+          </Suspense>
+        ) : (
+          <>
+            <EditorPane
+              path={currentPath}
+              contents={buffers[currentPath] ?? ''}
+              loading={file.isLoading}
+              error={file.error?.message}
+              dirty={dirtySet.has(currentPath)}
+              saving={save.isPending}
+              saveError={save.error?.message}
+              onChange={updateBuffer}
+              onSave={() => save.mutate()}
+            />
+            <PreviewPane version={previewVersion} onHover={onHover} />
+          </>
+        )}
       </div>
     </div>
   );
