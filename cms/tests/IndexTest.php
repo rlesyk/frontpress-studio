@@ -163,6 +163,53 @@ class IndexTest extends TestCase
         $this->assertContains('Draft', $titles);
     }
 
+    public function testRenameDetectedEvenWhenStaleMarkerShortCircuitsToFalse(): void
+    {
+        // Regression: previously, when the cache/index.mtime marker existed
+        // but was older than the index file (which it always is after the
+        // first admin save, since touchMarker → marker(T1) → rebuild →
+        // index(T2 > T1)), needsRebuild returned false immediately and
+        // never walked the FS. So external renames done via `mv` / Finder
+        // went undetected until the next admin save. Now the marker is a
+        // one-way positive signal: only "marker > index" returns true; a
+        // stale marker falls through to the directory-mtime scan.
+
+        $this->post('original', ['title' => 'Original']);
+        $this->index->get(); // build index
+
+        $indexFile = $this->cacheDir . '/index.json';
+        $marker    = $this->cacheDir . '/index.mtime';
+
+        // Simulate the state after an earlier admin save: marker exists,
+        // older than the index file (because rebuild followed it).
+        touch($marker, time() - 20);
+        touch($indexFile, time() - 10);
+        $this->assertLessThan(filemtime($indexFile), filemtime($marker));
+
+        // Rename the post externally (the way Finder / mv does it). The
+        // file's mtime can stay anything; the parent directory's mtime is
+        // bumped to NOW.
+        rename(
+            $this->contentDir . '/blog/original.md',
+            $this->contentDir . '/blog/renamed.md',
+        );
+
+        // Fresh Index instance so the per-request memo doesn't lie.
+        $r = new ReflectionProperty(Index::class, 'cache');
+        $r->setAccessible(true);
+        $r->setValue(null, []);
+        $index = new Index(
+            $this->contentDir,
+            $this->cacheDir,
+            new Content($this->contentDir, $this->cacheDir),
+        );
+
+        $entries = $index->get();
+        $paths   = array_column(array_values($entries), 'path');
+        $this->assertNotContains('blog/original', $paths, 'stale entry must be gone after rename');
+        $this->assertContains('blog/renamed', $paths, 'renamed file must appear under its new path');
+    }
+
     public function testDetectsDragDroppedFileWithOlderMtimeViaDirectoryMtime(): void
     {
         // Regression: a file added to an existing folder via Finder /

@@ -55,18 +55,26 @@ class Index
         if (!is_file($indexFile)) {
             return true;
         }
-        $marker = $this->cacheDir . '/index.mtime';
-        if (is_file($marker)) {
-            return filemtime($marker) > filemtime($indexFile);
-        }
-        // Cold cache / missing marker — fall back to scanning. We check BOTH
-        // file mtimes (which catch edits to existing posts) AND directory
-        // mtimes (which catch adds/removes via SCP, rsync, Finder drag-drop,
-        // `cp -p`, etc., where the new files keep their *original* older
-        // mtime but the parent directory's mtime is bumped to "now"). Only
-        // checking file mtimes makes the framework miss freshly-dropped
-        // content with old timestamps.
         $indexTime = filemtime($indexFile);
+
+        // Fast positive signal: any admin write touches the marker, so a
+        // marker newer than the index means "an admin-driven change since
+        // the last build" — short-circuit without walking the tree.
+        $marker = $this->cacheDir . '/index.mtime';
+        if (is_file($marker) && filemtime($marker) > $indexTime) {
+            return true;
+        }
+
+        // External edits (Finder rename, `mv`, `rm`, `cp -p`, rsync, SCP,
+        // git checkout, etc.) don't touch the marker. They DO bump the
+        // parent directory's mtime — that's universal on Linux/macOS for
+        // any add/remove/rename inside a directory. Walk the content tree
+        // and rebuild on any directory or .md file newer than the index.
+        // Cheap — one stat per entry, sub-millisecond for typical sites.
+        // Without this check, once the marker exists from any admin
+        // action, external changes are invisible until the next admin
+        // save — the exact bug a flat-file CMS shouldn't have, since
+        // editing content with whatever tool you like is the whole point.
         if ((int)@filemtime($this->contentDir) > $indexTime) {
             return true;
         }

@@ -7,6 +7,11 @@ layout: default
 
 All notable changes to MD Framework are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.61] — 2026-05-16
+
+### Fixed
+- **External renames / removals / adds were invisible until the next admin save** once `cache/index.mtime` existed. The 0.0.59 fix gave the index a directory-mtime fallback for drag-dropped files — but only on the "cold cache / missing marker" path. Once any admin write touched the marker file (which is then *older* than the rebuilt index forever), `needsRebuild()` short-circuited to `false` and the FS-scan path stopped running. The marker is now a one-way **positive** signal: a marker **newer** than the index returns "rebuild" immediately, otherwise the function falls through to the directory + .md mtime walk. So `mv`, `rm`, `cp -p`, rsync, SCP, and git checkouts all surface on the very next request without any manual cache invalidation. Added regression test (`IndexTest::testRenameDetectedEvenWhenStaleMarkerShortCircuitsToFalse`).
+
 ## [0.0.60] — 2026-05-16
 
 ### Fixed
@@ -197,6 +202,7 @@ All notable changes to MD Framework are documented here. The format is based on 
 - Admin UI at `/admin/` with EasyMDE editor, image uploads, CSRF protection, bcrypt-hashed credentials in `.env`.
 - PHP template system with `render()` helper and `_layout.php` output-buffer pattern.
 
+[0.0.61]: https://github.com/krstivoja/mdframework/releases/tag/0.0.61
 [0.0.60]: https://github.com/krstivoja/mdframework/releases/tag/0.0.60
 [0.0.59]: https://github.com/krstivoja/mdframework/releases/tag/0.0.59
 [0.0.58]: https://github.com/krstivoja/mdframework/releases/tag/0.0.58
