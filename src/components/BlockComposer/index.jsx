@@ -4,6 +4,8 @@ import { api } from '../../lib/api.js';
 import { appendBlock, findById, makeId, moveById, removeById, updateById } from '../../lib/blockHelpers.js';
 import BlockInspector from './BlockInspector.jsx';
 import BlockPalette from './BlockPalette.jsx';
+import CodePanel from './CodePanel.jsx';
+import ListView from './ListView.jsx';
 import VisualCanvas from './VisualCanvas.jsx';
 
 // Three-pane page-builder surface: Palette | Canvas | Inspector.
@@ -16,6 +18,7 @@ import VisualCanvas from './VisualCanvas.jsx';
 // adds blocks. Plenty for a real first pass; everything above is polish.
 export default function BlockComposer({ tree, onChange, pageMeta }) {
   const [selectedId, setSelectedId] = useState(null);
+  const [leftTab, setLeftTab] = useState('palette');
 
   // Registry from the server. Refetched on every mount — block.json edits
   // are infrequent enough that we don't need clever caching.
@@ -89,23 +92,41 @@ export default function BlockComposer({ tree, onChange, pageMeta }) {
   }, [tree, registry, onChange]);
 
   return (
-    <div className="grid h-full min-h-0 flex-1 grid-cols-[240px_minmax(0,1fr)_280px]">
-      <BlockPalette
-        blocks={registry}
-        onAdd={addBlock}
-        addingTo={addingTo}
-      />
-      <VisualCanvas
-        tree={tree}
-        pageMeta={pageMeta}
-        selectedId={selectedId}
-        selectedDef={selectedDef}
-        onSelect={setSelectedId}
-        onTextEdit={onTextEdit}
-        onMove={moveBlock}
-        onRemove={removeBlock}
-        onAddChild={onAddChild}
-      />
+    <div className="grid h-full min-h-0 flex-1 grid-cols-[260px_minmax(0,1fr)_300px]">
+      {/* Left column: tabbed Add-block / List-view */}
+      <aside className="flex min-h-0 flex-col overflow-hidden border-r border-zinc-200 bg-white">
+        <div className="flex border-b border-zinc-100">
+          <LeftTab active={leftTab === 'palette'} onClick={() => setLeftTab('palette')}>Add</LeftTab>
+          <LeftTab active={leftTab === 'list'}    onClick={() => setLeftTab('list')}>List view</LeftTab>
+        </div>
+        {leftTab === 'palette' ? (
+          <BlockPalette blocks={registry} onAdd={addBlock} addingTo={addingTo} />
+        ) : (
+          <ListView
+            tree={tree}
+            registry={registry}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+          />
+        )}
+      </aside>
+
+      {/* Center: canvas on top, code panel on the bottom (resizable later). */}
+      <div className="grid min-h-0 grid-rows-[minmax(0,1fr)_minmax(140px,28%)]">
+        <VisualCanvas
+          tree={tree}
+          pageMeta={pageMeta}
+          selectedId={selectedId}
+          selectedDef={selectedDef}
+          onSelect={setSelectedId}
+          onTextEdit={onTextEdit}
+          onMove={moveBlock}
+          onRemove={removeBlock}
+          onAddChild={onAddChild}
+        />
+        <CodePanel block={selected?.block || null} pageMeta={pageMeta} />
+      </div>
+
       <BlockInspector
         block={selected?.block || null}
         def={selectedDef}
@@ -113,5 +134,21 @@ export default function BlockComposer({ tree, onChange, pageMeta }) {
         onRemove={removeBlock}
       />
     </div>
+  );
+}
+
+function LeftTab({ active, children, ...rest }) {
+  return (
+    <button
+      type="button"
+      {...rest}
+      className={`flex-1 px-2 py-2 text-[12px] font-semibold uppercase tracking-wide transition ${
+        active
+          ? 'border-b-2 border-zinc-900 text-zinc-900'
+          : 'text-zinc-500 hover:text-zinc-800'
+      }`}
+    >
+      {children}
+    </button>
   );
 }
