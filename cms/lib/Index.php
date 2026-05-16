@@ -59,16 +59,29 @@ class Index
         if (is_file($marker)) {
             return filemtime($marker) > filemtime($indexFile);
         }
-        // Cold cache / missing marker — fall back to scanning .md files.
+        // Cold cache / missing marker — fall back to scanning. We check BOTH
+        // file mtimes (which catch edits to existing posts) AND directory
+        // mtimes (which catch adds/removes via SCP, rsync, Finder drag-drop,
+        // `cp -p`, etc., where the new files keep their *original* older
+        // mtime but the parent directory's mtime is bumped to "now"). Only
+        // checking file mtimes makes the framework miss freshly-dropped
+        // content with old timestamps.
         $indexTime = filemtime($indexFile);
-        $iter      = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($this->contentDir, \FilesystemIterator::SKIP_DOTS)
+        if ((int)@filemtime($this->contentDir) > $indexTime) {
+            return true;
+        }
+        $iter = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($this->contentDir, \FilesystemIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::SELF_FIRST,
         );
-        foreach ($iter as $file) {
-            if ($file->getExtension() !== 'md') {
+        foreach ($iter as $entry) {
+            if ($entry->isDir()) {
+                if ($entry->getMTime() > $indexTime) {
+                    return true;
+                }
                 continue;
             }
-            if ($file->getMTime() > $indexTime) {
+            if ($entry->getExtension() === 'md' && $entry->getMTime() > $indexTime) {
                 return true;
             }
         }

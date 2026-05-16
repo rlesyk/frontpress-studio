@@ -162,4 +162,55 @@ class IndexTest extends TestCase
         $this->assertContains('Live', $titles);
         $this->assertContains('Draft', $titles);
     }
+
+    public function testDetectsDragDroppedFileWithOlderMtimeViaDirectoryMtime(): void
+    {
+        // Regression: a file added to an existing folder via Finder /
+        // `cp -p` / rsync keeps its *original* (older) mtime, but the
+        // folder's mtime is bumped to "now". The cold-cache rebuild check
+        // used to look only at file mtimes, so freshly-added .md files
+        // with old timestamps were invisible and the framework kept
+        // serving a stale index. needsRebuild now checks directory
+        // mtimes too.
+
+        $this->post('first', ['title' => 'First']);
+        $this->index->get(); // build initial index
+
+        $indexFile = $this->cacheDir . '/index.json';
+        $this->assertFileExists($indexFile);
+        $this->assertCount(1, json_decode((string)file_get_contents($indexFile), true));
+
+        // Backdate the index to 10 seconds ago so the upcoming directory
+        // bump from `cp`-ing a file in is unambiguously newer than it.
+        // (Without this the test runs sub-second and the second-precision
+        // mtime check ties.)
+        $pastTime = time() - 10;
+        touch($indexFile, $pastTime);
+
+        // "Drop" a new post with a mtime well in the past, the way a
+        // Finder copy of an old WordPress export would land it. The file's
+        // own mtime stays old, but the parent directory's mtime is now.
+        $this->post('imported', ['title' => 'Imported'], strtotime('2024-01-01 00:00:00'));
+        $imported = $this->contentDir . '/blog/imported.md';
+        // Sanity: the file IS older than the (now backdated) index.
+        $this->assertLessThan(filemtime($indexFile), filemtime($imported));
+        // The directory should be newer than the index — that's what the
+        // rebuild check has to notice.
+        $this->assertGreaterThan(filemtime($indexFile), filemtime($this->contentDir . '/blog'));
+
+        // Force a fresh Index so the per-request memo doesn't mask state.
+        $r = new ReflectionProperty(Index::class, 'cache');
+        $r->setAccessible(true);
+        $r->setValue(null, []);
+        $index = new Index(
+            $this->contentDir,
+            $this->cacheDir,
+            new Content($this->contentDir, $this->cacheDir),
+        );
+
+        $entries = $index->get();
+        $this->assertCount(2, $entries, 'drag-dropped .md with older mtime must be picked up via folder mtime bump');
+        $paths = array_column(array_values($entries), 'path');
+        $this->assertContains('blog/imported', $paths);
+    }
 }
