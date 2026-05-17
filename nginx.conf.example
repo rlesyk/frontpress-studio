@@ -1,15 +1,19 @@
-# FrontPress Studio — nginx rules.
+# FrontPress Studio — optional nginx rules.
 #
-# Pairs with .htaccess (which Apache reads). The framework PHP files live
-# in the webroot but guard themselves with `defined('FRONTPRESS_BOOT') || exit;`,
-# and config.php is plain PHP that emits nothing on direct hit — so the
-# webserver only needs the minimal set of rules below.
+# These are NOT required to run the framework. The public front controller
+# (`index.php`) already self-dispatches any /admin/* URL that falls
+# through to it — so a stock WordPress-style nginx config (Local by
+# Flywheel et al.) works out of the box.
+#
+# Use these rules only if you want the small perf win of skipping the
+# index.php → admin/index.php hop, or to harden raw-Markdown / uploads
+# access at the webserver layer instead of in PHP.
 #
 # Drop the block below inside your `server { ... }` after `root` is set,
-# or save this file as e.g. /etc/nginx/snippets/mdframework.conf and
-# `include /etc/nginx/snippets/mdframework.conf;` from your server block.
-#
-# Assumes a PHP-FPM `location ~ \.php$ { ... }` is already configured.
+# or save this file as e.g. /etc/nginx/snippets/frontpress-studio.conf
+# and `include /etc/nginx/snippets/frontpress-studio.conf;` from your
+# server block. Assumes a PHP-FPM `location ~ \.php$ { ... }` is already
+# configured.
 
 # Block raw markdown source (the framework parses these server-side).
 location ~ \.md$ { return 404; }

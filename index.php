@@ -2,6 +2,22 @@
 
 declare(strict_types=1);
 
+// Webserver-agnostic admin dispatch: if a request to /admin/* falls
+// through to this front controller (Local by Flywheel, shared-host
+// nginx defaults, anywhere without a dedicated `location /admin { ... }`
+// rule), hand it off to admin/index.php so the framework works out of
+// the box without site-config edits.
+//
+// Done before anything else so admin/index.php owns the session, headers,
+// and FRONTPRESS_BOOT define on its own — no double session_start, no
+// constant redeclare notice.
+$_fp_path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/';
+if ($_fp_path === '/admin' || str_starts_with($_fp_path, '/admin/')) {
+    require __DIR__ . '/admin/index.php';
+    exit;
+}
+unset($_fp_path);
+
 define('FRONTPRESS_BOOT', true);
 
 session_set_cookie_params(['lifetime' => 0, 'path' => '/', 'httponly' => true, 'samesite' => 'Strict']);
