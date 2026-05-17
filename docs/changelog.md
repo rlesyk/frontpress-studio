@@ -3,6 +3,8 @@ title: Changelog
 layout: default
 ---
 
+{% raw %}
+
 # Changelog
 
 All notable changes to FrontPress Studio are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -343,3 +345,5 @@ All notable changes to FrontPress Studio are documented here. The format is base
 [0.0.53]: https://github.com/krstivoja/mdframework/releases/tag/0.0.53
 [0.0.52]: https://github.com/krstivoja/mdframework/releases/tag/0.0.52
 [1.0.0]: https://github.com/krstivoja/mdframework/releases/tag/v1.0.0
+
+{% endraw %}
