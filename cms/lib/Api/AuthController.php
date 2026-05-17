@@ -86,7 +86,7 @@ class AuthController
         // checklist item; the server enforces the same list so curl users
         // can't bypass the UI. Kept short on purpose — full breach-corpus
         // checks belong in a separate Have-I-Been-Pwned-style integration.
-        $blocked = ['admin', 'password', '12345678', 'qwertyui', 'iloveyou', 'changeme', 'admin123'];
+        $blocked = ['admin', 'password', '12345678', 'qwertyui', 'iloveyou', 'changeme', 'admin123', 'fpspass', 'fpsadmin'];
         if (in_array(strtolower($next), $blocked, true)) {
             \json_response(['ok' => false, 'error' => 'Pick something less common than that.'], 400);
         }

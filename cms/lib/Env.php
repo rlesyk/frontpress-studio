@@ -60,7 +60,7 @@ class Env
      * Rewrite `config.php` so `MD_ADMIN_PASS_HASH` holds the given bcrypt
      * hash and any plaintext `MD_ADMIN_PASS` define is removed. Used on
      * first request when a fresh install was unzipped with the friendly
-     * default `MD_ADMIN_PASS = 'admin'` line still present.
+     * default `MD_ADMIN_PASS = 'fpspass'` line still present.
      *
      * The atomic-write guarantees readers never see a half-rewritten file.
      * Returns true on success — caller decides whether failure is fatal.
@@ -114,9 +114,10 @@ class Env
     }
 
     /**
-     * True when the active admin password still verifies against the friendly
-     * default (`admin`) shipped in `config.example.php`. The CMS uses this to
-     * render a persistent first-run banner until the operator rotates it.
+     * True when the active admin password still verifies against a known
+     * shipped default. The CMS uses this to render a persistent first-run
+     * banner until the operator rotates it. `'admin'` stays in the list so
+     * installs created before the default was changed still see the banner.
      */
     public static function isPasswordDefault(): bool
     {
@@ -124,7 +125,12 @@ class Env
         if ($hash === '') {
             return false;
         }
-        return password_verify('admin', $hash);
+        foreach (['fpspass', 'admin'] as $candidate) {
+            if (password_verify($candidate, $hash)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

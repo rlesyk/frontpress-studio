@@ -15,7 +15,7 @@ Ultralight flat-file CMS built in PHP. No database. Content is Markdown files on
 
 ### Shared hosting (zip)
 
-Download `mdframework-<version>.zip` from [Releases](https://github.com/krstivoja/mdframework/releases) and unzip its contents into your domain's document root. Copy `.env.example` to `.env`, set your admin credentials, and visit `/admin`.
+Download `mdframework-<version>.zip` from [Releases](https://github.com/krstivoja/mdframework/releases) and unzip its contents into your domain's document root. Visit `/admin` and sign in with **`fpsadmin`** / **`fpspass`** — a persistent banner will nag you until you set a real password under **Settings → Security**.
 
 ### Source install (development)
 
@@ -23,7 +23,6 @@ Download `mdframework-<version>.zip` from [Releases](https://github.com/krstivoj
 git clone https://github.com/krstivoja/mdframework.git
 cd mdframework/app
 composer install --working-dir=cms
-cp .env.example .env
 
 # Admin SPA (React + Vite)
 cd src

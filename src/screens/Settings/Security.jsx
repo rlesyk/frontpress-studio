@@ -8,7 +8,7 @@ import { Alert, Button, Card, Field, Input } from '../../components/ui/index.js'
 // the two in sync so the UI's "Not a common password" check matches what
 // the API actually rejects.
 const COMMON_PASSWORDS = new Set([
-  'admin', 'password', '12345678', 'qwertyui', 'iloveyou', 'changeme', 'admin123',
+  'admin', 'password', '12345678', 'qwertyui', 'iloveyou', 'changeme', 'admin123', 'fpspass', 'fpsadmin',
 ]);
 
 function evaluateStrength(value) {

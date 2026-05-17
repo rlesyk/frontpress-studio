@@ -92,11 +92,12 @@ PHP);
         $this->assertSame($realHash, Env::get('ADMIN_PASS_HASH'));
     }
 
-    public function testUpgradeHandlesGetenvFallbackFormFromConfigExample(): void
+    public function testUpgradeHandlesGetenvFallbackForm(): void
     {
-        // Regression: config.example.php uses `getenv(...) ?: '...'` for
-        // each constant; upgrade must rewrite that line, not append a
-        // duplicate `define()` (which PHP would warn about and ignore).
+        // Regression: when the operator opts into the plaintext
+        // MD_ADMIN_PASS shape using `getenv(...) ?: '...'`, the upgrade
+        // must rewrite that line, not append a duplicate `define()`
+        // (which PHP would warn about and ignore).
         file_put_contents($this->tmp, <<<'PHP'
 <?php
 defined('FRONTPRESS_BOOT') || exit;

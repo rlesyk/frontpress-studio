@@ -20,10 +20,6 @@ src/dist/
 # ──────────────────────────────────────────────────────────────────
 site/
 
-# ──────────────────────────────────────────────────────────────────
-# Local config / secrets
-# ──────────────────────────────────────────────────────────────────
-config.php
 
 # Local Sites recreates a MySQL dump at /sql/local.sql for any site it
 # manages, regardless of whether the framework uses SQL. mdframework is

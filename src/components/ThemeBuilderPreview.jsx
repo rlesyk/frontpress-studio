@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { occurrenceOfBlock } from '../lib/themeBuilderBlocks.js';
 
 // Iframe preview of the public site. `path` is the URL the iframe loads
 // (defaults to `/`) and is editable from the input in the header so the
@@ -7,8 +8,21 @@ import { useEffect, useState } from 'react';
 //
 // `cacheBust` flips on save and on the Reload button click; we append it
 // as a query param so the iframe reloads with the fresh bundle.
-export default function ThemeBuilderPreview({ path, cacheBust, selectedBlock, onPathChange }) {
+//
+// `filePath` + `blocks` are the parsed tree of the file currently open in
+// the editor; combined with `selectedBlock` they let us postMessage the
+// iframe to scroll to (and briefly highlight) the matching DOM element
+// whenever the user picks a block in the outline.
+export default function ThemeBuilderPreview({
+  path,
+  cacheBust,
+  selectedBlock,
+  blocks,
+  filePath,
+  onPathChange,
+}) {
   const [draft, setDraft] = useState(path || '/');
+  const iframeRef = useRef(null);
 
   // Sync the input when the parent changes path externally (file switch,
   // explicit reset). The local `draft` lets the user type without
@@ -20,6 +34,29 @@ export default function ThemeBuilderPreview({ path, cacheBust, selectedBlock, on
     setDraft(normalized);
     onPathChange?.(normalized);
   }
+
+  // Outline → preview bridge. Whenever the selected block has a DOM tag
+  // we can resolve (html-source blocks only — Twig and marker blocks
+  // have no direct DOM correspondent), post the path + tag + occurrence
+  // to the iframe and let the inline script scroll it into view.
+  useEffect(() => {
+    if (!selectedBlock || selectedBlock.source !== 'html' || !filePath) return;
+    const iframe = iframeRef.current;
+    if (!iframe || !iframe.contentWindow) return;
+    const occurrence = occurrenceOfBlock(blocks, selectedBlock);
+    if (occurrence < 0) return;
+    try {
+      iframe.contentWindow.postMessage({
+        type: 'fp:focus',
+        path: filePath,
+        tag: selectedBlock.tag,
+        occurrence,
+      }, '*');
+    } catch (_) {
+      // Cross-origin or iframe-not-ready failures are silent — the
+      // user can re-click the row to retry once the iframe has loaded.
+    }
+  }, [selectedBlock, blocks, filePath]);
 
   // `fp_admin_preview=1` tells the public-side render to wrap output
   // with source-mapping HTML comments + a click-handler script. The
@@ -55,6 +92,7 @@ export default function ThemeBuilderPreview({ path, cacheBust, selectedBlock, on
       </div>
       <iframe
         key={src}
+        ref={iframeRef}
         title="Theme preview"
         src={src}
         className="min-h-0 flex-1 border-0 bg-white"

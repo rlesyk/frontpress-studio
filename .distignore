@@ -32,11 +32,6 @@ phpstan-baseline.neon
 # ──────────────────────────────────────────────────────────────────
 /docs/
 
-# ──────────────────────────────────────────────────────────────────
-# Local config / runtime / secrets
-# ──────────────────────────────────────────────────────────────────
-config.php
-
 # /site/ is user data, seeded from cms/starters/ on first request.
 # Excluded so a dev install's content/uploads doesn't ship in the zip.
 /site/

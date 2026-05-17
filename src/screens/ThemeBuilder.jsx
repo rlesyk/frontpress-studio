@@ -10,10 +10,10 @@ import { insertSnippet } from '../lib/themeBuilderSnippets.js';
 import { listTemplateFiles } from '../lib/themeBuilderTemplates.js';
 import { Alert } from '../components/ui/index.js';
 import TemplateAddDialog from '../components/TemplateAddDialog.jsx';
-import ThemeBuilderAddDialog from '../components/ThemeBuilderAddDialog.jsx';
 import ThemeBuilderHeader from '../components/ThemeBuilderHeader.jsx';
 import ThemeBuilderVisualPane from '../components/ThemeBuilderVisualPane.jsx';
 import ThemeCodePanel from '../components/ThemeCodePanel.jsx';
+import VerticalResizer from '../components/VerticalResizer.jsx';
 
 export default function ThemeBuilder() {
   const qc = useQueryClient();
@@ -24,10 +24,14 @@ export default function ThemeBuilder() {
   const [selectedBlockId, setSelectedBlockId] = useState('');
   const [previewKey, setPreviewKey] = useState(Date.now());
   const [previewPath, setPreviewPath] = useState('/');
-  const [addOpen, setAddOpen] = useState(false);
   const [newTemplateOpen, setNewTemplateOpen] = useState(false);
   const [cursorLine, setCursorLine] = useState(1);
+  const [layout, setLayout] = useState(() => readLayout());
   const previewPathTouched = useRef(false);
+
+  useEffect(() => {
+    try { localStorage.setItem('fp:theme-builder:layout', layout); } catch (_) {}
+  }, [layout]);
 
   const { data: themesData, isLoading: themesLoading } = useQuery({
     queryKey: ['themes'],
@@ -181,10 +185,11 @@ export default function ThemeBuilder() {
         themeLabel={themeLabel}
         path={path}
         templates={templates}
+        layout={layout}
         onChooseFile={chooseFile}
         onNewTemplate={() => setNewTemplateOpen(true)}
-        onReloadPreview={() => setPreviewKey(Date.now())}
         onSave={() => save.mutate()}
+        onLayoutChange={setLayout}
         canCreate={!!theme}
         saving={save.isPending}
         dirty={dirty}
@@ -193,16 +198,23 @@ export default function ThemeBuilder() {
       {save.error && <Alert tone="error">{save.error.message}</Alert>}
       {fileError && <Alert tone="error">{fileError.message}</Alert>}
 
-      <section className="grid min-h-0 flex-1 grid-rows-[minmax(260px,1fr)_minmax(260px,1fr)]">
+      <VerticalResizer
+        storageKey="fp:theme-builder:split"
+        direction={layout === 'right' ? 'row' : 'column'}
+      >
         <ThemeBuilderVisualPane
           blocks={blocks}
           draft={draft}
+          filePath={path}
           isTwig={isTwig}
           selectedBlock={selectedBlock}
           selectedBlockId={selectedBlockId}
           previewPath={previewPath}
           previewKey={previewKey}
-          onOpenAdd={() => setAddOpen(true)}
+          files={files}
+          onInsert={(snippet) =>
+            applyBlockChange(insertSnippet(draft, snippet, { line: cursorLine }))
+          }
           onSelectBlock={setSelectedBlockId}
           onChangeDraft={applyBlockChange}
           onPreviewPathChange={(next) => {
@@ -211,7 +223,7 @@ export default function ThemeBuilder() {
           }}
         />
 
-        <div className="flex min-h-0 flex-col">
+        <div className="flex min-h-0 flex-1 flex-col">
           {busy ? (
             <div className="p-4 text-sm text-zinc-500">Loading...</div>
           ) : (
@@ -221,20 +233,17 @@ export default function ThemeBuilder() {
               draft={draft}
               dirty={dirty}
               focusLine={selectedBlock?.startLine || null}
+              blocks={blocks}
+              cursorLine={cursorLine}
+              selectedBlockId={selectedBlockId}
               onChange={updateDraft}
               onSelectFile={chooseFile}
               onCursorChange={setCursorLine}
+              onSelectBlock={setSelectedBlockId}
             />
           )}
         </div>
-      </section>
-
-      <ThemeBuilderAddDialog
-        open={addOpen}
-        onClose={() => setAddOpen(false)}
-        onInsert={(snippet) => applyBlockChange(insertSnippet(draft, snippet, { line: cursorLine }))}
-        files={files}
-      />
+      </VerticalResizer>
 
       <TemplateAddDialog
         open={newTemplateOpen}
@@ -249,6 +258,15 @@ export default function ThemeBuilder() {
       />
     </main>
   );
+}
+
+function readLayout() {
+  try {
+    const raw = localStorage.getItem('fp:theme-builder:layout');
+    return raw === 'right' ? 'right' : 'below';
+  } catch (_) {
+    return 'below';
+  }
 }
 
 function preferredPath(files) {

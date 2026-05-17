@@ -130,6 +130,40 @@ function minLeadingWhitespace(lines) {
   return min === Infinity ? 0 : min;
 }
 
+/**
+ * Return every ancestor of the block containing `line`, ordered
+ * outermost → innermost (inclusive of the leaf itself). Used by the
+ * code editor's breadcrumb strip.
+ *
+ * Strategy: pick the deepest block whose `[startLine..endLine]` covers
+ * the cursor, then walk *up* via `parentId`. Earlier versions did a
+ * depth-first walk and pushed every block whose range covered the
+ * line, which got confused on multi-element-per-line markup (e.g.
+ * `<li><a>…</a></li>` all on one row) because the depth-first selector
+ * stopped at the first matching sibling instead of the most specific
+ * one. Walking up from the deepest match avoids that entirely.
+ */
+export function findAncestorsAtLine(blocks, line) {
+  const flat = flattenBlocks(blocks);
+  let deepest = null;
+  for (const b of flat) {
+    if (!b.startLine || !b.endLine) continue;
+    if (line < b.startLine || line > b.endLine) continue;
+    if (!deepest || b.depth > deepest.depth) deepest = b;
+  }
+  if (!deepest) return [];
+
+  const byId = new Map(flat.map((b) => [b.id, b]));
+  const chain = [];
+  let curr = deepest;
+  // Defensive bound — a malformed tree could in theory create a cycle.
+  for (let i = 0; i < flat.length && curr; i += 1) {
+    chain.unshift(curr);
+    curr = curr.parentId ? byId.get(curr.parentId) : null;
+  }
+  return chain;
+}
+
 export function findBlock(blocks, id) {
   for (const block of blocks) {
     if (block.id === id) return block;
@@ -163,12 +197,47 @@ export function findElementByTag(blocks, tag, occurrence) {
   return walk(blocks);
 }
 
+/**
+ * Inverse of `findElementByTag`: given an html-source block, compute the
+ * occurrence index it would land at if `findElementByTag` were called.
+ * Used by the outline → preview bridge: parent posts `{path, tag,
+ * occurrence}` to the iframe, which finds the matching DOM element and
+ * scrolls to it.
+ *
+ * Returns -1 for blocks the bridge can't resolve (Twig / marker blocks
+ * have no DOM tag, and blocks that aren't reachable in the tree).
+ */
+export function occurrenceOfBlock(blocks, target) {
+  if (!target || target.source !== 'html' || !target.tag) return -1;
+  let n = 0;
+  let found = -1;
+  function walk(items) {
+    for (const b of items) {
+      if (found !== -1) return;
+      if (b.source === 'html' && b.tag === target.tag) {
+        if (b.id === target.id) { found = n; return; }
+        n += 1;
+      }
+      if (Array.isArray(b.children) && b.children.length) walk(b.children);
+    }
+  }
+  walk(blocks);
+  return found;
+}
+
 function buildTree(events) {
   const root = { id: 'root', children: [] };
   const stack = [root];
 
+  // Monotonic per-build counter — appended to every generated ID so that
+  // multiple blocks at the same line (e.g. `<li><a>…</a></li>` inline)
+  // don't collide. Identity must be unique for `selectedBlockId`,
+  // `findBlock`, parent-chain walks, and React keys to behave.
+  let seq = 0;
+
   for (const ev of events) {
     if (ev.kind === 'marker-open') {
+      seq += 1;
       pushBlock(stack, {
         id: ev.id,
         type: ev.type,
@@ -185,8 +254,9 @@ function buildTree(events) {
       continue;
     }
     if (ev.kind === 'twig-open') {
+      seq += 1;
       pushBlock(stack, {
-        id: `twig-${ev.line}`,
+        id: `twig-${ev.line}-${seq}`,
         type: ev.type,
         label: ev.label,
         source: 'code',
@@ -202,8 +272,9 @@ function buildTree(events) {
     }
     if (ev.kind === 'html-open') {
       if (!VISUAL_TAGS.has(ev.tag)) continue;
+      seq += 1;
       pushBlock(stack, {
-        id: `html-${ev.line}`,
+        id: `html-${ev.line}-${seq}`,
         type: 'element',
         label: `<${ev.tag}>`,
         tag: ev.tag,

@@ -12,57 +12,48 @@ Visit `/admin/` in a browser.
 
 ## Setting the password
 
-The framework ships with a friendly default in `.env.example`:
+The framework ships with a `config.php` carrying a friendly default — username `fpsadmin`, password `fpspass`, already pre-hashed:
 
-```
-ADMIN_USER=admin
-ADMIN_PASS=admin
-ADMIN_PASS_HASH=
-```
-
-On the first request to `/admin/`, the plaintext `ADMIN_PASS` is bcrypt-hashed and `.env` is rewritten atomically to `ADMIN_PASS_HASH=…` (the plaintext line is removed). Subsequent requests see only the hash.
-
-To get started locally:
-
-```bash
-cp .env.example .env
-# Optional: edit ADMIN_PASS to something other than "admin" before first hit
+```php
+define('MD_ADMIN_USER',      getenv('MD_ADMIN_USER') ?: 'fpsadmin');
+define('MD_ADMIN_PASS_HASH', '$2y$12$Se9J1HL9cltJyftHLaykGuP8pidNbtds0WR02Vl2JyUGNfJaQe7Le');
 ```
 
-Then visit `/admin/`. After that first request, `.env` looks like this on disk:
+You sign in once, get nagged by a persistent "Set a strong admin password" banner, and rotate the password under **Settings → Security**.
 
+### Plaintext shortcut (optional)
+
+If you'd rather pick the initial password yourself before first login, swap the hash line in `config.php` for a plaintext `MD_ADMIN_PASS`:
+
+```php
+define('MD_ADMIN_PASS', 'pickapassword');
 ```
-ADMIN_USER=admin
-ADMIN_PASS_HASH=$2y$12$...
-```
+
+On the first request to `/admin/`, the plaintext is bcrypt-hashed and `config.php` is rewritten atomically to `define('MD_ADMIN_PASS_HASH', '…')` (the plaintext line is removed). Subsequent requests see only the hash. `MD_ADMIN_PASS_HASH` wins if both are present.
 
 ### Production: hash from day one
 
-If you'd rather skip the auto-hash window entirely (the seconds-to-minutes between unzip and first `/admin/` hit, when plaintext sits on disk), generate the hash yourself and put it directly in `.env`:
+To skip the auto-hash window entirely (the seconds-to-minutes between unzip and first `/admin/` hit, when plaintext would sit on disk), generate the hash yourself and put it directly in `config.php`:
 
 ```bash
 php -r "echo password_hash('yourpassword', PASSWORD_BCRYPT);"
 ```
 
-```
-ADMIN_USER=admin
-ADMIN_PASS=
-ADMIN_PASS_HASH=$2y$12$...
+```php
+define('MD_ADMIN_PASS_HASH', '$2y$12$...');
 ```
 
-When `ADMIN_PASS_HASH` is set, the auto-hash step is skipped — `ADMIN_PASS` is ignored if both are present.
+### If `config.php` isn't writable
 
-### If `.env` isn't writable
-
-If the web server can't rewrite `.env` (read-only filesystem, wrong file owner), the in-memory hash still works for the current request and login succeeds — but the next request will see the plaintext again and re-hash it. The error is logged via `error_log()`. Fix file permissions or set `ADMIN_PASS_HASH` directly to break the cycle.
+If the web server can't rewrite `config.php` (read-only filesystem, wrong file owner), the in-memory hash still works for the current request and login succeeds — but the next request will see the plaintext again and re-hash it. The error is logged via `error_log()`. Fix file permissions or set `MD_ADMIN_PASS_HASH` directly to break the cycle.
 
 ### First-run banner
 
-When the active password still verifies against the default (`admin`), the admin shell renders a persistent banner across the top of every screen:
+When the active password still verifies against a known shipped default (current: `fpspass`; legacy: `admin`), the admin shell renders a persistent banner across the top of every screen:
 
 > Set a strong admin password to finish setup. **Open Security settings**
 
-It does not dismiss — the only way to clear it is to rotate the password under **Settings → Security**. The check is `password_verify('admin', $ADMIN_PASS_HASH)` in [`FrontPress\Env::isPasswordDefault()`](app/cms/lib/Env.php), surfaced via `/admin/api/me` as `passwordIsDefault`. A custom password that happens to also be `admin` triggers the banner — that's intentional; you should pick something else.
+It does not dismiss — the only way to clear it is to rotate the password under **Settings → Security**. The check loops `password_verify(<candidate>, $ADMIN_PASS_HASH)` over the shipped-defaults list in [`FrontPress\Env::isPasswordDefault()`](app/cms/lib/Env.php), surfaced via `/admin/api/me` as `passwordIsDefault`. A custom password that happens to match one of those values triggers the banner — that's intentional; you should pick something else.
 
 ### Changing the password from the admin
 

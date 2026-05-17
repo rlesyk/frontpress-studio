@@ -288,6 +288,43 @@ function inject_preview_script(string $body): string
       }, '*');
     } catch (_) {}
   }, true);
+  // Inverse lookup: walk same-tag elements in document order, return
+  // the Nth one whose source-file marker matches `path`. Mirrors the
+  // counting in `tagOccurrence` so a selection round-trips cleanly.
+  function findByOccurrence(path, tag, occurrence) {
+    if (!tag || occurrence < 0) return null;
+    var all = document.body.getElementsByTagName(tag);
+    var n = 0;
+    for (var i = 0; i < all.length; i++) {
+      if (findSrc(all[i]) === path) {
+        if (n === occurrence) return all[i];
+        n += 1;
+      }
+    }
+    return null;
+  }
+  // Parent → iframe: when the user selects a block in the outline, the
+  // Theme Builder posts `{ type: 'fp:focus', path, tag, occurrence }`
+  // and we scroll the matching element into view with a brief
+  // outline so it's obvious which one got picked.
+  window.addEventListener('message', function (e) {
+    var data = e.data;
+    if (!data || data.type !== 'fp:focus') return;
+    var el = findByOccurrence(data.path, data.tag, data.occurrence);
+    if (!el || !el.scrollIntoView) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // Briefly outline so the scroll target is obvious. Restore the
+    // original inline outline values so we don't clobber a theme that
+    // sets them itself.
+    var prevOutline = el.style.outline;
+    var prevOffset = el.style.outlineOffset;
+    el.style.outline = '2px solid rgb(59, 130, 246)';
+    el.style.outlineOffset = '2px';
+    setTimeout(function () {
+      el.style.outline = prevOutline;
+      el.style.outlineOffset = prevOffset;
+    }, 1200);
+  });
   // Subtle hover outline so the user can tell something is mappable.
   var style = document.createElement('style');
   style.textContent = '*:hover { outline: 1px dashed rgba(59,130,246,.4); outline-offset: 1px; cursor: crosshair; }';

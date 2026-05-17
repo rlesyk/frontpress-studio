@@ -31,7 +31,7 @@ public_html/
 └── site/
 ```
 
-Copy `.env.example` to `.env`, edit it to set your admin credentials, and visit `/admin` in your browser.
+Visit `/admin` in your browser and sign in with **`fpsadmin`** / **`fpspass`**. A persistent banner across the top of the admin nags you until you set a real password under **Settings → Security**.
 
 ### Source install (development)
 
@@ -39,7 +39,6 @@ Copy `.env.example` to `.env`, edit it to set your admin credentials, and visit 
 git clone https://github.com/krstivoja/mdframework.git
 cd mdframework/app
 composer install --working-dir=cms
-cp .env.example .env
 ```
 
 The admin UI is a React app built with Vite. To work on it locally:
@@ -55,7 +54,7 @@ Production deployments need the prebuilt `admin/assets/` directory present; the 
 
 ## Directory structure
 
-The framework root (`app/` in the source tree, your domain folder for a release unzip) is also the document root. Sensitive prefixes (`cms/`, `site/`, `bootstrap.php`, `.env`) are blocked at the HTTP layer by `.htaccess`, the same way WordPress protects `wp-config.php` while sitting next to `index.php`.
+The framework root (`app/` in the source tree, your domain folder for a release unzip) is also the document root. Sensitive prefixes (`cms/`, `site/`, `bootstrap.php`, `config.php`) are blocked at the HTTP layer by `.htaccess`, the same way WordPress protects `wp-config.php` while sitting next to `index.php`.
 
 ```
 app/                          # ← also the web root (DocumentRoot)
@@ -64,8 +63,7 @@ app/                          # ← also the web root (DocumentRoot)
 ├── admin.php                 # Admin SPA shell (HTTP layer)
 ├── router.php                # PHP -S dev router (mirrors .htaccess)
 ├── bootstrap.php             # Autoloader, shared globals, render() / posts() helpers
-├── .env                      # Git-ignored — admin credentials (DENIED via .htaccess)
-├── .env.example
+├── config.php                # Admin credentials + runtime flags (DENIED via .htaccess)
 ├── assets/                   # Symlink → site/themes/<active>/assets
 ├── admin/                    # Admin entry point + built SPA bundle
 │   ├── index.php             # /admin/ front controller
