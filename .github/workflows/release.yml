@@ -50,7 +50,7 @@ jobs:
         run: |
           VERSION="${GITHUB_REF#refs/tags/}"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "package=mdframework-${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "package=frontpress-studio-${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Package release zip
         run: |

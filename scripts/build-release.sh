@@ -18,7 +18,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 VERSION="${1:-$(cat cms/VERSION 2>/dev/null || echo dev)}"
-PKG="mdframework-${VERSION}"
+PKG="frontpress-studio-${VERSION}"
 OUT="release/${PKG}"
 
 echo "→ Building ${PKG}"

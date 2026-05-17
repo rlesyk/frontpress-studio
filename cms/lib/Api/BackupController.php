@@ -65,7 +65,7 @@ class BackupController
         // Override the JSON content-type set by the router.
         header_remove('Content-Type');
         header('Content-Type: application/zip');
-        header('Content-Disposition: attachment; filename="mdframework-' . $label . '-' . $stamp . '.zip"');
+        header('Content-Disposition: attachment; filename="frontpress-studio-' . $label . '-' . $stamp . '.zip"');
         header('Content-Length: ' . (string)filesize($tmp));
         readfile($tmp);
         @unlink($tmp);

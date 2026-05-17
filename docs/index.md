@@ -17,7 +17,7 @@ Ultralight flat-file CMS built in PHP. No database. Content is Markdown files on
 
 ### Shared hosting — unzip into your domain folder
 
-Download `mdframework-<version>.zip` from the [GitHub Releases](https://github.com/krstivoja/mdframework/releases) page and unzip its contents directly into your site's document root (the folder your domain points at — for example `htdocs/example.com/` or `public_html/`). It should sit alongside any existing files the way WordPress lives next to `wp-config.php`:
+Download `frontpress-studio-<version>.zip` from the [GitHub Releases](https://github.com/krstivoja/mdframework/releases) page and unzip its contents directly into your site's document root (the folder your domain points at — for example `htdocs/example.com/` or `public_html/`). It should sit alongside any existing files the way WordPress lives next to `wp-config.php`:
 
 ```
 public_html/
