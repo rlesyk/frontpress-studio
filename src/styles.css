@@ -58,12 +58,12 @@ html, body, #root {
   height: 100%;
 }
 
-/* CodeMirror host — let the editor fill whatever min-height the consumer
-   sets via Tailwind utilities. Without this, .cm-editor sizes to its
-   content and the surface collapses on empty documents. */
+/* Code-editor host — the Monaco wrapper renders into a div with this
+   class. Monaco respects `automaticLayout: true` so it resizes with the
+   container; we just need a flex shell so the wrapper itself fills
+   whatever the consumer sized via Tailwind utilities. */
 .cm-host { display: flex; flex-direction: column; }
-.cm-host .cm-editor { flex: 1; min-height: inherit; }
-.cm-host .cm-scroller { font-family: var(--font-mono); }
+.cm-host > * { flex: 1; min-height: inherit; }
 
 /* Toast UI's default chrome wraps the toolbar + edit surface in
    `.toastui-editor-defaultUI`. It defaults to `width: auto` which can

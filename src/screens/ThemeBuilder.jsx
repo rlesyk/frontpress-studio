@@ -220,7 +220,7 @@ export default function ThemeBuilder() {
           />
         </div>
 
-        <div className="min-h-0">
+        <div className="flex min-h-0 flex-col">
           {busy ? (
             <div className="p-4 text-sm text-zinc-500">Loading...</div>
           ) : (

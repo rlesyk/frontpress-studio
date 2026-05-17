@@ -7,6 +7,17 @@ layout: default
 
 All notable changes to FrontPress Studio are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.75] — 2026-05-17
+
+### Changed
+- **Code editor migrated from CodeMirror 6 to Monaco** (`@monaco-editor/react`, Monaco itself streamed from a pinned `cdn.jsdelivr.net/npm/monaco-editor@0.52.2` build). Public API of `components/CodeEditor.jsx` is unchanged — `value`, `onChange`, `language`, `className`, `focusLine` all behave the same — plus a new optional `filename` prop that auto-derives the language from the extension (twig/html → html, css/scss → css, js/ts/json/php/md/yaml all mapped). Bundle impact at our origin: `CodeEditor` chunk went from 461 KB / 161 KB gzip down to 16 KB / 5.8 KB gzip; Monaco itself loads from the CDN on first navigation to a screen that uses it.
+- `ThemeCodePanel` now passes `filename={selectedPath}` so each theme file picks up its own language model (and Monaco persists the per-path model when you tab between them).
+- Dropped `codemirror`, `@codemirror/lang-html`, `@codemirror/state`, `@codemirror/view`, `@codemirror/commands`, `@codemirror/language` from `package.json`. The `SYNC_FROM_PROP` annotation hack from 0.0.74 is gone — `@monaco-editor/react` doesn't round-trip external value updates back through `onChange`, so file-switch dirty-flag tripping just doesn't happen here.
+- Fixed a layout bug surfaced by the editor swap: ThemeBuilder's grid cell wrapping `ThemeCodePanel` wasn't a flex container, so the `flex-1` chain below it collapsed. CodeMirror happened to mask this by pushing height from its content; Monaco doesn't. The wrapper is now `flex min-h-0 flex-col`.
+
+### Trade-off
+- **Admin now needs network on first load** to fetch Monaco from the CDN. Air-gapped installs / restrictive corporate networks lose the editor until they configure a local CDN mirror via `loader.config()`. This is explicit per the user's "monaco can work from cdn" decision; cache partitioning means the cross-origin caching benefit is gone, so the first hit is a real download.
+
 ## [0.0.74] — 2026-05-17
 
 ### Fixed

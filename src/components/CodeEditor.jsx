@@ -1,112 +1,115 @@
-import { Annotation } from '@codemirror/state';
 import { useEffect, useRef } from 'react';
-import { EditorState } from '@codemirror/state';
-import { EditorView, keymap, lineNumbers, highlightActiveLine } from '@codemirror/view';
-import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
-import { html } from '@codemirror/lang-html';
-import {
-  syntaxHighlighting,
-  defaultHighlightStyle,
-  bracketMatching,
-  indentOnInput,
-} from '@codemirror/language';
+import Editor, { loader } from '@monaco-editor/react';
 
-// Annotation used to tag transactions where we (not the user) wrote the
-// new doc — file switch, mode swap, external buffer reset. The update
-// listener uses this to suppress onChange so the parent doesn't get
-// marked dirty by its own hydration.
-const SYNC_FROM_PROP = Annotation.define();
+// Pin Monaco to a known-good version so a Microsoft release doesn't
+// silently change behavior under us. The bundle stays tiny — only the
+// loader script (~3 KB) ships from our origin; the editor itself loads
+// from the CDN on first navigation to a screen that uses CodeEditor.
+loader.config({
+  paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs' },
+});
 
 /**
- * Thin React wrapper around a CodeMirror 6 EditorView. Used by PageEditor for
- * the HTML view and reusable for any future code-editing surface.
+ * Thin React wrapper around `@monaco-editor/react`. Public API matches
+ * the previous CodeMirror-backed component so callers don't change:
  *
- * The editor is created once on mount; subsequent prop changes (`value`)
- * are applied via dispatch only when they differ from the current document,
- * so React-driven re-renders don't blow away cursor/selection state.
+ *   <CodeEditor
+ *     value={...}            // string
+ *     onChange={(next) => …} // fires only on real user edits
+ *     language="html"        // 'html' | 'css' | 'javascript' | 'plaintext' | …
+ *     filename="post.twig"   // optional — auto-derives a language if `language` is the default
+ *     className="h-full"
+ *     focusLine={42}         // when set, scroll + select that line and focus
+ *   />
+ *
+ * `@monaco-editor/react` already does the right thing with external
+ * value updates — it doesn't round-trip them back through `onChange` —
+ * so the SYNC_FROM_PROP annotation dance we used with CodeMirror isn't
+ * needed here. Switching files no longer flips the parent's dirty flag.
  */
 export default function CodeEditor({
   value,
   onChange,
   language = 'html',
+  filename = null,
   className = '',
   focusLine = null,
 }) {
-  const hostRef    = useRef(null);
-  const viewRef    = useRef(null);
-  const onChangeRef = useRef(onChange);
+  const editorRef = useRef(null);
+  const monacoRef = useRef(null);
+  const effectiveLanguage = filename ? languageFor(filename) || language : language;
 
-  // Keep the latest onChange in a ref so the EditorView's update listener
-  // (created once) always calls the freshest closure without re-instantiating
-  // the editor on every parent re-render.
-  useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
+  function handleMount(editor, monaco) {
+    editorRef.current = editor;
+    monacoRef.current = monaco;
+  }
 
+  // Reveal + select the requested line. Bridges the outline-click in the
+  // Theme Builder to "jump and highlight" in the code panel.
   useEffect(() => {
-    if (!hostRef.current || viewRef.current) return;
-
-    const langExt = language === 'html' ? html() : html();
-
-    const state = EditorState.create({
-      doc: value || '',
-      extensions: [
-        lineNumbers(),
-        history(),
-        bracketMatching(),
-        indentOnInput(),
-        highlightActiveLine(),
-        syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
-        keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap]),
-        langExt,
-        EditorView.lineWrapping,
-        EditorView.updateListener.of((update) => {
-          if (!update.docChanged) return;
-          // Skip transactions we dispatched ourselves to mirror a `value`
-          // prop change — otherwise the parent's hydration of a freshly-
-          // loaded file would round-trip back as "user edit" and trip the
-          // dirty flag the moment a file tab is clicked.
-          const fromProp = update.transactions.some(
-            (tr) => tr.annotation(SYNC_FROM_PROP),
-          );
-          if (fromProp) return;
-          onChangeRef.current?.(update.state.doc.toString());
-        }),
-      ],
+    const editor = editorRef.current;
+    if (!editor || !focusLine) return;
+    const model = editor.getModel();
+    if (!model) return;
+    const lineNo = Math.max(1, Math.min(focusLine, model.getLineCount()));
+    const endCol = model.getLineMaxColumn(lineNo);
+    editor.revealLineInCenter(lineNo);
+    editor.setSelection({
+      startLineNumber: lineNo,
+      startColumn: 1,
+      endLineNumber: lineNo,
+      endColumn: endCol,
     });
-
-    viewRef.current = new EditorView({ state, parent: hostRef.current });
-
-    return () => {
-      viewRef.current?.destroy();
-      viewRef.current = null;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Sync prop → editor when the parent supplies a different document
-  // (e.g. switching files, mode swap). Compares text equality so we don't
-  // dispatch redundant transactions while the user is typing.
-  useEffect(() => {
-    const view = viewRef.current;
-    if (!view) return;
-    const current = view.state.doc.toString();
-    if (current === (value ?? '')) return;
-    view.dispatch({
-      changes: { from: 0, to: current.length, insert: value ?? '' },
-      annotations: SYNC_FROM_PROP.of(true),
-    });
-  }, [value]);
-
-  useEffect(() => {
-    const view = viewRef.current;
-    if (!view || !focusLine) return;
-    const lineNo = Math.max(1, Math.min(focusLine, view.state.doc.lines));
-    const line = view.state.doc.line(lineNo);
-    view.dispatch({
-      selection: { anchor: line.from, head: line.to },
-      effects: EditorView.scrollIntoView(line.from, { y: 'center' }),
-    });
-    view.focus();
+    editor.focus();
   }, [focusLine]);
 
-  return <div ref={hostRef} className={`cm-host text-[13px] ${className}`} />;
+  return (
+    <div className={`cm-host text-[13px] ${className}`}>
+      <Editor
+        value={value ?? ''}
+        onChange={(next) => onChange?.(next ?? '')}
+        language={effectiveLanguage}
+        path={filename || undefined}
+        theme="vs"
+        onMount={handleMount}
+        loading={<div className="p-3 text-xs text-zinc-500">Loading editor…</div>}
+        options={{
+          automaticLayout: true,
+          minimap: { enabled: false },
+          fontSize: 13,
+          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+          lineNumbers: 'on',
+          renderLineHighlight: 'line',
+          wordWrap: 'on',
+          scrollBeyondLastLine: false,
+          tabSize: 2,
+          insertSpaces: true,
+          smoothScrolling: true,
+          padding: { top: 6, bottom: 6 },
+        }}
+      />
+    </div>
+  );
+}
+
+// Map a file path / name to a Monaco language id. Returns null when we
+// don't have a sensible mapping — the caller's `language` prop wins as
+// a fallback.
+function languageFor(filename) {
+  const ext = filename.split('.').pop()?.toLowerCase();
+  switch (ext) {
+    case 'twig':
+    case 'html': return 'html';
+    case 'css':
+    case 'scss': return 'css';
+    case 'js':
+    case 'mjs': return 'javascript';
+    case 'ts':  return 'typescript';
+    case 'json': return 'json';
+    case 'md':  return 'markdown';
+    case 'php': return 'php';
+    case 'yml':
+    case 'yaml': return 'yaml';
+    default: return null;
+  }
 }

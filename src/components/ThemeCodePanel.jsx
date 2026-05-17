@@ -35,7 +35,7 @@ export default function ThemeCodePanel({
       <CodeEditor
         value={draft}
         onChange={onChange}
-        language="html"
+        filename={selectedPath}
         focusLine={focusLine}
         className="min-h-0 flex-1"
       />
