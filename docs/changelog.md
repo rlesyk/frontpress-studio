@@ -7,6 +7,11 @@ layout: default
 
 All notable changes to FrontPress Studio are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.72] — 2026-05-17
+
+### Fixed
+- **Content images rendered distorted** in the starter themes when the source image's intrinsic aspect ratio didn't match the column-scaled width. The reset had `img { max-width: 100%; display: block }` but was missing `height: auto`, so images with explicit `width`/`height` attributes (or implicit ones from the browser's intrinsic-size handling under certain conditions) got squished. Added `height: auto` to both starter themes (`blank-twig` / `blank-php`) and to the bundled active `blank` theme so the browser preserves aspect ratio when scaling down. Also added content-image visual defaults: vertical breathing room, centered placement, rounded corners, and figure / figcaption styling. New themes installed from either starter pick the fix up automatically.
+
 ## [0.0.71] — 2026-05-17
 
 ### Removed

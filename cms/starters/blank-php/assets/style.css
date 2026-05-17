@@ -3,7 +3,7 @@
 html { -webkit-text-size-adjust: 100%; }
 body, h1, h2, h3, h4, h5, h6, p, blockquote, dl, dd, figure { margin: 0; }
 ul, ol { margin: 0; padding: 0; }
-img, picture, video, svg { max-width: 100%; display: block; }
+img, picture, video, svg { max-width: 100%; height: auto; display: block; }
 a { color: inherit; }
 button, input, select, textarea { font: inherit; color: inherit; }
 
@@ -61,3 +61,20 @@ a { color: #0a58ca; }
 .pagination { display: flex; gap: 1rem; align-items: center; margin-top: 2rem; font-size: 0.9rem; }
 .pagination a { text-decoration: none; }
 .pagination a:hover { text-decoration: underline; }
+
+/* --- content images ---
+   The reset already sets `max-width: 100%; height: auto` so the browser
+   scales images down proportionally to fit the column without stretching.
+   These rules add the visual treatment: centered placement, vertical
+   breathing room, and rounded corners. We deliberately don't force a
+   width — small icons or graphics shouldn't be upscaled and blurred. */
+article img,
+.prose img,
+figure img { margin-inline: auto; margin-block: 1.5rem; border-radius: 6px; }
+
+figure { margin-block: 1.5rem; }
+figure img { margin-block: 0; }
+figcaption { text-align: center; font-size: 0.875rem; color: var(--color-muted); margin-top: 0.5rem; }
+
+.post-featured { margin-block: 1.5rem; }
+.post-featured img { margin: 0; }
