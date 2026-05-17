@@ -112,44 +112,40 @@ export default function Themes() {
       <Card title="Installed">
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           {(data?.themes || []).map(t => (
-            <div key={t.slug} className="rounded-md border border-zinc-200 p-3">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <div className="font-medium">{t.name || t.slug}</div>
-                  <EngineBadge engine={t.engine} />
-                </div>
-                <div className="flex items-center gap-3">
-                  {data.active === t.slug ? (
-                    <Badge tone="active">Active</Badge>
-                  ) : (
-                    <Button variant="link" size="sm" onClick={() => activate.mutate(t.slug)}>
-                      Activate
-                    </Button>
-                  )}
-                  <Button
-                    variant="link"
-                    size="sm"
-                    onClick={() => download(t.slug)}
-                    disabled={downloading === t.slug}
-                  >
-                    {downloading === t.slug ? 'Downloading…' : 'Download'}
-                  </Button>
-                  {data.active !== t.slug && (
-                    <Button
-                      variant="link-danger"
-                      size="sm"
-                      onClick={() => {
-                        if (confirm(`Delete the "${t.name || t.slug}" theme? This removes the theme files from disk.`)) {
-                          remove.mutate(t.slug);
-                        }
-                      }}
-                    >
-                      Delete
-                    </Button>
-                  )}
-                </div>
-              </div>
+            <div key={t.slug} className="flex flex-col rounded-md border border-zinc-200 p-3">
+              <div className="font-medium">{t.name || t.slug}</div>
               {t.description && <p className="mt-1 text-xs text-zinc-500">{t.description}</p>}
+              <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+                <EngineBadge engine={t.engine} />
+                {data.active === t.slug ? (
+                  <Badge tone="active">Active</Badge>
+                ) : (
+                  <Button variant="link" size="sm" onClick={() => activate.mutate(t.slug)}>
+                    Activate
+                  </Button>
+                )}
+                <Button
+                  variant="link"
+                  size="sm"
+                  onClick={() => download(t.slug)}
+                  disabled={downloading === t.slug}
+                >
+                  {downloading === t.slug ? 'Downloading…' : 'Download'}
+                </Button>
+                {data.active !== t.slug && (
+                  <Button
+                    variant="link-danger"
+                    size="sm"
+                    onClick={() => {
+                      if (confirm(`Delete the "${t.name || t.slug}" theme? This removes the theme files from disk.`)) {
+                        remove.mutate(t.slug);
+                      }
+                    }}
+                  >
+                    Delete
+                  </Button>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -173,13 +169,11 @@ export default function Themes() {
       <Card title="Starters">
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           {(data?.starters || []).map(s => (
-            <div key={s.slug} className="rounded-md border border-zinc-200 p-3">
-              <div className="flex items-center gap-2">
-                <div className="font-medium">{s.name || s.slug}</div>
-                <EngineBadge engine={s.engine} />
-              </div>
+            <div key={s.slug} className="flex flex-col rounded-md border border-zinc-200 p-3">
+              <div className="font-medium">{s.name || s.slug}</div>
               {s.description && <p className="mt-1 text-xs text-zinc-500">{s.description}</p>}
-              <div className="mt-2">
+              <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+                <EngineBadge engine={s.engine} />
                 <Button
                   variant="link"
                   size="sm"
