@@ -483,17 +483,16 @@ function FieldRow({
           )}
         </div>
 
-        {/* Trash icon — bottom-aligned so it sits next to the
-            Required checkbox on the second row, not floating up at the
-            Type dropdown. `self-end` anchors to the bottom of the flex
-            row; `mb-2` matches the Required label's `pb-2` so the
-            optical baselines line up. */}
+        {/* Trash icon — aligned with the top input row (Name / Label /
+            Type). `mt-[18px]` matches the label height + spacing above
+            those inputs so the icon's centre lines up with their
+            centres. */}
         <button
           type="button"
           onClick={onRemove}
           aria-label="Remove field"
           title="Remove field"
-          className="mb-2 inline-flex h-9 w-9 shrink-0 items-center justify-center self-end rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 [&>svg]:h-3.5 [&>svg]:w-3.5"
+          className="mt-[26px] inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 [&>svg]:h-3.5 [&>svg]:w-3.5"
         >
           {IconTrash}
         </button>

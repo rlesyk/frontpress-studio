@@ -11,6 +11,11 @@ All notable changes to FrontPress Studio are documented here. The format is base
 
 ## [Unreleased]
 
+## [0.0.84] — 2026-05-18
+
+### Changed
+- **Trash icon moved back to the top of the row,** aligned with the Type column. 0.0.83 put it at the bottom next to Required; on real screens the operator's eye tracks the icons together with the inputs they delete, not with the unrelated Required checkbox in the row below. Reverted to `mt-[26px]` so the icon's centre matches the input centres on the top row.
+
 ## [0.0.83] — 2026-05-18
 
 ### Fixed
