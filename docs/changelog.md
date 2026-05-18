@@ -11,6 +11,31 @@ All notable changes to FrontPress Studio are documented here. The format is base
 
 ## [Unreleased]
 
+## [0.0.78] — 2026-05-18
+
+### Added
+- **Built-in contact form + SMTP email.** First-party form handler, mailer, and submissions inbox — no Formspree or Composer dep required.
+  - **Mailer + SMTP transport** in `cms/lib/Mailer.php` + `cms/lib/SmtpTransport.php`. Hand-rolled SMTP client (no vendor dep) speaking `EHLO → STARTTLS → AUTH LOGIN → MAIL FROM → RCPT TO → DATA`. Works with Postmark, Mailgun, SendGrid, Amazon SES, Gmail (app password), Microsoft 365, and any custom relay. Falls back to PHP `mail()` when SMTP isn't configured or when `fallback_to_mail` is on.
+  - **Settings → Email** screen (`/admin/settings/email`) — SMTP credentials form with host / port / encryption / user / password / from-address / from-name / fallback toggle. Password masked with `(unchanged)` and only sent on POST when the operator types a fresh value (mirroring `Settings → Security`). Also supports off-disk credentials via `define('MD_SMTP_PASS', '…');` in `config.php` — `ServiceFactory::mailer()` reads it when the JSON value is blank.
+  - **Send test email** button on the same screen — `POST /admin/api/email/test {to}` runs the exact same `Mailer::send()` path the contact form uses, so a green test guarantees real submissions also deliver. Surfaces verbatim SMTP errors (`535 5.7.8 …`, `Connection refused`, `STARTTLS failed`) rather than a generic "send failed".
+  - **Contact form** — public `POST /submit/contact` handler in `index.php`. Honeypot field + per-IP per-hour rate limit (default 5/hr, file-backed sliding window in `site/cache/rate-limit.json`) + server-side field validation by type (text / email / tel / url / textarea / select / checkbox).
+  - **Field builder** under the Email screen — one row per field with Name, Label, Type, Required, Placeholder. Type-specific fields (Choices for select, Checkbox label for checkbox). Drag-up / drag-down with row buttons. Default contact form ships with name + email + message already configured.
+  - **`contact_form('contact')` Twig helper** in `cms/lib/template_helpers.php` — emits the default HTML for any configured form, reading the field list from `site/config.json:forms.<name>`. Theme authors can ignore it and write their own markup; the public endpoint just reads `$_POST[<field>]` per the whitelist.
+  - **`templates/contact.twig`** in both the active `blank` theme and the `blank-twig` starter — `{% extends '_layout.twig' %}` rendering the form via the helper, with success / error banners driven by `query.sent` / `query.err`. `.fp-form*` styles added to the bundled stylesheet.
+  - **Settings → Submissions** screen (`/admin/settings/submissions`) — table view of every submission with delivery badge (sent / mail() / failed). Click a row for the detail drawer with full payload, IP, user-agent, and the verbatim SMTP transport result.
+  - **Submission storage** — one JSON file per submission at `site/data/submissions/<form>/YYYY-MM/<ts>_<rand>.json`. Strict id regex blocks path traversal. Included in `Backup → Full` and `Backup → Content` archives. `SubmissionStore::list / find / delete` API in `cms/lib/SubmissionStore.php`.
+  - **`query` Twig global** — `$_GET` exposed as a Twig global so themes can render `?sent=1` banners without a JS round-trip.
+- Tests: `MailerTest`, `SubmissionStoreTest`, `RateLimiterTest` (13 new tests; 144 → 157 suite total).
+
+### Deliberate non-goals (v1, future work)
+- OAuth2 / XOAUTH2 (Gmail / Microsoft "modern auth" without an app password). Use a transactional relay or app password.
+- HTML email body (plain text only).
+- Autoresponder back to the submitter.
+- CAPTCHA. Honeypot + rate limit only. The endpoint stays open to drop in Cloudflare Turnstile later.
+- Submission retention / auto-expiry sweep.
+- Webhook fan-out on submission.
+
+
 ### Fixed
 - **Theme Builder — breadcrumb showed phantom ancestors.** Inline markup like `<li><a>...</a></li>` (every row in a typical `_header.twig`) caused the breadcrumb to render bizarre paths such as `<header> › <li> › <li> › <nav> › <ul> › <li> › <a>`. Two underlying bugs: (a) every block's ID in [`themeBuilderBlocks.js`](app/src/lib/themeBuilderBlocks.js)'s `buildTree` was `html-${line}` / `twig-${line}`, so two tags on the same line collided — breaking `selectedBlockId` matching, `findBlock`, and any code keyed by ID; (b) `findAncestorsAtLine` was a depth-first walk that pushed every block whose line range covered the cursor, which stopped at the first match instead of the most specific one. Fix: IDs now include a monotonic per-build counter (`html-${line}-${seq}`), and `findAncestorsAtLine` picks the deepest block whose range covers the line and walks up via `parentId` — robust against any line-range overlap.
 

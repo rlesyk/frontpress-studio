@@ -32,6 +32,7 @@ If you've never touched the project before, read these in order:
 | [Themes](features/themes.md) | Install / activate / delete / download as zip, drag-drop install, starter themes. |
 | [Theme Builder](features/theme-builder.md) | Visual editor for `.twig` / `.php` / `.css`, outline, preview, click-to-source. |
 | [Fields and taxonomies](features/fields.md) | Custom front matter fields, taxonomy archives, the **Manage fields** screen. |
+| [Contact form](features/contact-form.md) | Built-in form handler + SMTP / `mail()` delivery, submissions inbox, field builder. |
 | [Backups](features/backups.md) | Full / Content / Settings ZIP archives + restore. |
 | [Settings](features/settings.md) | Site config, SEO defaults, security, cache. |
 | [SEO](features/seo.md) | Auto-injected meta tags, per-page overrides, `seo_head()`. |

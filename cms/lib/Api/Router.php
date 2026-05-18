@@ -73,6 +73,12 @@ class Router
                 case 'audit':
                     AuditController::handle($method, $config);
                     return;
+                case 'email':
+                    EmailController::handle($rest, $method, $config);
+                    return;
+                case 'submissions':
+                    SubmissionsController::handle($rest, $method, $config);
+                    return;
             }
         } catch (\Throwable $e) {
             // Don't leak exception messages to the client by default — they

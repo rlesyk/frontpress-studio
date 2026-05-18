@@ -18,7 +18,14 @@ class SettingsController
         $cfg = $config['config'];
 
         if ($method === 'GET') {
-            \json_response(['ok' => true, 'settings' => $cfg->all()]);
+            // Never echo the SMTP password back to the browser. The UI
+            // shows a "(unchanged)" placeholder and only POSTs the
+            // password when the operator types a fresh one.
+            $all = $cfg->all();
+            if (isset($all['email']) && is_array($all['email'])) {
+                $all['email']['smtp_pass'] = ($all['email']['smtp_pass'] ?? '') !== '' ? '__SAVED__' : '';
+            }
+            \json_response(['ok' => true, 'settings' => $all]);
         }
 
         Router::requireCsrf();
@@ -102,14 +109,136 @@ class SettingsController
             ];
         }
 
+        // Email (SMTP) — only persist when the payload mentions the block
+        // so saves from other settings panes don't zero it out.
+        $existingEmail = (array)($cfg->all()['email'] ?? []);
+        $email = $existingEmail;
+        if (is_array($body['email'] ?? null)) {
+            $in = $body['email'];
+            $enc = strtolower((string)($in['smtp_encryption'] ?? 'tls'));
+            if (!in_array($enc, ['tls', 'ssl', 'none'], true)) $enc = 'tls';
+            $port = (int)($in['smtp_port'] ?? 587);
+            if ($port < 1 || $port > 65535) $port = 587;
+
+            // smtp_pass empty in the payload OR equal to the masked
+            // placeholder means "leave whatever's already saved alone".
+            $rawPass = $in['smtp_pass'] ?? null;
+            $newPass = (is_string($rawPass) && $rawPass !== '' && $rawPass !== '__SAVED__')
+                ? $rawPass
+                : (string)($existingEmail['smtp_pass'] ?? '');
+
+            $email = [
+                'smtp_host'        => trim((string)($in['smtp_host'] ?? '')),
+                'smtp_port'        => $port,
+                'smtp_user'        => trim((string)($in['smtp_user'] ?? '')),
+                'smtp_pass'        => $newPass,
+                'smtp_encryption'  => $enc,
+                'from_address'     => filter_var(trim((string)($in['from_address'] ?? '')), FILTER_VALIDATE_EMAIL) ?: '',
+                'from_name'        => trim((string)($in['from_name'] ?? '')),
+                'fallback_to_mail' => self::flag($in, 'fallback_to_mail', !empty($existingEmail['fallback_to_mail'])),
+            ];
+        }
+
+        // Forms — each form has a flat per-form spec. Field types are
+        // taken from a small whitelist; the public-side submit handler
+        // validates incoming POSTs against this exact list.
+        $existingForms = (array)($cfg->all()['forms'] ?? []);
+        $forms = $existingForms;
+        if (is_array($body['forms'] ?? null)) {
+            $forms = [];
+            foreach ($body['forms'] as $name => $spec) {
+                $slug = preg_replace('/[^a-z0-9_-]/', '', strtolower((string)$name));
+                if (!$slug || !is_array($spec)) continue;
+                $forms[$slug] = self::normalizeFormSpec($spec);
+            }
+        }
+
         $cfg->save(array_merge($cfg->all(), [
             'site'       => $site,
             'taxonomies' => $taxonomies,
             'uploads'    => $uploads,
             'seo'        => $seo,
+            'email'      => $email,
+            'forms'      => $forms,
         ]));
 
-        \json_response(['ok' => true, 'settings' => $cfg->all()]);
+        // Mirror the GET-time password masking on the way back.
+        $all = $cfg->all();
+        if (isset($all['email']) && is_array($all['email'])) {
+            $all['email']['smtp_pass'] = ($all['email']['smtp_pass'] ?? '') !== '' ? '__SAVED__' : '';
+        }
+        \json_response(['ok' => true, 'settings' => $all]);
+    }
+
+    /**
+     * Validate / normalise a single form spec. Accepts both the rich
+     * field-object shape and the legacy bare-string shape (a hand-edited
+     * `["name","email","message"]`) — the bare-string variant gets
+     * heuristically typed.
+     *
+     * @param array<string, mixed> $spec
+     * @return array<string, mixed>
+     */
+    private static function normalizeFormSpec(array $spec): array
+    {
+        $fields = [];
+        foreach ((array)($spec['fields'] ?? []) as $f) {
+            if (is_string($f)) {
+                $name = preg_replace('/[^a-z0-9_-]/', '', strtolower($f));
+                if (!$name) continue;
+                $fields[] = [
+                    'name'        => $name,
+                    'label'       => ucfirst(str_replace('_', ' ', $name)),
+                    'type'        => self::guessTypeFromName($name),
+                    'required'    => true,
+                    'placeholder' => '',
+                ];
+                continue;
+            }
+            if (!is_array($f)) continue;
+            $name = preg_replace('/[^a-z0-9_-]/', '', strtolower((string)($f['name'] ?? '')));
+            if (!$name) continue;
+            $type = (string)($f['type'] ?? 'text');
+            if (!in_array($type, ['text', 'email', 'tel', 'url', 'textarea', 'select', 'checkbox'], true)) {
+                $type = 'text';
+            }
+            $row = [
+                'name'        => $name,
+                'label'       => trim((string)($f['label'] ?? ucfirst(str_replace('_', ' ', $name)))),
+                'type'        => $type,
+                'required'    => !empty($f['required']),
+                'placeholder' => trim((string)($f['placeholder'] ?? '')),
+            ];
+            if ($type === 'select') {
+                $row['choices'] = array_values(array_filter(array_map(
+                    fn ($v) => trim((string)$v),
+                    (array)($f['choices'] ?? [])
+                ), fn ($v) => $v !== ''));
+            }
+            if ($type === 'checkbox') {
+                $row['cb_label'] = trim((string)($f['cb_label'] ?? $row['label']));
+            }
+            $fields[] = $row;
+        }
+
+        return [
+            'to'                  => filter_var(trim((string)($spec['to'] ?? '')), FILTER_VALIDATE_EMAIL) ?: '',
+            'subject_prefix'      => trim((string)($spec['subject_prefix'] ?? '')),
+            'fields'              => $fields,
+            'honeypot_field'      => preg_replace('/[^a-z0-9_-]/', '', strtolower((string)($spec['honeypot_field'] ?? 'website'))) ?: 'website',
+            'rate_limit_per_hour' => max(0, min(1000, (int)($spec['rate_limit_per_hour'] ?? 5))),
+            'success_redirect'    => trim((string)($spec['success_redirect'] ?? '/?sent=1')),
+            'store_submissions'   => self::flag($spec, 'store_submissions', true),
+        ];
+    }
+
+    private static function guessTypeFromName(string $name): string
+    {
+        if ($name === 'email')   return 'email';
+        if ($name === 'phone' || $name === 'tel') return 'tel';
+        if ($name === 'url' || $name === 'website') return 'url';
+        if (in_array($name, ['message', 'body', 'comment', 'notes'], true)) return 'textarea';
+        return 'text';
     }
 
     /**

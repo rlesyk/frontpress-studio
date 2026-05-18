@@ -11,9 +11,13 @@ use FrontPress\BackupService;
 use FrontPress\CacheService;
 use FrontPress\Content;
 use FrontPress\ContentRepository;
+use FrontPress\Env;
 use FrontPress\Index;
+use FrontPress\Mailer;
 use FrontPress\MediaService;
 use FrontPress\PathResolver;
+use FrontPress\RateLimiter;
+use FrontPress\SubmissionStore;
 use FrontPress\ThemeArchiver;
 use FrontPress\ThemeFiles;
 use FrontPress\ThemeService;
@@ -107,5 +111,43 @@ final class ServiceFactory
     public static function trash(array $config): Trash
     {
         return new Trash($config['cacheDir'], $config['contentDir']);
+    }
+
+    /**
+     * Build the configured Mailer. SMTP credentials come from
+     * `site/config.json:email`, except for the password — if the JSON
+     * value is empty, we fall back to the `MD_SMTP_PASS` constant from
+     * `config.php`. Lets operators keep real credentials off the
+     * gitignored-or-not JSON file when they prefer.
+     *
+     * @param array<string, mixed> $config
+     */
+    public static function mailer(array $config): Mailer
+    {
+        $cfg = $config['config'] ?? null;
+        /** @var array<string, mixed> $email */
+        $email = is_object($cfg) && method_exists($cfg, 'get')
+            ? (array)($cfg->get('email', []) ?? [])
+            : [];
+        if (empty($email['smtp_pass'])) {
+            $envPass = Env::get('SMTP_PASS', '');
+            if ($envPass !== null && $envPass !== '') {
+                $email['smtp_pass'] = $envPass;
+            }
+        }
+        return new Mailer($email);
+    }
+
+    /** @param array<string, mixed> $config */
+    public static function submissions(array $config): SubmissionStore
+    {
+        $appRoot = (string)($config['appRoot'] ?? '');
+        return new SubmissionStore($appRoot . '/site/data/submissions');
+    }
+
+    /** @param array<string, mixed> $config */
+    public static function rateLimiter(array $config): RateLimiter
+    {
+        return new RateLimiter($config['cacheDir'] . '/rate-limit.json');
     }
 }

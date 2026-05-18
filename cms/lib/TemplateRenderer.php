@@ -37,6 +37,10 @@ final class TemplateRenderer
         $cfg = $GLOBALS['fp_config'] ?? null;
         $this->twig->addGlobal('config', $cfg && method_exists($cfg, 'all') ? $cfg->all() : []);
 
+        // Query-string globals so themes can render "?sent=1" success banners
+        // without a JS round-trip. `query` mirrors `$_GET` as a plain array.
+        $this->twig->addGlobal('query', $_GET);
+
         // Register helpers — names match the global PHP functions so a theme
         // author writes `{{ e(x) }}` / `{{ slug_url(cat) }}` exactly as in PHP.
         $isSafe = ['is_safe' => ['html']];
@@ -46,6 +50,7 @@ final class TemplateRenderer
         $this->twig->addFunction(new TwigFunction('paginate', 'paginate', $isSafe));
         $this->twig->addFunction(new TwigFunction('inspect', 'inspect', $isSafe));
         $this->twig->addFunction(new TwigFunction('seo_head', 'seo_head', $isSafe));
+        $this->twig->addFunction(new TwigFunction('contact_form', 'contact_form', $isSafe));
         $this->twig->addFunction(new TwigFunction('partial', function (string $name, array $vars = []): string {
             ob_start();
             partial($name, $vars);

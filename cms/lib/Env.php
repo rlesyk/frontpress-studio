@@ -27,6 +27,10 @@ class Env
         'APP_ENV',
         'APP_DEBUG',
         'SESSION_IDLE_SECONDS',
+        // Optional: lets operators keep the SMTP password off the
+        // site/config.json file by defining MD_SMTP_PASS in config.php.
+        // ServiceFactory::mailer() reads it as a fallback.
+        'SMTP_PASS',
     ];
 
     /** @var array<string, string> */

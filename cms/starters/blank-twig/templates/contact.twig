@@ -1,0 +1,18 @@
+{% extends '_layout.twig' %}
+{% set page_title = 'Contact' %}
+
+{% block content %}
+<article class="prose">
+  <h1>Contact</h1>
+
+  {% if query.sent is defined %}
+    <p class="fp-form__status fp-form__status--ok">Thanks — we'll be in touch.</p>
+  {% endif %}
+
+  {% if query.err is defined %}
+    <p class="fp-form__status fp-form__status--err">Something went wrong with that submission. Please check your entries and try again.</p>
+  {% endif %}
+
+  {{ contact_form('contact')|raw }}
+</article>
+{% endblock %}

@@ -166,6 +166,86 @@ if (!function_exists('seo_head')) {
     }
 }
 
+if (!function_exists('contact_form')) {
+    /**
+     * Render the default HTML for a configured contact form. Reads the
+     * form spec from `site/config.json:forms.<name>` and emits one
+     * `<label><span>…</span><input|textarea|select></label>` per field,
+     * plus the honeypot input + the submit button.
+     *
+     * The form action is `/submit/<name>`, which the public router
+     * handles directly — see index.php's `/submit/` short-circuit.
+     *
+     * Theme authors who want custom markup can ignore this helper and
+     * roll their own HTML targeting the same action; the server-side
+     * handler just reads `$_POST[<field-name>]` per the field whitelist.
+     *
+     * Usage:
+     *   Twig:  {{ contact_form()|raw }}
+     *          {{ contact_form('contact')|raw }}
+     *          {{ contact_form('contact', { class: 'my-form' })|raw }}
+     *
+     * @param array<string, mixed> $opts
+     */
+    function contact_form(string $form = 'contact', array $opts = []): string
+    {
+        $config = $GLOBALS['fp_config'] ?? null;
+        $forms  = ($config && method_exists($config, 'get')) ? (array)$config->get('forms', []) : [];
+        $spec   = $forms[$form] ?? null;
+        if (!is_array($spec)) return '';
+        $fields = (array)($spec['fields'] ?? []);
+        if (empty($fields)) return '';
+
+        $class = htmlspecialchars((string)($opts['class'] ?? 'fp-form'), ENT_QUOTES, 'UTF-8');
+        $hp    = htmlspecialchars((string)($spec['honeypot_field'] ?? 'website'), ENT_QUOTES, 'UTF-8');
+        $action = '/submit/' . htmlspecialchars($form, ENT_QUOTES, 'UTF-8');
+
+        $rows = '';
+        foreach ($fields as $f) {
+            if (!is_array($f) || !isset($f['name'])) continue;
+            $name = htmlspecialchars((string)$f['name'], ENT_QUOTES, 'UTF-8');
+            $type = (string)($f['type'] ?? 'text');
+            $label = htmlspecialchars((string)($f['label'] ?? ucfirst((string)$f['name'])), ENT_QUOTES, 'UTF-8');
+            $required = !empty($f['required']) ? ' required' : '';
+            $placeholder = (string)($f['placeholder'] ?? '');
+            $ph = $placeholder !== ''
+                ? ' placeholder="' . htmlspecialchars($placeholder, ENT_QUOTES, 'UTF-8') . '"'
+                : '';
+
+            if ($type === 'textarea') {
+                $input = "<textarea id=\"{$name}\" name=\"{$name}\" rows=\"6\"{$ph}{$required}></textarea>";
+                $rows .= "<label class=\"fp-form__row\"><span>{$label}</span>{$input}</label>";
+            } elseif ($type === 'select') {
+                $opts2 = '<option value="">—</option>';
+                foreach ((array)($f['choices'] ?? []) as $c) {
+                    $ce = htmlspecialchars((string)$c, ENT_QUOTES, 'UTF-8');
+                    $opts2 .= "<option value=\"{$ce}\">{$ce}</option>";
+                }
+                $input = "<select id=\"{$name}\" name=\"{$name}\"{$required}>{$opts2}</select>";
+                $rows .= "<label class=\"fp-form__row\"><span>{$label}</span>{$input}</label>";
+            } elseif ($type === 'checkbox') {
+                $cb = htmlspecialchars((string)($f['cb_label'] ?? $f['label']), ENT_QUOTES, 'UTF-8');
+                $rows .= "<label class=\"fp-form__cb\"><input id=\"{$name}\" name=\"{$name}\" type=\"checkbox\" value=\"1\"{$required}> <span>{$cb}</span></label>";
+            } else {
+                // text / email / tel / url — same HTML, different type.
+                $safeType = in_array($type, ['email', 'tel', 'url', 'text'], true) ? $type : 'text';
+                $input = "<input id=\"{$name}\" name=\"{$name}\" type=\"{$safeType}\"{$ph}{$required}>";
+                $rows .= "<label class=\"fp-form__row\"><span>{$label}</span>{$input}</label>";
+            }
+        }
+
+        // Honeypot — visually offscreen but in the form so bots find it.
+        // Real users never fill it; the server treats any value as "drop".
+        $honeypot = "<input type=\"text\" name=\"{$hp}\" tabindex=\"-1\" autocomplete=\"off\""
+                  . " style=\"position:absolute;left:-9999px\" aria-hidden=\"true\">";
+
+        return "<form class=\"{$class}\" method=\"post\" action=\"{$action}\">"
+             . $rows . $honeypot
+             . '<button type="submit">Send</button>'
+             . '</form>';
+    }
+}
+
 if (!function_exists('inspect')) {
     /**
      * Render a pretty-printed, collapsible dump of any value as HTML. Useful

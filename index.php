@@ -109,6 +109,147 @@ if ($url === '/sitemap.xml') {
     exit;
 }
 
+// ── /submit/<form> — public form submission handler ─────────────────────────
+// One generic POST endpoint, configurable per form via site/config.json:
+//   forms.<name>.{to, subject_prefix, fields[], honeypot_field,
+//                 rate_limit_per_hour, success_redirect, store_submissions}
+// Honeypot + per-IP rate-limit guard the endpoint; CSRF intentionally NOT
+// required (the submitter is anonymous and the operator can't pre-share a
+// token with them). Field whitelist + server-side type validation come
+// from the same `fields` list the admin builder edits.
+
+if (str_starts_with($url, '/submit/')) {
+    if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+        http_response_code(405);
+        echo 'Method not allowed';
+        exit;
+    }
+
+    $name = preg_replace('/[^a-z0-9_-]/', '', strtolower(substr($url, strlen('/submit/'))));
+    $forms = (array)$config->get('forms', []);
+    $spec  = $forms[$name] ?? null;
+    if (!$spec) {
+        http_response_code(404);
+        echo 'Unknown form';
+        exit;
+    }
+
+    $redirect = (string)($spec['success_redirect'] ?? '/?sent=1');
+    $errRedirect = function (string $err) use ($redirect) {
+        $sep = str_contains($redirect, '?') ? '&' : '?';
+        header('Location: ' . $redirect . $sep . 'err=' . urlencode($err), true, 303);
+        exit;
+    };
+
+    // Honeypot — bots fill every field; humans leave the hidden one empty.
+    // We mirror a "thanks!" redirect so bots can't tell they were caught.
+    $hp = (string)($spec['honeypot_field'] ?? 'website');
+    if (!empty($_POST[$hp])) {
+        header('Location: ' . $redirect, true, 303);
+        exit;
+    }
+
+    // Rate limit. Key is form + IP so each form can have its own budget.
+    $ip = (string)($_SERVER['REMOTE_ADDR'] ?? 'unknown');
+    $cfgBag = [
+        'appRoot'  => __DIR__,
+        'cacheDir' => $CACHE_DIR,
+        'config'   => $config,
+    ];
+    $limiter = FrontPress\Api\ServiceFactory::rateLimiter($cfgBag);
+    $max = (int)($spec['rate_limit_per_hour'] ?? 5);
+    if ($max > 0 && !$limiter->check("$name:$ip", $max, 3600)) {
+        http_response_code(429);
+        echo 'Too many requests — try again later.';
+        exit;
+    }
+
+    // Collect + validate fields against the spec.
+    $errors  = [];
+    $payload = [];
+    foreach ((array)($spec['fields'] ?? []) as $f) {
+        if (!is_array($f)) continue;
+        $fname    = (string)($f['name'] ?? '');
+        if ($fname === '') continue;
+        $ftype    = (string)($f['type'] ?? 'text');
+        $required = !empty($f['required']);
+        $raw      = $_POST[$fname] ?? '';
+        $v        = is_string($raw) ? trim($raw) : '';
+        if ($v === '') {
+            if ($required && $ftype !== 'checkbox') $errors[$fname] = 'required';
+            if ($ftype === 'checkbox' && $required) $errors[$fname] = 'required';
+            continue;
+        }
+        $v = mb_substr($v, 0, 5000);
+        switch ($ftype) {
+            case 'email':
+                if (!filter_var($v, FILTER_VALIDATE_EMAIL)) { $errors[$fname] = 'invalid_email'; continue 2; }
+                break;
+            case 'url':
+                if (!filter_var($v, FILTER_VALIDATE_URL)) { $errors[$fname] = 'invalid_url'; continue 2; }
+                break;
+            case 'tel':
+                if (!preg_match('/^[0-9+\-() ]{4,32}$/', $v)) { $errors[$fname] = 'invalid_tel'; continue 2; }
+                break;
+            case 'select':
+                $choices = (array)($f['choices'] ?? []);
+                if (!in_array($v, $choices, true)) { $errors[$fname] = 'invalid_choice'; continue 2; }
+                break;
+            case 'checkbox':
+                $v = '1';
+                break;
+            case 'text':
+            case 'textarea':
+            default:
+                // Just trimmed — already capped at 5000 chars above.
+                break;
+        }
+        $payload[$fname] = $v;
+    }
+
+    if (!empty($errors)) {
+        $firstField = array_key_first($errors);
+        $errRedirect($errors[$firstField] . ':' . $firstField);
+    }
+
+    // Build the outgoing email body — every collected field on its own
+    // labelled paragraph. Reply-To is the submitter's email if present.
+    $bodyLines = [];
+    foreach ($payload as $k => $v) {
+        $label = ucfirst(str_replace('_', ' ', $k));
+        $bodyLines[] = $label . ":\n" . $v;
+    }
+    $emailBody = implode("\n\n", $bodyLines) . "\n\n— Sent from " . ($_SERVER['HTTP_HOST'] ?? 'site') . " at " . date(\DATE_ATOM);
+
+    $subjectName = $payload['name'] ?? ($payload['email'] ?? 'New submission');
+    $subject = trim(((string)($spec['subject_prefix'] ?? '')) . ' ' . $subjectName);
+    if ($subject === '') $subject = 'New submission';
+
+    $emailRes = ['ok' => false, 'transport' => 'none'];
+    $to = (string)($spec['to'] ?? '');
+    if ($to !== '') {
+        $mailer = FrontPress\Api\ServiceFactory::mailer($cfgBag);
+        $replyTo = $payload['email'] ?? null;
+        $emailRes = $mailer->send($to, $subject, $emailBody, $replyTo);
+    }
+
+    if (!empty($spec['store_submissions'])) {
+        try {
+            FrontPress\Api\ServiceFactory::submissions(['appRoot' => __DIR__])
+                ->save($name, $payload, [
+                    'ip'    => $ip,
+                    'ua'    => $_SERVER['HTTP_USER_AGENT'] ?? null,
+                    'email' => $emailRes,
+                ]);
+        } catch (\Throwable $e) {
+            error_log('[fp.submit] persist failed: ' . $e->getMessage());
+        }
+    }
+
+    header('Location: ' . $redirect, true, 303);
+    exit;
+}
+
 $route = $router->resolve($url);
 
 switch ($route['type']) {
