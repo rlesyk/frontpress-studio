@@ -11,6 +11,11 @@ All notable changes to FrontPress Studio are documented here. The format is base
 
 ## [Unreleased]
 
+## [0.0.82] — 2026-05-18
+
+### Fixed
+- **Contact form field rows overflowed narrow containers.** The site-wide `Input` / `Select` enforce `min-w-[250px]` so they don't squeeze in dense forms; combined with three columns (Name / Label / Type) that pushed the row to a 750 px minimum, which spilled past the right edge when a side panel was open. Fixed by switching the row's grid to `minmax(0, 1fr)` columns and overriding the inputs' min-width to 0 locally (Tailwind v4 arbitrary-descendant variant for the Select's inner element).
+
 ## [0.0.81] — 2026-05-18
 
 ### Changed

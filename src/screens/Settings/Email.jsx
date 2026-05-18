@@ -409,9 +409,14 @@ function FieldRow({
           </svg>
         </div>
 
-        <div className="flex-1 space-y-2">
-          <div className="grid gap-2 sm:grid-cols-[1fr_1fr_140px]">
-            <Field label="Name">
+        <div className="min-w-0 flex-1 space-y-2">
+          {/* `minmax(0, 1fr)` lets the columns shrink below their inputs'
+              `min-w-[250px]` site-wide minimum. `min-w-0` on each Field
+              cooperates so the inputs themselves can also fall below
+              that width. Without these, the row overflows its container
+              on narrow widths (e.g. when a side panel is open). */}
+          <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_140px]">
+            <Field label="Name" className="min-w-0">
               <Input
                 data-field-input="name"
                 value={field.name}
@@ -419,25 +424,36 @@ function FieldRow({
                 onBlur={onNameBlur}
                 placeholder="email"
                 mono
+                className="!min-w-0"
               />
             </Field>
-            <Field label="Label">
+            <Field label="Label" className="min-w-0">
               <Input
                 value={field.label}
                 onChange={(e) => onChange({ label: e.target.value })}
                 placeholder="Email address"
+                className="!min-w-0"
               />
             </Field>
-            <Field label="Type">
+            {/* Select wraps the inner <select> in a <span> that carries the
+                chevron — className passed to <Select> lands on the span, not
+                the select. Use Tailwind's arbitrary-descendant variant
+                ([&_select]:…) to reach the inner element. */}
+            <Field label="Type" className="min-w-0 [&_select]:!min-w-0">
               <Select value={field.type} onChange={(e) => onChange({ type: e.target.value })}>
                 {FIELD_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
               </Select>
             </Field>
           </div>
 
-          <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
-            <Field label="Placeholder">
-              <Input value={field.placeholder || ''} onChange={(e) => onChange({ placeholder: e.target.value })} placeholder="Optional" />
+          <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+            <Field label="Placeholder" className="min-w-0">
+              <Input
+                value={field.placeholder || ''}
+                onChange={(e) => onChange({ placeholder: e.target.value })}
+                placeholder="Optional"
+                className="!min-w-0"
+              />
             </Field>
             <label className="flex items-center gap-2 self-end pb-2 text-sm">
               <input type="checkbox" checked={!!field.required} onChange={(e) => onChange({ required: e.target.checked })} />
