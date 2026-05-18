@@ -1,3 +1,7 @@
+[![][version]](https://github.com/krstivoja/frontpress-studio/releases/latest)
+[![][commit]](https://github.com/krstivoja/frontpress-studio)
+[![][stars]](https://github.com/krstivoja/frontpress-studio)
+
 # FrontPress Studio
 
 Ultralight flat-file CMS built in PHP. No database. Content is Markdown files on disk; the admin is a browser UI at `/admin`.
