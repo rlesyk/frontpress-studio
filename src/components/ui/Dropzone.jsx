@@ -47,8 +47,8 @@ export default function Dropzone({
           handleFiles(e.dataTransfer.files);
         }}
         className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-10 text-center transition-colors ${
-          disabled ? 'cursor-not-allowed border-zinc-200 bg-zinc-50 opacity-60' :
-          drag     ? 'border-zinc-900 bg-zinc-50' : 'border-zinc-300 bg-white'
+          disabled ? 'cursor-not-allowed border-zinc-200 bg-zinc-100 opacity-60' :
+          drag     ? 'border-zinc-900 bg-zinc-100' : 'border-zinc-300 bg-zinc-50'
         }`}
       >
         <p className="text-sm text-zinc-700">{label}</p>

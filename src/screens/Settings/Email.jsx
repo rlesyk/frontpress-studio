@@ -385,7 +385,7 @@ function FieldRow({
       onDragOver={onDragOver}
       onDrop={onDrop}
       onDragEnd={onDragEnd}
-      className={`rounded-md border bg-white p-3 transition-colors ${
+      className={`rounded-md border bg-zinc-50 p-3 transition-colors ${
         isDragging ? 'opacity-50 border-zinc-300' :
         isDragOver ? 'border-zinc-900 ring-2 ring-zinc-900/15' :
                      'border-zinc-200'

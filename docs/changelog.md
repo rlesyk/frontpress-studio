@@ -11,6 +11,20 @@ All notable changes to FrontPress Studio are documented here. The format is base
 
 ## [Unreleased]
 
+## [0.0.86] — 2026-05-18
+
+### Changed
+- **Flipped the card hierarchy.** 0.0.85 had outer Cards in zinc-50; the right hierarchy is white-on-the-outside, zinc-50-on-the-inside. So now:
+  - Cards: `bg-white` (back to the original).
+  - Sub-cards / inner tiles / dropzones: `bg-zinc-50`.
+- Concretely:
+  - `Card.jsx` and the inline duplicates in `Media.jsx` and `PagesList.jsx`: `bg-zinc-50` → `bg-white`.
+  - Backup download tiles, Themes Installed cards, Themes Starters cards: `bg-white` → `bg-zinc-50`.
+  - `TaxonomyRow.jsx` (Manage fields): `bg-white` → `bg-zinc-50`.
+  - `ThemeReference.jsx` Var/Sig tables: `bg-white` → `bg-zinc-50`.
+  - Contact form field row in `Email.jsx`: `bg-white` → `bg-zinc-50`.
+  - `Dropzone.jsx` resting state: `bg-white` → `bg-zinc-50`, drag-active goes one step darker to `bg-zinc-100` so the highlight is still visible against the (now slightly tinted) base.
+
 ## [0.0.85] — 2026-05-18
 
 ### Changed

@@ -125,7 +125,7 @@ export default function PagesList() {
 
   if (isLoading) {
     return (
-      <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-6 shadow-card" aria-hidden="true">
+      <div className="rounded-lg border border-zinc-200 bg-white p-6 shadow-card" aria-hidden="true">
         <div className="h-6 w-40 animate-pulse rounded bg-zinc-200" />
         <div className="mt-6 space-y-3">
           {Array.from({ length: 6 }).map((_, i) => (

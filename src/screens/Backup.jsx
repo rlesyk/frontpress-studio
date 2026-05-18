@@ -85,7 +85,7 @@ export default function Backup() {
       <Card title="Download">
         <div className="grid gap-3 md:grid-cols-3">
           {['full', 'content', 'settings'].map(scope => (
-            <div key={scope} className="rounded-md border border-zinc-200 bg-white p-3">
+            <div key={scope} className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
               <div className="font-medium capitalize">{scope}</div>
               <div className="mt-1 text-xs text-zinc-500">{formatBytes(data?.sizes?.[scope] ?? 0)}</div>
               <div className="mt-2">

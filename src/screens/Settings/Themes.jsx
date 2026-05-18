@@ -112,7 +112,7 @@ export default function Themes() {
       <Card title="Installed">
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           {(data?.themes || []).map(t => (
-            <div key={t.slug} className="flex flex-col rounded-md border border-zinc-200 bg-white p-3">
+            <div key={t.slug} className="flex flex-col rounded-md border border-zinc-200 bg-zinc-50 p-3">
               <div className="font-medium">{t.name || t.slug}</div>
               {t.description && <p className="mt-1 text-xs text-zinc-500">{t.description}</p>}
               <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
@@ -169,7 +169,7 @@ export default function Themes() {
       <Card title="Starters">
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           {(data?.starters || []).map(s => (
-            <div key={s.slug} className="flex flex-col rounded-md border border-zinc-200 bg-white p-3">
+            <div key={s.slug} className="flex flex-col rounded-md border border-zinc-200 bg-zinc-50 p-3">
               <div className="font-medium">{s.name || s.slug}</div>
               {s.description && <p className="mt-1 text-xs text-zinc-500">{s.description}</p>}
               <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
