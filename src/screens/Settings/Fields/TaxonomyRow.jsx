@@ -19,7 +19,7 @@ export default function TaxonomyRow({ slug, tax, folders, onUpdate, onRename, on
   }
 
   return (
-    <div className="rounded-md border border-zinc-200 bg-zinc-50/50 p-3">
+    <div className="rounded-md border border-zinc-200 bg-white p-3">
       <div className="flex items-start gap-3">
         <div className="flex-1 space-y-3">
           <div className="grid gap-2 sm:grid-cols-2">

@@ -11,6 +11,17 @@ All notable changes to FrontPress Studio are documented here. The format is base
 
 ## [Unreleased]
 
+## [0.0.85] — 2026-05-18
+
+### Changed
+- **Cards now use `bg-zinc-50` consistently across the admin.** Before this, the `<Card>` component was white but a handful of inline duplicates (PagesList empty-state, Media upload area, Login form) and the Manage fields taxonomy block (`bg-zinc-50/50`) drifted in either direction — so visually similar containers ended up on three different backgrounds. Picked one (zinc-50) and propagated it:
+  - `Card.jsx` itself: `bg-white` → `bg-zinc-50`.
+  - Inline `Card` duplicates in `Media.jsx` and `PagesList.jsx`: same swap.
+  - Manage fields `TaxonomyRow.jsx`: `bg-zinc-50/50` → `bg-white` so it stands out clearly on the now-zinc-50 parent Card.
+  - Nested tiles that had no explicit background (Backup download tiles, Themes Installed cards, Themes Starters cards) now get `bg-white` so they're visible on the zinc-50 Card parent.
+  - ThemeReference's `VarTable` / `SigTable` switched from `bg-zinc-50` (would blend with the new Card) to `bg-white` for the same reason.
+  - Login screen left alone — it sits on a `bg-zinc-100` page background outside the admin shell.
+
 ## [0.0.84] — 2026-05-18
 
 ### Changed

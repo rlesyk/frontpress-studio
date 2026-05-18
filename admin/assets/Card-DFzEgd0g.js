@@ -1,0 +1,1 @@
+import{j as s}from"./main-DFnXWdkJ.js";function n({title:e,children:r,className:a=""}){return s.jsxs("section",{className:`rounded-lg border border-zinc-200 bg-zinc-50 p-6 shadow-card ${a}`,children:[e&&s.jsx("h3",{className:"mb-4 text-[15px] font-semibold text-zinc-900",children:e}),s.jsx("div",{className:"space-y-4",children:r})]})}export{n as C};

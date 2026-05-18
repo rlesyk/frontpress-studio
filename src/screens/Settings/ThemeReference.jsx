@@ -103,7 +103,7 @@ function Section({ title, subtitle, children }) {
 
 function VarTable({ rows, engine, dense }) {
   return (
-    <div className="mt-3 overflow-hidden rounded-md border border-zinc-100 bg-zinc-50">
+    <div className="mt-3 overflow-hidden rounded-md border border-zinc-200 bg-white">
       <table className="w-full text-[13px]">
         <tbody>
           {rows.map((r) => (
@@ -124,7 +124,7 @@ function VarTable({ rows, engine, dense }) {
 
 function SigTable({ rows, engine }) {
   return (
-    <div className="overflow-hidden rounded-md border border-zinc-100 bg-zinc-50">
+    <div className="overflow-hidden rounded-md border border-zinc-200 bg-white">
       <table className="w-full text-[13px]">
         <tbody>
           {rows.map((r) => (
