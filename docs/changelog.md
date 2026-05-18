@@ -11,6 +11,11 @@ All notable changes to FrontPress Studio are documented here. The format is base
 
 ## [Unreleased]
 
+## [0.0.83] — 2026-05-18
+
+### Fixed
+- **Contact form trash icon floated next to the Type dropdown** instead of aligning with the Required checkbox on the second row. The button was `mt-[18px]` (top-aligned to the first input row, matching the single-row Manage fields layout). Email's rows have two stacked input rows, so the trash hovered awkwardly at the top. Switched to `self-end mb-2` so the icon sits at the row's bottom, next to the Required checkbox.
+
 ## [0.0.82] — 2026-05-18
 
 ### Fixed

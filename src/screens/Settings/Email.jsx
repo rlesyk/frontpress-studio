@@ -483,14 +483,17 @@ function FieldRow({
           )}
         </div>
 
-        {/* Trash icon — matches the Manage fields row styling. Drag-and-drop
-            covers sorting; no need for separate up/down arrows. */}
+        {/* Trash icon — bottom-aligned so it sits next to the
+            Required checkbox on the second row, not floating up at the
+            Type dropdown. `self-end` anchors to the bottom of the flex
+            row; `mb-2` matches the Required label's `pb-2` so the
+            optical baselines line up. */}
         <button
           type="button"
           onClick={onRemove}
           aria-label="Remove field"
           title="Remove field"
-          className="mt-[18px] inline-flex h-9 w-9 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 [&>svg]:h-3.5 [&>svg]:w-3.5"
+          className="mb-2 inline-flex h-9 w-9 shrink-0 items-center justify-center self-end rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 [&>svg]:h-3.5 [&>svg]:w-3.5"
         >
           {IconTrash}
         </button>
