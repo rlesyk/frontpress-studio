@@ -11,6 +11,11 @@ All notable changes to FrontPress Studio are documented here. The format is base
 
 ## [Unreleased]
 
+## [0.0.87] — 2026-05-18
+
+### Added
+- **Provider picker on Settings → Email.** Eight tiles above the SMTP form — **Postmark · Mailgun · SendGrid · Amazon SES · Brevo · Gmail · Microsoft 365 · Custom / Other.** Click one and the host / port / encryption snap to that provider's canonical values; username and password are left alone so switching providers doesn't wipe what you typed. A provider-specific note appears below the grid: *"SendGrid: Username is the literal string apikey. Password is your API key."*, *"Gmail: Requires an app password..."*, etc. — eliminates the "what do I put in the username field?" round-trip to the provider's docs. The picker auto-highlights the provider that matches your current host (with prefix-matching for SES so any region tile lights up). Text + monogram only — no provider logos to keep the admin minimal and avoid brand-asset licensing.
+
 ## [0.0.86] — 2026-05-18
 
 ### Changed

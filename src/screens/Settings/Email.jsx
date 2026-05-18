@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api.js';
 import { Alert, Button, Card, Field, Input, Select } from '../../components/ui/index.js';
 import { IconTrash } from '../../components/icons.jsx';
+import EmailProviderPicker from './EmailProviderPicker.jsx';
 
 const DEFAULT_EMAIL = {
   smtp_host: '',
@@ -192,9 +193,21 @@ export default function EmailSettings() {
           <header>
             <h3 className="text-sm font-semibold text-zinc-900">SMTP</h3>
             <p className="mt-1 text-xs text-zinc-500">
-              Outgoing mail. Works with any provider that exposes SMTP — Postmark, Mailgun, SendGrid, Amazon SES, Gmail (app password), Microsoft 365, or your own relay. Leave the host empty to fall back to PHP <code>mail()</code>.
+              Pick your provider and we'll pre-fill host / port / encryption — you only need to supply the username and password. Leave the host empty to fall back to PHP <code>mail()</code>.
             </p>
           </header>
+
+          {/* Click a tile -> snap host/port/encryption to that provider's
+              canonical values. Leaves user/pass alone so switching providers
+              doesn't wipe what the operator typed by mistake. */}
+          <EmailProviderPicker
+            activeHost={email.smtp_host}
+            onPick={(p) => set({
+              smtp_host: p.host,
+              smtp_port: p.port,
+              smtp_encryption: p.encryption,
+            })}
+          />
 
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Host">

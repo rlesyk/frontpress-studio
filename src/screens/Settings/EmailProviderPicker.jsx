@@ -1,0 +1,150 @@
+// Provider quick-config for the SMTP form. Each provider knows its
+// canonical host / port / encryption — clicking a tile snaps those
+// three fields to the right values so the operator only types
+// username + password.
+//
+// No logos by design — we'd rather keep the admin minimal than chase
+// brand-asset licenses. Monogram + name is enough to recognise the
+// provider you're configuring.
+//
+// Real defaults vetted against each provider's docs (May 2026).
+
+const PROVIDERS = [
+  {
+    slug: 'postmark',
+    name: 'Postmark',
+    monogram: 'P',
+    accent: 'text-amber-700 bg-amber-100',
+    host: 'smtp.postmarkapp.com',
+    port: 587,
+    encryption: 'tls',
+    note: 'Server token as both username and password.',
+  },
+  {
+    slug: 'mailgun',
+    name: 'Mailgun',
+    monogram: 'M',
+    accent: 'text-red-700 bg-red-100',
+    host: 'smtp.mailgun.org',
+    port: 587,
+    encryption: 'tls',
+    note: 'SMTP credentials from your Mailgun domain settings.',
+  },
+  {
+    slug: 'sendgrid',
+    name: 'SendGrid',
+    monogram: 'S',
+    accent: 'text-blue-700 bg-blue-100',
+    host: 'smtp.sendgrid.net',
+    port: 587,
+    encryption: 'tls',
+    note: 'Username is the literal string "apikey". Password is your API key.',
+  },
+  {
+    slug: 'ses',
+    name: 'Amazon SES',
+    monogram: 'A',
+    accent: 'text-orange-700 bg-orange-100',
+    host: 'email-smtp.us-east-1.amazonaws.com',
+    port: 587,
+    encryption: 'tls',
+    note: 'Replace the region in the host (us-east-1) with the one your SES domain is in. Credentials come from IAM "SMTP credentials".',
+  },
+  {
+    slug: 'brevo',
+    name: 'Brevo',
+    monogram: 'B',
+    accent: 'text-emerald-700 bg-emerald-100',
+    host: 'smtp-relay.brevo.com',
+    port: 587,
+    encryption: 'tls',
+    note: 'Username is your Brevo account email. Password is the SMTP key from Senders & IPs → SMTP.',
+  },
+  {
+    slug: 'gmail',
+    name: 'Gmail',
+    monogram: 'G',
+    accent: 'text-rose-700 bg-rose-100',
+    host: 'smtp.gmail.com',
+    port: 587,
+    encryption: 'tls',
+    note: 'Requires an app password (Google account → Security → 2-Step Verification → App passwords). Your account password won\'t work.',
+  },
+  {
+    slug: 'microsoft365',
+    name: 'Microsoft 365',
+    monogram: 'O',
+    accent: 'text-sky-700 bg-sky-100',
+    host: 'smtp.office365.com',
+    port: 587,
+    encryption: 'tls',
+    note: 'SMTP AUTH must be enabled for the mailbox. Use an app password if the account has MFA on.',
+  },
+  {
+    slug: 'custom',
+    name: 'Custom / Other',
+    monogram: '…',
+    accent: 'text-zinc-700 bg-zinc-200',
+    host: '',
+    port: 587,
+    encryption: 'tls',
+    note: 'Type your own host, port, and encryption. Use this for self-hosted Postfix, ProtonMail Bridge, your VPS\'s sendmail, or any provider not listed here.',
+  },
+];
+
+// Pick the provider tile whose host the current config matches. SES is
+// matched by prefix because operators change the region; everything
+// else is a literal host match. Falls back to `custom` so changing the
+// host by hand still highlights something sensible.
+export function detectProvider(host) {
+  if (!host) return null;
+  const lower = String(host).toLowerCase();
+  if (lower.startsWith('email-smtp.')) return PROVIDERS.find((p) => p.slug === 'ses');
+  return PROVIDERS.find((p) => p.host && p.host.toLowerCase() === lower) || PROVIDERS.find((p) => p.slug === 'custom');
+}
+
+export default function EmailProviderPicker({ activeHost, onPick }) {
+  const active = detectProvider(activeHost);
+
+  return (
+    <div>
+      <div className="mb-2 text-[13px] font-medium text-zinc-900">Provider</div>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {PROVIDERS.map((p) => {
+          const isActive = active && active.slug === p.slug;
+          return (
+            <button
+              key={p.slug}
+              type="button"
+              onClick={() => onPick(p)}
+              className={`flex items-center gap-2.5 rounded-md border bg-zinc-50 px-3 py-2 text-left text-[13px] transition-colors hover:bg-white ${
+                isActive
+                  ? 'border-zinc-900 ring-2 ring-zinc-900/15'
+                  : 'border-zinc-200 hover:border-zinc-300'
+              }`}
+              title={p.note}
+            >
+              <span
+                className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded font-mono text-[12px] font-semibold ${p.accent}`}
+                aria-hidden="true"
+              >
+                {p.monogram}
+              </span>
+              <span className="truncate font-medium text-zinc-900">{p.name}</span>
+            </button>
+          );
+        })}
+      </div>
+      {active && active.slug !== 'custom' && (
+        <p className="mt-2 text-[12px] text-zinc-600">
+          <span className="font-semibold">{active.name}:</span> {active.note}
+        </p>
+      )}
+      {active && active.slug === 'custom' && (
+        <p className="mt-2 text-[12px] text-zinc-500">
+          Custom configuration. Set the host, port, and encryption to whatever your provider documents.
+        </p>
+      )}
+    </div>
+  );
+}
