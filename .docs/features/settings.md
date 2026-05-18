@@ -19,20 +19,18 @@ The active theme name lives at `active_theme` and is set from the **Themes** scr
 
 ## Manage fields
 
-Where you configure taxonomies and custom fields. See [Pages and posts → Taxonomies and custom fields](pages-and-posts.md#taxonomies-and-custom-fields) for usage. The on-disk shape lives at `site/config.json` under `taxonomies:`.
-
-Example after adding a `Series` taxonomy applied to `blog/`:
+Where you configure taxonomies and custom fields. Full reference: [Fields and taxonomies](fields.md). The on-disk shape lives at `site/config.json` under `taxonomies:`:
 
 ```json
 {
   "taxonomies": {
-    "tags":       { "label": "Tags",       "applies_to": [],       "fields": [] },
-    "categories": { "label": "Categories", "applies_to": [],       "fields": [] },
+    "tags":       { "label": "Tags",       "post_types": [],       "fields": [] },
+    "categories": { "label": "Categories", "post_types": [],       "fields": [] },
     "series": {
       "label": "Series",
-      "applies_to": ["blog"],
+      "post_types": ["blog"],
       "fields": [
-        { "name": "series", "label": "Series", "type": "choices", "allow_multiple": false, "hide_from_sidebar": false, "choices": ["WordPress", "Tailwind", "Performance"] }
+        { "name": "series", "type": "array", "widget": "select", "items": ["WordPress", "Tailwind", "Performance"], "multiple": false, "hidden": false }
       ]
     }
   }

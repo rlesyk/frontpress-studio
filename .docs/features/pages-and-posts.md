@@ -72,18 +72,18 @@ Two taxonomies are built in — **tags** and **categories** — and they always 
 
 Add more under **Settings → Manage fields**:
 
-1. **+ Add taxonomy** — create a new top-level field group (`Featured`, `Series`, whatever).
-2. Configure **Applies to folders** to scope it to specific post types.
+1. **+ Add taxonomy** — create a new top-level field group (`Series`, `Featured`, whatever).
+2. Configure **Applies to folders** to scope it to specific post types. Leave empty for all folders.
 3. Add **sub-fields** — each sub-field's `Name` is the front-matter key.
 
-Field types:
+Two field types:
 
-- **List of choices** — single-select dropdown (or multi-select if **Allow multiple values** is on).
-- **Free text** — single-line input.
-- **Long text** — textarea.
-- **Boolean** — toggle.
+- **Single value** — free-text input. Default value pre-fills new posts.
+- **List of choices** — pick from a predefined set. Three widgets (dropdown / checkboxes / radios) and an **Allow multiple values** toggle for the dropdown variant.
 
-The **Hide from sidebar** toggle suppresses a field from the editor while keeping its config (useful for fields you populate programmatically).
+Plus a **Hide from sidebar** toggle on every field — suppresses it from the editor UI while keeping its config (useful for fields you populate programmatically).
+
+Full reference: [Fields and taxonomies](fields.md).
 
 ## The public side
 
