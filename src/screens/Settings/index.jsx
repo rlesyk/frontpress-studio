@@ -11,7 +11,6 @@ export default function Settings() {
         <Tab to="/settings/reference">Theme reference</Tab>
         <Tab to="/settings/seo">SEO</Tab>
         <Tab to="/settings/email">Email</Tab>
-        <Tab to="/settings/submissions">Submissions</Tab>
         <Tab to="/settings/security">Security</Tab>
       </nav>
       <Outlet />

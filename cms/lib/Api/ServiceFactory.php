@@ -17,7 +17,6 @@ use FrontPress\Mailer;
 use FrontPress\MediaService;
 use FrontPress\PathResolver;
 use FrontPress\RateLimiter;
-use FrontPress\SubmissionStore;
 use FrontPress\ThemeArchiver;
 use FrontPress\ThemeFiles;
 use FrontPress\ThemeService;
@@ -136,13 +135,6 @@ final class ServiceFactory
             }
         }
         return new Mailer($email);
-    }
-
-    /** @param array<string, mixed> $config */
-    public static function submissions(array $config): SubmissionStore
-    {
-        $appRoot = (string)($config['appRoot'] ?? '');
-        return new SubmissionStore($appRoot . '/site/data/submissions');
     }
 
     /** @param array<string, mixed> $config */

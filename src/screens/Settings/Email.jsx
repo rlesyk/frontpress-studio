@@ -241,7 +241,7 @@ export default function EmailSettings() {
               checked={!!contact.store_submissions}
               onChange={(e) => setC({ store_submissions: e.target.checked })}
             />
-            <span>Store every submission on disk (under <code>site/data/submissions/</code> — included in backups).</span>
+            <span>Save every submission as a draft post under <code>site/content/&lt;form&gt;/</code>. The folder appears in the admin Pages list — included in backups, searchable, restorable from trash.</span>
           </label>
 
           <div className="space-y-2">

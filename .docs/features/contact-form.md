@@ -1,14 +1,17 @@
 # Contact form
 
-A built-in form handler + SMTP email pipeline. No external service, no composer dep, no Formspree-style middleman. Configure SMTP under **Settings → Email**, drop the bundled `templates/contact.twig` into a page (or render `{{ contact_form()|raw }}` from any template), and you're done.
+A built-in form handler + SMTP email pipeline. No external service, no composer dependency.
+
+Submissions are stored as regular content files — each one is a Markdown page under `site/content/<form>/`, always saved as `draft: true`. That means the **Pages screen** is your inbox: submissions appear in the sidebar as a folder (`contact/`, `newsletter/`, whatever you've configured), they're full-text searchable, they get included in **Backup → Full** and **Backup → Content** ZIPs, and the existing 30-day trash / undo applies if you accidentally delete one.
+
+Two locks keep them off the public site: every submission has `draft: true` (which the public renderer 404s for anonymous visitors), and the framework hard-blocks the entire `/<form-name>/*` route shape so an attacker can't enumerate filenames either.
 
 ## What ships
 
 - A public endpoint at `POST /submit/<form>`.
 - A bundled `contact` form with three fields (name, email, message) configured by default.
 - An SMTP client that talks to every transactional provider via the standard ports.
-- A submissions inbox at `/admin/settings/submissions` so you can review what came in even if email fails.
-- Per-form on-disk storage at `site/data/submissions/`, included in backups.
+- Auto-blocked public routes for any configured form folder, plus `draft: true` on every submission.
 
 ## Configuring SMTP
 
@@ -60,8 +63,8 @@ The same screen has a **Contact form** card.
 - **Send to** — where notifications land. Required for email delivery.
 - **Subject prefix** — prepended to every subject line (`[Contact]` by default).
 - **Rate limit / hour / IP** — 5 by default. Set to `0` to disable.
-- **Success redirect** — where to send the user after a successful submission. The bundled `contact.twig` reads `?sent=1` from the URL to render a thank-you banner.
-- **Store every submission on disk** — when off, only email delivery runs; submissions don't persist anywhere.
+- **Success redirect** — where to send the user after a successful submission. The bundled `contact.twig` page reads `?sent=1` from the URL to render a thank-you banner.
+- **Save every submission as a draft post** — when off, only email delivery runs; submissions don't persist to disk.
 
 ### Fields
 
@@ -77,7 +80,7 @@ Click **+ Add field** to add another. Each row has:
 
 | Control | Notes |
 |---|---|
-| Name | The `$_POST` key and the JSON key for stored submissions. Lowercase, `[a-z0-9_-]+`. |
+| Name | The `$_POST` key and the front-matter key on the persisted submission. Lowercase, `[a-z0-9_-]+`. |
 | Label | Display label rendered above the input. |
 | Type | `text`, `email`, `tel`, `url`, `textarea`, `select`, or `checkbox`. |
 | Required | Adds `required` to the HTML input + server-side validation. |
@@ -108,17 +111,18 @@ The `blank` theme ships with `templates/contact.twig`. Create a page that uses i
 
 1. **Pages** → choose any folder (or create one called `pages`) → **+ New page**.
 2. Title: `Contact`. Slug: `contact`.
+
+   > **Don't put the page inside a `contact/` folder.** The framework blocks `/contact/*` from public access (since `contact/` is the submission folder). Put your contact page under `pages/contact` or at the root of a different folder.
 3. **Template** dropdown → **Contact**.
 4. Save.
 
-Visit `/contact` (or `/<folder>/contact` if you put it in a folder) on the public site. The form renders. Submit it. You're done.
+Visit `/pages/contact` (or wherever you put it) on the public site. The form renders. Submit it.
 
 ### Option 2: call the helper directly
 
 In any Twig template:
 
 ```twig
-{# templates/contact.twig — or anywhere else #}
 <h1>Get in touch</h1>
 {{ contact_form('contact')|raw }}
 ```
@@ -135,7 +139,7 @@ The endpoint is just a generic POST handler. If you want custom markup, target i
   <label>Email <input type="email" name="email" required></label>
   <label>Message <textarea name="message" required></textarea></label>
 
-  {# Honeypot — match the `honeypot_field` setting (default: "website"). #}
+  <!-- Honeypot — match the `honeypot_field` setting (default: "website"). -->
   <input type="text" name="website" tabindex="-1" autocomplete="off"
          style="position:absolute;left:-9999px" aria-hidden="true">
 
@@ -153,31 +157,42 @@ When someone submits the form:
 2. **Rate-limit check** — if the IP has already exceeded `rate_limit_per_hour` in the last hour, the request gets a `429 Too many requests` response.
 3. **Field validation** — required fields must be non-empty, types must match. First validation failure short-circuits to `<success_redirect>?err=<code>:<field>`.
 4. **Email send** — built with `From: <from_address>`, `To: <to>`, `Reply-To: <submitter email>` (if the form had an `email` field), subject `<subject_prefix> <submitter name|email|"New submission">`. Body is plain text, one field per labelled paragraph.
-5. **Persist** — if `store_submissions` is on, write `site/data/submissions/<form>/<YYYY-MM>/<ts>_<rand>.json` with the full payload + delivery result.
+5. **Persist** — if **Save every submission** is on, write `site/content/<form>/<YYYY-MM-DD-HHMMSS>-<rand>.md` with all fields in front matter, `draft: true`, and the message text as the markdown body.
 6. **Redirect** — 303 to `success_redirect` (default `/contact?sent=1`).
 
 If the email send fails but storage is on, **the submission is still saved.** Operators can review what came in even when delivery is broken.
 
 ## Reviewing submissions
 
-**Settings → Submissions.**
+**Pages → `contact` (or whatever the form name is).**
 
-Each row shows when it came in, the form name, a one-line summary, and a delivery badge:
+The folder appears in the admin sidebar once the first submission lands. Click in — the standard Pages list shows every submission, newest-first, with title (name + timestamp), draft status, and date. Click any row to open the standard editor:
 
-| Badge | Meaning |
-|---|---|
-| **sent** | Email delivered via SMTP. |
-| **mail()** | SMTP failed but PHP `mail()` accepted. Check spam folder. |
-| **failed** | Neither SMTP nor `mail()` worked. Submission is on disk; email isn't. |
-| **no email** | `Send to` is empty in the form config; no delivery attempted. |
+- The **body** is the message text.
+- The **right sidebar** shows all the other form fields as front matter (name, email, plus `submitted_at`, `submitted_ip`, `delivery_ok`, `delivery_transport`, `delivery_error` if delivery failed).
+- The page is automatically `draft: true` — the public site doesn't serve it.
 
-Click a row to open the detail drawer with the full payload, IP, user-agent, and the verbatim SMTP transport result (including any error message).
+You can **edit** a submission (annotate with notes — "called back Tuesday", "spam, ignore"), **tag it** (`tags: [spam]`, `tags: [hot-lead]`), or **delete it** — which moves the file to trash for 30 days with the regular 10-second undo toast. Bulk-select multiple rows for batch delete from the Pages list.
 
-The **Delete** button removes the submission JSON file from disk. There's no trash bin — these are anonymous public inputs, not editorial content.
+The delivery status badges from the previous version aren't a per-row column today — the info is in the front matter (`delivery_ok`, `delivery_transport`, `delivery_error`) so it's a couple of clicks deep. Building a column for it is a follow-up.
+
+## Public access is blocked
+
+Two locks:
+
+1. **`draft: true`** on every submission. The public renderer 404s draft pages for anonymous visitors.
+2. **Folder route block** in `index.php`. For every form configured in `site/config.json:forms.<name>`, the framework hard-404s `/<name>` and any `/<name>/*` URL — even for the operator while logged in. So if you ever set `draft: false` on a submission by accident, the route block still keeps it off the public site.
+
+The block uses the form name as the folder name — for the bundled `contact` form, **`/contact/*` is unreachable**. If you want a public-facing contact page, put it at a different URL like `/pages/contact` or `/about/contact`.
 
 ## Backups
 
-`site/data/submissions/` is included in **Backup → Full** and **Backup → Content** ZIPs. A restore brings them back. If you delete a submission and run a restore from before the delete, the submission reappears.
+Submissions live under `site/content/` like all other content. They're included automatically in:
+
+- **Backup → Full** — entire `site/` directory.
+- **Backup → Content** — `site/content/` only.
+
+A restore brings them back. No additional configuration.
 
 ## Adding a second form (e.g. newsletter, RSVP)
 
@@ -195,7 +210,7 @@ The endpoint is generic — `/submit/<form>` works for any form name configured 
 }
 ```
 
-Then point a form at `/submit/newsletter` and you're good.
+Then point a form at `/submit/newsletter`. Submissions land at `site/content/newsletter/<ts>-<rand>.md`, and `/newsletter/*` is automatically route-blocked on the public site.
 
 ## Troubleshooting
 
@@ -207,8 +222,10 @@ Then point a form at `/submit/newsletter` and you're good.
 
 **Test succeeds via `mail` but you set up SMTP** — SMTP failed and the fallback caught it. The diagnostic shows the SMTP error verbatim. Disable the fallback once you're done debugging so failures are loud.
 
-**Submissions show up but no email** — Check `Settings → Email → Send a test email` first. If the test fails, real submissions also fail — but they still persist to `site/data/submissions/`.
+**Submissions show up but no email** — Check `Settings → Email → Send a test email` first. If the test fails, real submissions also fail — but they still persist to `site/content/<form>/`.
 
 **`429 Too many requests`** — Rate limit hit. Bump `rate_limit_per_hour` in the form config, or clear `site/cache/rate-limit.json` to reset.
 
 **Public form posts but redirect goes to `err=required:email`** — The form's `email` field was empty. Check that your form HTML's `name` attributes match the configured field names exactly.
+
+**My `/contact` page returns 404** — The `contact/` folder is the submission folder, so `/contact/*` is route-blocked. Put your contact page somewhere else (e.g. `/pages/contact`).

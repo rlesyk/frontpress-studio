@@ -11,6 +11,28 @@ All notable changes to FrontPress Studio are documented here. The format is base
 
 ## [Unreleased]
 
+## [0.0.79] — 2026-05-18
+
+### Changed
+- **Form submissions are now stored as custom posts.** Each submission is a Markdown file at `site/content/<form>/<YYYY-MM-DD-HHMMSS>-<rand>.md` with all form fields in YAML front matter, the `message` field as the body, and `draft: true` set. This replaces the standalone `site/data/submissions/` JSON store from 0.0.78.
+
+  Why: submissions are now treated as regular content, which means they reuse the framework's existing infrastructure for free. They appear in the **Pages** list under the form's folder name (e.g. `contact/`), they're full-text searchable, they're included in `Backup → Full` and `Backup → Content` automatically, and the 30-day trash retention + 10-second undo toast apply if you delete one by accident. Operators can also annotate / tag / re-categorise submissions through the regular editor (e.g. mark spam, add follow-up notes).
+
+  Privacy: every submission has `draft: true`, AND the framework hard-blocks the public route `/<form>/*` for every configured form in `site/config.json:forms.<name>`. So even if a draft flag is accidentally flipped, the route block keeps the submission off the public site.
+
+  Migration note: pre-0.0.79 submissions stored in `site/data/submissions/` are not auto-migrated. If you have any, copy the JSON contents into a new Markdown file or accept that they stay archived in the old location (they're still in your backups).
+
+### Removed
+- `cms/lib/SubmissionStore.php` — replaced by `ContentRepository::save()`.
+- `cms/lib/Api/SubmissionsController.php` — Pages screen + existing pages endpoints cover the inbox UX.
+- `src/screens/Settings/Submissions.jsx` — the Pages list under each form's folder replaces it.
+- `Settings → Submissions` tab.
+- `cms/tests/SubmissionStoreTest.php`.
+- `ServiceFactory::submissions()`.
+
+### Added
+- `site/content/<form>/` folders are now reserved per configured form. The framework hard-404s `/<form>` and `/<form>/*` URLs on the public site, regardless of any individual submission's `draft` value. Belt-and-braces defence in depth.
+
 ## [0.0.78] — 2026-05-18
 
 ### Added

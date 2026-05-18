@@ -109,6 +109,24 @@ if ($url === '/sitemap.xml') {
     exit;
 }
 
+// ── Block public access to submission folders ───────────────────────────────
+// Every configured form name is also the folder its submissions land in
+// (e.g. `forms.contact` → `site/content/contact/`). Even though every
+// submission is saved with `draft: true` — which means the public renderer
+// already 404s individual submission pages — we belt-and-braces 404 the
+// whole folder so an attacker can't guess at filenames either. The admin's
+// Pages list still surfaces these folders normally.
+$_fp_forms = (array)$config->get('forms', []);
+foreach ($_fp_forms as $_fp_name => $_fp_spec) {
+    $_fp_name = (string)$_fp_name;
+    if ($_fp_name === '') continue;
+    if ($url === '/' . $_fp_name || str_starts_with($url, '/' . $_fp_name . '/')) {
+        not_found($url);
+        exit;
+    }
+}
+unset($_fp_forms, $_fp_name, $_fp_spec);
+
 // ── /submit/<form> — public form submission handler ─────────────────────────
 // One generic POST endpoint, configurable per form via site/config.json:
 //   forms.<name>.{to, subject_prefix, fields[], honeypot_field,
@@ -152,9 +170,12 @@ if (str_starts_with($url, '/submit/')) {
     // Rate limit. Key is form + IP so each form can have its own budget.
     $ip = (string)($_SERVER['REMOTE_ADDR'] ?? 'unknown');
     $cfgBag = [
-        'appRoot'  => __DIR__,
-        'cacheDir' => $CACHE_DIR,
-        'config'   => $config,
+        'appRoot'    => __DIR__,
+        'cacheDir'   => $CACHE_DIR,
+        'config'     => $config,
+        'contentDir' => $CONTENT_DIR,
+        'uploadsDir' => $UPLOADS_DIR,
+        'themesDir'  => __DIR__ . '/site/themes',
     ];
     $limiter = FrontPress\Api\ServiceFactory::rateLimiter($cfgBag);
     $max = (int)($spec['rate_limit_per_hour'] ?? 5);
@@ -235,12 +256,44 @@ if (str_starts_with($url, '/submit/')) {
 
     if (!empty($spec['store_submissions'])) {
         try {
-            FrontPress\Api\ServiceFactory::submissions(['appRoot' => __DIR__])
-                ->save($name, $payload, [
-                    'ip'    => $ip,
-                    'ua'    => $_SERVER['HTTP_USER_AGENT'] ?? null,
-                    'email' => $emailRes,
-                ]);
+            // Persist as a regular content file under `<form>/`. Always
+            // draft so it never appears on the public site even by accident
+            // (the route-block above is the second lock). The Pages list
+            // surfaces the folder automatically once the first submission
+            // lands; operators get search / trash / backup for free.
+            $now    = new DateTimeImmutable('now', new DateTimeZone('UTC'));
+            $slug   = $now->format('Y-m-d-His') . '-' . bin2hex(random_bytes(2));
+            $relRaw = $name . '/' . $slug;
+            $folder = $CONTENT_DIR . '/' . $name;
+            if (!is_dir($folder)) @mkdir($folder, 0755, true);
+
+            $title = trim((string)($payload['name'] ?? $payload['email'] ?? $payload['subject'] ?? 'Submission'));
+            if ($title === '') $title = 'Submission';
+
+            $meta = array_merge($payload, [
+                'title'              => $title . ' — ' . $now->format('M j, Y g:i A'),
+                'date'               => $now->format('Y-m-d'),
+                'draft'              => true,
+                'submitted_at'       => $now->format(\DATE_ATOM),
+                'submitted_ip'       => $ip,
+                'submitted_ua'       => $_SERVER['HTTP_USER_AGENT'] ?? null,
+                'form'               => $name,
+                'delivery_ok'        => (bool)$emailRes['ok'],
+                'delivery_transport' => (string)$emailRes['transport'],
+            ]);
+            if (!empty($emailRes['error'])) $meta['delivery_error'] = (string)$emailRes['error'];
+
+            // The markdown body — preferentially the `message` field, since
+            // that's the long-form text on most contact forms. Fall back to
+            // a labelled dump of every field when no `message` is present.
+            $body = !empty($payload['message'])
+                ? (string)$payload['message']
+                : implode("\n\n", array_map(
+                    fn ($k, $v) => '**' . ucfirst(str_replace('_', ' ', (string)$k)) . ":**\n" . $v,
+                    array_keys($payload), array_values($payload),
+                ));
+
+            FrontPress\Api\ServiceFactory::repository($cfgBag)->save($relRaw, $meta, $body);
         } catch (\Throwable $e) {
             error_log('[fp.submit] persist failed: ' . $e->getMessage());
         }
