@@ -11,6 +11,11 @@ All notable changes to FrontPress Studio are documented here. The format is base
 
 ## [Unreleased]
 
+## [0.0.81] — 2026-05-18
+
+### Changed
+- **Contact form field rows: drop the ▲/▼ buttons, swap × for the trash icon.** Drag-and-drop already covers reordering — keeping the up/down buttons next to a grip handle was redundant and ate horizontal space on narrow screens (you'd see the row layout compress / overlap with the right edge). The delete control is now a small `IconTrash` button matching the **Manage fields** screen's row style. Same component, consistent look across both field builders.
+
 ## [0.0.80] — 2026-05-18
 
 ### Changed

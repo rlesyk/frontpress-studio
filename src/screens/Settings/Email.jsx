@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api.js';
 import { Alert, Button, Card, Field, Input, Select } from '../../components/ui/index.js';
+import { IconTrash } from '../../components/icons.jsx';
 
 const DEFAULT_EMAIL = {
   smtp_host: '',
@@ -321,10 +322,7 @@ export default function EmailSettings() {
                     index={i}
                     field={f}
                     onChange={(patch) => updateField(i, patch)}
-                    onMove={(dir) => moveField(i, i + dir)}
                     onRemove={() => removeField(i)}
-                    isFirst={i === 0}
-                    isLast={i === contact.fields.length - 1}
                     isDragging={draggingIdx === i}
                     isDragOver={dragOverIdx === i && draggingIdx !== i}
                     onDragStart={(e) => onDragStart(i, e)}
@@ -354,8 +352,8 @@ function guessTypeFromName(name) {
 }
 
 function FieldRow({
-  index, field, onChange, onMove, onRemove,
-  isFirst, isLast, isDragging, isDragOver,
+  index, field, onChange, onRemove,
+  isDragging, isDragOver,
   onDragStart, onDragOver, onDrop, onDragEnd,
 }) {
   function onNameBlur(e) {
@@ -469,13 +467,17 @@ function FieldRow({
           )}
         </div>
 
-        {/* Keyboard / a11y-friendly sort + delete. Live alongside drag-drop
-            so power users and keyboard-only users both have a path. */}
-        <div className="flex flex-col items-center gap-1">
-          <Button variant="secondary" size="sm" onClick={() => onMove(-1)} disabled={isFirst} title="Move up" aria-label="Move up">▲</Button>
-          <Button variant="secondary" size="sm" onClick={() => onMove(1)}  disabled={isLast}  title="Move down" aria-label="Move down">▼</Button>
-          <Button variant="danger-outline" size="sm" onClick={onRemove} title="Remove field" aria-label="Remove field">×</Button>
-        </div>
+        {/* Trash icon — matches the Manage fields row styling. Drag-and-drop
+            covers sorting; no need for separate up/down arrows. */}
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label="Remove field"
+          title="Remove field"
+          className="mt-[18px] inline-flex h-9 w-9 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 [&>svg]:h-3.5 [&>svg]:w-3.5"
+        >
+          {IconTrash}
+        </button>
       </div>
     </li>
   );
