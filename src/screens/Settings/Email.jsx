@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api.js';
 import { Alert, Button, Card, Field, Input, Select } from '../../components/ui/index.js';
@@ -14,16 +14,13 @@ const DEFAULT_EMAIL = {
   fallback_to_mail: true,
 };
 
-const DEFAULT_FIELDS = [
-  { name: 'name',    label: 'Your name',     type: 'text',     required: true,  placeholder: '' },
-  { name: 'email',   label: 'Email address', type: 'email',    required: true,  placeholder: '' },
-  { name: 'message', label: 'Message',       type: 'textarea', required: true,  placeholder: '' },
-];
-
+// Fresh forms start blank — the operator builds the field list themselves
+// from "+ Add field". Mirrors how Manage fields (taxonomies) works, and
+// avoids shipping placeholder fields the operator has to rename / delete.
 const DEFAULT_CONTACT = {
   to: '',
   subject_prefix: '[Contact]',
-  fields: DEFAULT_FIELDS,
+  fields: [],
   honeypot_field: 'website',
   rate_limit_per_hour: 5,
   success_redirect: '/contact?sent=1',
@@ -55,6 +52,9 @@ export default function EmailSettings() {
   const [email, setEmail]     = useState(DEFAULT_EMAIL);
   const [contact, setContact] = useState(DEFAULT_CONTACT);
   const [saved, setSaved]     = useState(false);
+  const [draggingIdx, setDraggingIdx] = useState(null);
+  const [dragOverIdx,  setDragOverIdx]  = useState(null);
+  const focusNewRowRef = useRef(false);
 
   // Hydrate from the server response. We never echo the real password
   // back — it arrives as `"__SAVED__"` when one exists, `""` when not.
@@ -66,15 +66,24 @@ export default function EmailSettings() {
     setEmail({ ...DEFAULT_EMAIL, ...(s.email || {}) });
     const c = s.forms?.contact;
     if (c) {
-      setContact({
-        ...DEFAULT_CONTACT,
-        ...c,
-        fields: Array.isArray(c.fields) && c.fields.length ? c.fields : DEFAULT_FIELDS,
-      });
+      // Use the server-side fields verbatim — including an empty array.
+      // A freshly-installed CMS has no `forms.contact` at all, so this
+      // path is only hit after the operator has saved at least once.
+      setContact({ ...DEFAULT_CONTACT, ...c, fields: Array.isArray(c.fields) ? c.fields : [] });
     } else {
       setContact(DEFAULT_CONTACT);
     }
   }, [data]);
+
+  // After clicking "+ Add field", focus the new row's Name input so the
+  // operator types straight into it without grabbing the mouse.
+  useEffect(() => {
+    if (!focusNewRowRef.current) return;
+    focusNewRowRef.current = false;
+    const rows = document.querySelectorAll('[data-field-row]');
+    const last = rows[rows.length - 1];
+    last?.querySelector('input[data-field-input="name"]')?.focus();
+  }, [contact.fields.length]);
 
   const passwordIsStored = (data?.settings?.email?.smtp_pass ?? '') === '__SAVED__';
 
@@ -111,8 +120,55 @@ export default function EmailSettings() {
     onError:   (e) => setTestRes({ ok: false, error: e.message || 'Request failed' }),
   });
 
-  const set = (patch) => setEmail((p) => ({ ...p, ...patch }));
+  const set  = (patch) => setEmail((p) => ({ ...p, ...patch }));
   const setC = (patch) => setContact((p) => ({ ...p, ...patch }));
+
+  function addField() {
+    focusNewRowRef.current = true;
+    setC({ fields: [...contact.fields, { name: '', label: '', type: 'text', required: false, placeholder: '' }] });
+  }
+
+  function updateField(i, patch) {
+    setC({ fields: contact.fields.map((x, j) => i === j ? { ...x, ...patch } : x) });
+  }
+
+  function removeField(i) {
+    setC({ fields: contact.fields.filter((_, j) => j !== i) });
+  }
+
+  function moveField(from, to) {
+    if (from === to || to < 0 || to >= contact.fields.length) return;
+    const arr = [...contact.fields];
+    const [moved] = arr.splice(from, 1);
+    arr.splice(to, 0, moved);
+    setC({ fields: arr });
+  }
+
+  // Drag-and-drop reordering. We use the field's index as the drag
+  // payload — when the row is reordered the index becomes stale, but
+  // the drop handler reads the live indices off the DOM via the
+  // `data-field-row` attribute, so the stale payload is fine.
+  function onDragStart(i, e) {
+    setDraggingIdx(i);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(i));
+  }
+  function onDragOver(i, e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverIdx !== i) setDragOverIdx(i);
+  }
+  function onDrop(i, e) {
+    e.preventDefault();
+    const from = draggingIdx ?? Number(e.dataTransfer.getData('text/plain'));
+    setDraggingIdx(null);
+    setDragOverIdx(null);
+    if (Number.isInteger(from)) moveField(from, i);
+  }
+  function onDragEnd() {
+    setDraggingIdx(null);
+    setDragOverIdx(null);
+  }
 
   if (isLoading) return <div className="text-sm text-zinc-500">Loading…</div>;
 
@@ -216,7 +272,7 @@ export default function EmailSettings() {
           <header>
             <h3 className="text-sm font-semibold text-zinc-900">Contact form</h3>
             <p className="mt-1 text-xs text-zinc-500">
-              Public form available at <code>/submit/contact</code>. The bundled <code>blank</code> theme exposes it as the <code>contact</code> template — create a page and pick "Contact" from the Template dropdown.
+              Public form available at <code>/submit/contact</code>. Submissions land as draft posts under <code>site/content/contact/</code>; the Pages list surfaces the folder.
             </p>
           </header>
 
@@ -245,33 +301,40 @@ export default function EmailSettings() {
           </label>
 
           <div className="space-y-2">
-            <div className="text-xs font-semibold text-zinc-700">Fields</div>
-            <ul className="space-y-2">
-              {contact.fields.map((f, i) => (
-                <FieldRow
-                  key={i}
-                  field={f}
-                  onChange={(patch) => setC({ fields: contact.fields.map((x, j) => i === j ? { ...x, ...patch } : x) })}
-                  onMove={(dir) => {
-                    const arr = [...contact.fields];
-                    const j = i + dir;
-                    if (j < 0 || j >= arr.length) return;
-                    [arr[i], arr[j]] = [arr[j], arr[i]];
-                    setC({ fields: arr });
-                  }}
-                  onRemove={() => setC({ fields: contact.fields.filter((_, j) => j !== i) })}
-                  isFirst={i === 0}
-                  isLast={i === contact.fields.length - 1}
-                />
-              ))}
-            </ul>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setC({ fields: [...contact.fields, { name: '', label: '', type: 'text', required: false, placeholder: '' }] })}
-            >
-              + Add field
-            </Button>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xs font-semibold text-zinc-700">Fields</div>
+                <div className="text-[11px] text-zinc-500">Drag rows to reorder. Type into <em>Name</em> first — the Label and Type auto-fill when you tab away.</div>
+              </div>
+              <Button variant="secondary" size="sm" onClick={addField}>+ Add field</Button>
+            </div>
+
+            {contact.fields.length === 0 ? (
+              <div className="rounded-md border border-dashed border-zinc-300 bg-zinc-50/50 p-6 text-center text-xs text-zinc-500">
+                No fields yet. Click <strong>+ Add field</strong> to build the form one field at a time.
+              </div>
+            ) : (
+              <ul className="space-y-2">
+                {contact.fields.map((f, i) => (
+                  <FieldRow
+                    key={i}
+                    index={i}
+                    field={f}
+                    onChange={(patch) => updateField(i, patch)}
+                    onMove={(dir) => moveField(i, i + dir)}
+                    onRemove={() => removeField(i)}
+                    isFirst={i === 0}
+                    isLast={i === contact.fields.length - 1}
+                    isDragging={draggingIdx === i}
+                    isDragOver={dragOverIdx === i && draggingIdx !== i}
+                    onDragStart={(e) => onDragStart(i, e)}
+                    onDragOver={(e) => onDragOver(i, e)}
+                    onDrop={(e) => onDrop(i, e)}
+                    onDragEnd={onDragEnd}
+                  />
+                ))}
+              </ul>
+            )}
           </div>
         </div>
       </Card>
@@ -279,67 +342,141 @@ export default function EmailSettings() {
   );
 }
 
-function FieldRow({ field, onChange, onMove, onRemove, isFirst, isLast }) {
+// Auto-derive Type from common Name patterns. Mirrors what the server
+// does in SettingsController::guessTypeFromName so the UI shows the same
+// type the server will pick on save.
+function guessTypeFromName(name) {
+  if (name === 'email') return 'email';
+  if (name === 'phone' || name === 'tel') return 'tel';
+  if (name === 'url' || name === 'website') return 'url';
+  if (['message', 'body', 'comment', 'notes'].includes(name)) return 'textarea';
+  return 'text';
+}
+
+function FieldRow({
+  index, field, onChange, onMove, onRemove,
+  isFirst, isLast, isDragging, isDragOver,
+  onDragStart, onDragOver, onDrop, onDragEnd,
+}) {
+  function onNameBlur(e) {
+    const value = e.target.value.trim();
+    if (!value) return;
+    const updates = {};
+    // Auto-derive Label from Name when the operator hasn't typed one
+    // themselves — same `snake_case → Sentence case` rule as elsewhere.
+    if (!field.label) {
+      updates.label = value.charAt(0).toUpperCase()
+                    + value.slice(1).replace(/[_-]/g, ' ');
+    }
+    // Auto-derive Type when it's still the default `text` and the Name
+    // is one we recognise. Stops overriding if the operator changed
+    // the type already.
+    if (field.type === 'text') {
+      const guessed = guessTypeFromName(value);
+      if (guessed !== 'text') updates.type = guessed;
+    }
+    if (Object.keys(updates).length) onChange(updates);
+  }
+
   return (
-    <li className="rounded-md border border-zinc-200 bg-white p-3">
-      <div className="grid gap-2 sm:grid-cols-[1fr_1fr_140px_auto]">
-        <Field label="Name">
-          <Input
-            value={field.name}
-            onChange={(e) => onChange({ name: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '') })}
-            placeholder="email"
-            mono
-          />
-        </Field>
-        <Field label="Label">
-          <Input
-            value={field.label}
-            onChange={(e) => onChange({ label: e.target.value })}
-            placeholder="Email address"
-          />
-        </Field>
-        <Field label="Type">
-          <Select value={field.type} onChange={(e) => onChange({ type: e.target.value })}>
-            {FIELD_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-          </Select>
-        </Field>
-        <div className="flex items-end gap-1 pb-1">
-          <Button variant="secondary" size="sm" onClick={() => onMove(-1)} disabled={isFirst} title="Move up">▲</Button>
-          <Button variant="secondary" size="sm" onClick={() => onMove(1)}  disabled={isLast}  title="Move down">▼</Button>
-          <Button variant="danger-outline" size="sm" onClick={onRemove} title="Remove field">×</Button>
+    <li
+      data-field-row
+      data-field-index={index}
+      draggable
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      onDragEnd={onDragEnd}
+      className={`rounded-md border bg-white p-3 transition-colors ${
+        isDragging ? 'opacity-50 border-zinc-300' :
+        isDragOver ? 'border-zinc-900 ring-2 ring-zinc-900/15' :
+                     'border-zinc-200'
+      }`}
+    >
+      <div className="flex items-start gap-3">
+        {/* Grip handle — visual cue + drag affordance. The whole row is
+            draggable; the handle just shows where to grab. */}
+        <div
+          className="mt-7 cursor-grab select-none text-zinc-400 active:cursor-grabbing"
+          aria-hidden="true"
+          title="Drag to reorder"
+        >
+          <svg width="14" height="20" viewBox="0 0 8 14" fill="currentColor">
+            <circle cx="2" cy="2"  r="1.2" />
+            <circle cx="6" cy="2"  r="1.2" />
+            <circle cx="2" cy="7"  r="1.2" />
+            <circle cx="6" cy="7"  r="1.2" />
+            <circle cx="2" cy="12" r="1.2" />
+            <circle cx="6" cy="12" r="1.2" />
+          </svg>
+        </div>
+
+        <div className="flex-1 space-y-2">
+          <div className="grid gap-2 sm:grid-cols-[1fr_1fr_140px]">
+            <Field label="Name">
+              <Input
+                data-field-input="name"
+                value={field.name}
+                onChange={(e) => onChange({ name: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '') })}
+                onBlur={onNameBlur}
+                placeholder="email"
+                mono
+              />
+            </Field>
+            <Field label="Label">
+              <Input
+                value={field.label}
+                onChange={(e) => onChange({ label: e.target.value })}
+                placeholder="Email address"
+              />
+            </Field>
+            <Field label="Type">
+              <Select value={field.type} onChange={(e) => onChange({ type: e.target.value })}>
+                {FIELD_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </Select>
+            </Field>
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+            <Field label="Placeholder">
+              <Input value={field.placeholder || ''} onChange={(e) => onChange({ placeholder: e.target.value })} placeholder="Optional" />
+            </Field>
+            <label className="flex items-center gap-2 self-end pb-2 text-sm">
+              <input type="checkbox" checked={!!field.required} onChange={(e) => onChange({ required: e.target.checked })} />
+              <span>Required</span>
+            </label>
+          </div>
+
+          {field.type === 'select' && (
+            <Field label="Choices (one per line)">
+              <textarea
+                className="block w-full rounded-md border border-zinc-200 bg-white px-2 py-1.5 font-mono text-[13px]"
+                rows={3}
+                value={(field.choices || []).join('\n')}
+                onChange={(e) => onChange({ choices: e.target.value.split('\n') })}
+                onBlur={(e) => onChange({ choices: e.target.value.split('\n').map((s) => s.trim()).filter(Boolean) })}
+              />
+            </Field>
+          )}
+          {field.type === 'checkbox' && (
+            <Field label="Checkbox label (text next to the box)">
+              <Input
+                value={field.cb_label || field.label}
+                onChange={(e) => onChange({ cb_label: e.target.value })}
+                placeholder="I agree to the terms"
+              />
+            </Field>
+          )}
+        </div>
+
+        {/* Keyboard / a11y-friendly sort + delete. Live alongside drag-drop
+            so power users and keyboard-only users both have a path. */}
+        <div className="flex flex-col items-center gap-1">
+          <Button variant="secondary" size="sm" onClick={() => onMove(-1)} disabled={isFirst} title="Move up" aria-label="Move up">▲</Button>
+          <Button variant="secondary" size="sm" onClick={() => onMove(1)}  disabled={isLast}  title="Move down" aria-label="Move down">▼</Button>
+          <Button variant="danger-outline" size="sm" onClick={onRemove} title="Remove field" aria-label="Remove field">×</Button>
         </div>
       </div>
-
-      <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_auto]">
-        <Field label="Placeholder">
-          <Input value={field.placeholder || ''} onChange={(e) => onChange({ placeholder: e.target.value })} placeholder="Optional" />
-        </Field>
-        <label className="flex items-center gap-2 self-end pb-2 text-sm">
-          <input type="checkbox" checked={!!field.required} onChange={(e) => onChange({ required: e.target.checked })} />
-          <span>Required</span>
-        </label>
-      </div>
-
-      {field.type === 'select' && (
-        <Field label="Choices (one per line)">
-          <textarea
-            className="block w-full rounded-md border border-zinc-200 bg-white px-2 py-1.5 font-mono text-[13px]"
-            rows={3}
-            value={(field.choices || []).join('\n')}
-            onChange={(e) => onChange({ choices: e.target.value.split('\n') })}
-            onBlur={(e) => onChange({ choices: e.target.value.split('\n').map((s) => s.trim()).filter(Boolean) })}
-          />
-        </Field>
-      )}
-      {field.type === 'checkbox' && (
-        <Field label="Checkbox label (text next to the box)">
-          <Input
-            value={field.cb_label || field.label}
-            onChange={(e) => onChange({ cb_label: e.target.value })}
-            placeholder="I agree to the terms"
-          />
-        </Field>
-      )}
     </li>
   );
 }

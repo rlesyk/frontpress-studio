@@ -11,6 +11,16 @@ All notable changes to FrontPress Studio are documented here. The format is base
 
 ## [Unreleased]
 
+## [0.0.80] — 2026-05-18
+
+### Changed
+- **Contact form field builder now starts blank and supports drag-to-reorder.** Previously a fresh install seeded the form with `name`/`email`/`message` placeholder rows that operators had to either rename or accept; now the field list starts empty with an "**+ Add field**" CTA, mirroring how the **Manage fields** screen works for taxonomies.
+- **Smarter add-flow.** Clicking + Add field auto-focuses the new row's **Name** input. When you tab away from a non-empty Name, the row auto-fills:
+  - **Label** = `Name` with underscores/hyphens turned into spaces, first letter capitalised (only if the operator hasn't typed a Label themselves).
+  - **Type** = inferred from common Names — `email` → Email, `phone`/`tel` → Phone, `url`/`website` → URL, `message`/`body`/`comment`/`notes` → Long text. Only kicks in when the Type is still the default `text`. The operator can override and the auto-derive stops touching it.
+- **Drag-and-drop sorting.** Each row has a grip handle on the left; the whole row is draggable. Drop indicator highlights the target row with a ring. The existing ▲/▼ keyboard-friendly sort buttons stay alongside drag-and-drop so a11y / keyboard-only workflows still work.
+- Empty-state copy: when no fields are configured, the builder shows a dashed-border zero-state instead of a row with the default values.
+
 ## [0.0.79] — 2026-05-18
 
 ### Changed
