@@ -122,7 +122,7 @@
 <body>
 <main class="card" role="main">
   <div class="brand">
-    <span class="logo" aria-hidden="true">M</span>
+    <span class="logo" aria-hidden="true">F</span>
     <h1>FrontPress Admin</h1>
   </div>
 

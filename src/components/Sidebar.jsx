@@ -16,7 +16,7 @@ export default function Sidebar() {
     <aside className="flex w-60 shrink-0 flex-col border-r border-zinc-200 bg-white">
       <div className="flex items-center gap-2 px-4 py-4">
         <span className="flex h-7 w-7 items-center justify-center rounded-md bg-zinc-900 text-[12px] font-bold text-white">
-          M
+          F
         </span>
         <span className="text-[15px] font-semibold tracking-tight">FrontPress Admin</span>
       </div>
