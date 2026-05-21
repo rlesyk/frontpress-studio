@@ -20,6 +20,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Verify tag matches cms/VERSION
+        # Releases ship `cms/VERSION` to disk; `Updater::currentVersion()`
+        # reads it at runtime to compute "update available". If the pushed
+        # tag and the on-disk file disagree, every install from this zip
+        # would compare wrong against future tags (banner shows when it
+        # shouldn't, or never shows when it should). Fail loud so the
+        # author has to bump the file first.
+        #
+        # Both `0.0.90` and `v0.0.90` style tags are accepted to match the
+        # workflow trigger filter above.
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          FILE="$(cat cms/VERSION | tr -d '[:space:]')"
+          if [ "$TAG" != "$FILE" ] && [ "$TAG" != "v$FILE" ]; then
+            echo "::error::Tag '$TAG' does not match cms/VERSION ('$FILE'). Bump cms/VERSION to match the tag (or vice versa) and re-tag."
+            exit 1
+          fi
+          echo "Tag '$TAG' matches cms/VERSION '$FILE'."
+
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
