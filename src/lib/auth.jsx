@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { api, setCsrf } from './api.js';
+import { api, setCsrf, setUnauthorizedHandler } from './api.js';
 
 const AuthCtx = createContext(null);
 
@@ -18,6 +18,17 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => { refresh(); }, [refresh]);
+
+  // Catch session expiry on any request: clear React auth state so the
+  // <Protected> wrapper bounces the user to /login. The api layer skips
+  // /me itself, so the initial unauth probe doesn't trip this.
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      setCsrf('');
+      setState({ status: 'ready', user: null, passwordIsDefault: false });
+    });
+    return () => setUnauthorizedHandler(null);
+  }, []);
 
   const login = useCallback(async (username, password) => {
     const res = await api.post('/login', { username, password });

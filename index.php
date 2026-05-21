@@ -111,16 +111,18 @@ if ($url === '/sitemap.xml') {
 
 // ── Block public access to submission folders ───────────────────────────────
 // Every configured form name is also the folder its submissions land in
-// (e.g. `forms.contact` → `site/content/contact/`). Even though every
-// submission is saved with `draft: true` — which means the public renderer
-// already 404s individual submission pages — we belt-and-braces 404 the
-// whole folder so an attacker can't guess at filenames either. The admin's
-// Pages list still surfaces these folders normally.
+// (e.g. `forms.contact` → `site/content/contact/`). Submissions are saved
+// with `draft: true` so the renderer already 404s them individually; we
+// belt-and-braces 404 the whole subtree so an attacker can't guess at
+// filenames either. The bare `/contact` URL is left alone — that resolves
+// to `pages/contact.md` (or a folder archive) and is the natural spot for
+// the public contact form. The admin's Pages list still surfaces the
+// submission folder normally.
 $_fp_forms = (array)$config->get('forms', []);
 foreach ($_fp_forms as $_fp_name => $_fp_spec) {
     $_fp_name = (string)$_fp_name;
     if ($_fp_name === '') continue;
-    if ($url === '/' . $_fp_name || str_starts_with($url, '/' . $_fp_name . '/')) {
+    if (str_starts_with($url, '/' . $_fp_name . '/')) {
         not_found($url);
         exit;
     }

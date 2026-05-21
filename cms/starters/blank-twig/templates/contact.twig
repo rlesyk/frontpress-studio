@@ -1,9 +1,13 @@
 {% extends '_layout.twig' %}
-{% set page_title = 'Contact' %}
+{% set page_title = meta.title|default('Contact') %}
 
 {% block content %}
 <article class="prose">
-  <h1>Contact</h1>
+  <h1>{{ meta.title|default('Contact') }}</h1>
+
+  {% if html is defined and html %}
+    {{ html|raw }}
+  {% endif %}
 
   {% if query.sent is defined %}
     <p class="fp-form__status fp-form__status--ok">Thanks — we'll be in touch.</p>

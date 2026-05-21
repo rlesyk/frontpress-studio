@@ -2,6 +2,7 @@
 // (same-origin), attaches CSRF header on mutating requests, and throws on errors.
 
 let csrfToken = '';
+let onUnauthorized = null;
 
 export function setCsrf(token) {
   csrfToken = token || '';
@@ -9,6 +10,14 @@ export function setCsrf(token) {
 
 export function getCsrf() {
   return csrfToken;
+}
+
+// AuthProvider registers a handler here so any 401 from any endpoint
+// (e.g. an expired session caught mid-action) clears React auth state
+// and routes back to /login — instead of leaving the user staring at a
+// failed mutation toast.
+export function setUnauthorizedHandler(fn) {
+  onUnauthorized = typeof fn === 'function' ? fn : null;
 }
 
 export class ApiError extends Error {
@@ -37,6 +46,11 @@ async function request(method, path, { body, signal } = {}) {
   try { data = text ? JSON.parse(text) : null; } catch { /* non-JSON */ }
 
   if (!res.ok || (data && data.ok === false)) {
+    // Skip the global handler for /me itself — the AuthProvider's initial
+    // probe is allowed to fail with 401 without bouncing the user.
+    if (res.status === 401 && onUnauthorized && path !== '/me') {
+      try { onUnauthorized(); } catch { /* ignore */ }
+    }
     const msg = (data && data.error) || text || `${res.status} ${res.statusText}`;
     throw new ApiError(msg, res.status, data);
   }
