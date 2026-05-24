@@ -112,6 +112,14 @@ class ThemesController
             }
             \json_response(['ok' => false, 'error' => $result['error'] ?? 'Failed'], 400);
         }
+        if (in_array($action, ['file-create', 'file-delete', 'file-rename', 'file-duplicate'], true)) {
+            self::themeFileMutation($config, fn () => self::dispatchFileMutation(
+                ServiceFactory::themeFiles($config),
+                $action,
+                $body
+            ));
+            return;
+        }
         if ($action === 'create-template') {
             $theme   = isset($body['theme']) ? (string)$body['theme'] : null;
             $slug    = preg_replace('/[^a-z0-9_-]/', '', strtolower((string)($body['slug'] ?? '')));
@@ -239,6 +247,44 @@ class ThemesController
             'active'   => $themes->active(),
             'starters' => array_values($starters),
         ]);
+    }
+
+    /**
+     * Run a `ThemeFiles` mutation, return its JSON, and clear the page +
+     * Twig caches on success. Centralised so the four `file-*` actions
+     * stay tiny.
+     *
+     * @param array<string, mixed> $config
+     * @param callable(): array<string, mixed> $fn
+     */
+    private static function themeFileMutation(array $config, callable $fn): void
+    {
+        try {
+            $result = $fn();
+        } catch (\RuntimeException $e) {
+            \json_response(['ok' => false, 'error' => $e->getMessage()], 400);
+        }
+        if (!empty($result['ok'])) {
+            self::clearCache($config);
+            \json_response($result);
+        }
+        \json_response(['ok' => false, 'error' => $result['error'] ?? 'Failed'], 400);
+    }
+
+    /**
+     * @param array<string, mixed> $body
+     * @return array<string, mixed>
+     */
+    private static function dispatchFileMutation(\FrontPress\ThemeFiles $files, string $action, array $body): array
+    {
+        $theme = isset($body['theme']) ? (string)$body['theme'] : null;
+        return match ($action) {
+            'file-create'    => $files->create($theme, (string)($body['path'] ?? ''), (string)($body['content'] ?? '')),
+            'file-delete'    => $files->delete($theme, (string)($body['path'] ?? '')),
+            'file-rename'    => $files->rename($theme, (string)($body['from'] ?? ''), (string)($body['to'] ?? '')),
+            'file-duplicate' => $files->duplicate($theme, (string)($body['from'] ?? ''), (string)($body['to'] ?? '')),
+            default          => ['ok' => false, 'error' => 'Unknown file action'],
+        };
     }
 
     /** @param array<string, mixed> $config */

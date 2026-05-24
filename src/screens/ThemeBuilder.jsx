@@ -212,11 +212,14 @@ export default function ThemeBuilder() {
           previewPath={previewPath}
           previewKey={previewKey}
           files={files}
+          theme={theme}
+          dirty={dirty}
           onInsert={(snippet) =>
             applyBlockChange(insertSnippet(draft, snippet, { line: cursorLine }))
           }
           onSelectBlock={setSelectedBlockId}
           onChangeDraft={applyBlockChange}
+          onSelectFile={chooseFile}
           onPreviewPathChange={(next) => {
             previewPathTouched.current = true;
             setPreviewPath(next);
@@ -228,16 +231,13 @@ export default function ThemeBuilder() {
             <div className="p-4 text-sm text-zinc-500">Loading...</div>
           ) : (
             <ThemeCodePanel
-              files={files}
               selectedPath={path}
               draft={draft}
-              dirty={dirty}
               focusLine={selectedBlock?.startLine || null}
               blocks={blocks}
               cursorLine={cursorLine}
               selectedBlockId={selectedBlockId}
               onChange={updateDraft}
-              onSelectFile={chooseFile}
               onCursorChange={setCursorLine}
               onSelectBlock={setSelectedBlockId}
             />

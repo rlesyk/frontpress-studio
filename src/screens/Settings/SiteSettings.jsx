@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api.js';
+import { useAuth } from '../../lib/auth.jsx';
 import { Alert, Button, Card, Field, Input } from '../../components/ui/index.js';
 
 export default function SiteSettings() {
   const qc = useQueryClient();
+  const { update } = useAuth();
   const { data, isLoading } = useQuery({
     queryKey: ['settings'],
     queryFn: () => api.get('/settings'),
@@ -132,6 +134,26 @@ export default function SiteSettings() {
             {rebuildAssets.isPending ? 'Compiling…' : 'Rebuild theme SCSS'}
           </Button>
           {cacheMsg && <span className="text-xs text-zinc-500">{cacheMsg}</span>}
+        </div>
+      </Card>
+
+      {/* Version surface. `update.current` is the canonical on-disk version
+          (cms/VERSION). When an update is available we also show the latest
+          tag so the user has the same context they get from the sidebar
+          banner. Kept read-only here — the actionable "Update now" button
+          lives in the sidebar banner so we don't render the same control
+          twice and have to keep two copies of the apply state in sync. */}
+      <Card title="Version">
+        <div className="flex items-baseline gap-2 text-[13px]">
+          <span className="text-zinc-500">FrontPress Studio</span>
+          <span className="font-mono font-medium text-zinc-900">
+            v{update?.current ?? '—'}
+          </span>
+          {update?.available && update.latest && (
+            <span className="text-xs text-zinc-500">
+              · update available: <span className="font-mono text-zinc-700">v{update.latest}</span>
+            </span>
+          )}
         </div>
       </Card>
     </div>

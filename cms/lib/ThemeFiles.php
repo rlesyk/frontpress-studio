@@ -89,43 +89,99 @@ class ThemeFiles
         }
 
         $slug = $this->themeSlug($theme);
-        $rel  = $this->normalizePath($path);
-        if (!$this->isEditablePath($rel)) {
-            return ['ok' => false, 'error' => 'Theme file is not editable'];
+        $dest = $this->prepareDestination($slug, $path);
+        if (empty($dest['ok'])) {
+            return $dest;
         }
 
-        $base = realpath($this->themesDir . '/' . $slug);
-        if (!$base) {
-            return ['ok' => false, 'error' => 'Theme not found'];
-        }
-        $full = $base . '/' . $rel;
-        if (file_exists($full)) {
-            return ['ok' => false, 'error' => 'Theme file already exists'];
-        }
-
-        $dir = dirname($full);
-        if (!is_dir($dir) && !@mkdir($dir, 0755, true)) {
-            return ['ok' => false, 'error' => 'Could not create directory'];
-        }
-
-        // Resolve the parent dir so we can verify the new path doesn't
-        // escape the theme root via symlinks before writing the file.
-        $realDir = realpath($dir);
-        if (!$realDir || !str_starts_with($realDir, $base . '/')) {
-            return ['ok' => false, 'error' => 'Invalid theme file path'];
-        }
-
-        if (file_put_contents($full, $content, LOCK_EX) === false) {
+        if (file_put_contents($dest['full'], $content, LOCK_EX) === false) {
             return ['ok' => false, 'error' => 'Could not write theme file'];
         }
 
         return [
             'ok' => true,
             'theme' => $slug,
-            'path' => $rel,
-            'language' => $this->languageFor($rel),
+            'path' => $dest['rel'],
+            'language' => $this->languageFor($dest['rel']),
             'size' => strlen($content),
         ];
+    }
+
+    /**
+     * Validate a new-file path: editable extension, traversal-safe, doesn't
+     * clobber an existing file, parent directory exists or can be created.
+     * Used by `create`, `rename`, and `duplicate`.
+     *
+     * @return array{ok: bool, error?: string, full?: string, rel?: string}
+     */
+    private function prepareDestination(string $slug, string $to): array
+    {
+        $rel = $this->normalizePath($to);
+        if (!$this->isEditablePath($rel)) {
+            return ['ok' => false, 'error' => 'Destination is not an editable path'];
+        }
+        $base = realpath($this->themesDir . '/' . $slug);
+        if (!$base) {
+            return ['ok' => false, 'error' => 'Theme not found'];
+        }
+        $full = $base . '/' . $rel;
+        if (file_exists($full)) {
+            return ['ok' => false, 'error' => 'Destination already exists'];
+        }
+        $dir = dirname($full);
+        if (!is_dir($dir) && !@mkdir($dir, 0755, true)) {
+            return ['ok' => false, 'error' => 'Could not create directory'];
+        }
+        // Resolve via realpath so a symlinked parent can't redirect the
+        // new file out of the theme root.
+        $realDir = realpath($dir);
+        if (!$realDir || !str_starts_with($realDir, $base . '/')) {
+            return ['ok' => false, 'error' => 'Invalid destination path'];
+        }
+        return ['ok' => true, 'full' => $full, 'rel' => $rel];
+    }
+
+    /** @return array<string, mixed> */
+    public function delete(?string $theme, string $path): array
+    {
+        $slug = $this->themeSlug($theme);
+        $full = $this->resolveExistingFile($slug, $path);
+        if (!@unlink($full)) {
+            return ['ok' => false, 'error' => 'Could not delete theme file'];
+        }
+        return ['ok' => true, 'theme' => $slug, 'path' => $this->normalizePath($path)];
+    }
+
+    /**
+     * Move an editable theme file. `from` must exist, `to` must not. Both
+     * paths must live under `templates/` or `assets/` and use one of the
+     * whitelisted extensions.
+     *
+     * @return array<string, mixed>
+     */
+    public function rename(?string $theme, string $from, string $to): array
+    {
+        $slug = $this->themeSlug($theme);
+        $src  = $this->resolveExistingFile($slug, $from);
+        $dest = $this->prepareDestination($slug, $to);
+        if (empty($dest['ok'])) return $dest;
+        if (!@rename($src, $dest['full'])) {
+            return ['ok' => false, 'error' => 'Could not rename theme file'];
+        }
+        return ['ok' => true, 'theme' => $slug, 'path' => $dest['rel'], 'from' => $this->normalizePath($from)];
+    }
+
+    /** @return array<string, mixed> */
+    public function duplicate(?string $theme, string $from, string $to): array
+    {
+        $slug = $this->themeSlug($theme);
+        $src  = $this->resolveExistingFile($slug, $from);
+        $dest = $this->prepareDestination($slug, $to);
+        if (empty($dest['ok'])) return $dest;
+        if (!@copy($src, $dest['full'])) {
+            return ['ok' => false, 'error' => 'Could not duplicate theme file'];
+        }
+        return ['ok' => true, 'theme' => $slug, 'path' => $dest['rel'], 'from' => $this->normalizePath($from)];
     }
 
     /** @return array<string, mixed> */

@@ -41,17 +41,15 @@ class Updater
             return null;
         }
 
-        $ctx = stream_context_create(['http' => [
-            'header'  => "User-Agent: FrontPressStudio\r\n",
-            'timeout' => 6,
-        ]]);
-        $json = @file_get_contents("https://api.github.com/repos/{$repo}/releases/latest", false, $ctx);
+        $url  = "https://api.github.com/repos/{$repo}/releases/latest";
+        $json = $this->httpGet($url);
         if (!$json) {
             return null;
         }
 
         $data = json_decode($json, true);
         if (empty($data['tag_name'])) {
+            error_log("Updater::checkLatest: GitHub returned no tag_name (got: " . substr((string)$json, 0, 200) . ')');
             return null;
         }
 
@@ -62,6 +60,163 @@ class Updater
             'zip_url'   => $data['zipball_url']  ?? '',
             'published' => $data['published_at'] ?? '',
         ];
+    }
+
+    /**
+     * Locate a CA bundle file that actually exists on this host. PHP
+     * exposes the openssl-configured paths via `openssl_get_cert_locations()`,
+     * but those paths frequently point at files that don't exist (Local
+     * Sites is the canonical offender — it sets `default_cert_file` to a
+     * WordPress-internal path). Walk the configured locations first, then
+     * fall through to common system locations on macOS / Debian / RHEL.
+     *
+     * Returns the first readable PEM bundle found, or null if none exists.
+     * Cached statically per request so the stat calls aren't repeated.
+     */
+    private static ?string $cachedCaBundle = null;
+    private static bool $caBundleSearched = false;
+
+    private static function findCaBundle(): ?string
+    {
+        if (self::$caBundleSearched) {
+            return self::$cachedCaBundle;
+        }
+        self::$caBundleSearched = true;
+
+        $candidates = [];
+
+        if (function_exists('openssl_get_cert_locations')) {
+            $loc = openssl_get_cert_locations();
+            if (!empty($loc['default_cert_file'])) {
+                $candidates[] = $loc['default_cert_file'];
+            }
+            if (!empty($loc['default_cert_dir'])) {
+                $candidates[] = rtrim($loc['default_cert_dir'], '/') . '/cert.pem';
+            }
+        }
+
+        // Common system locations. Ordered roughly by "most likely to be
+        // present on a given OS" — macOS, Debian/Ubuntu, RHEL/Fedora,
+        // Alpine, FreeBSD, Homebrew.
+        $candidates = array_merge($candidates, [
+            '/etc/ssl/cert.pem',
+            '/etc/ssl/certs/ca-certificates.crt',
+            '/etc/pki/tls/certs/ca-bundle.crt',
+            '/etc/ssl/ca-bundle.pem',
+            '/usr/local/share/certs/ca-root-nss.crt',
+            '/usr/local/etc/openssl@3/cert.pem',
+            '/usr/local/etc/openssl/cert.pem',
+            '/opt/homebrew/etc/openssl@3/cert.pem',
+        ]);
+
+        foreach ($candidates as $path) {
+            if (is_string($path) && $path !== '' && is_file($path) && is_readable($path)) {
+                self::$cachedCaBundle = $path;
+                return $path;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * GET a URL with sensible defaults. Prefers curl (more reliable
+     * over HTTPS across PHP-FPM ini configs and far better error reporting)
+     * and falls back to `file_get_contents` when the curl extension isn't
+     * available. Either path logs the failure cause via `error_log()` so a
+     * silent `null` return is debuggable from the webserver log.
+     *
+     * `$accept` controls the Accept header; defaults to `application/json`
+     * for API calls. Binary downloads (e.g. the release zip) pass `*\/*`
+     * (or any non-JSON value) so the server returns the binary payload.
+     *
+     * `$timeout` is used for both connect and total transfer. The default
+     * is comfortable for an API call but a multi-MB release-zip download
+     * needs a larger window — callers pass an override.
+     *
+     * Returns the response body on HTTP 2xx, null otherwise.
+     */
+    private function httpGet(string $url, string $accept = 'application/json', int $timeout = 10): ?string
+    {
+        $ua = 'FrontPressStudio';
+
+        // file:// fast-path. Used by the test suite to load a fixture
+        // ZIP without spinning up an HTTP server; curl rejects file://
+        // by default for safety, and a network round-trip for what's
+        // really a local read would be wasteful anyway. Production
+        // `isAllowedZipUrl()` keeps real callers on https://.
+        if (str_starts_with($url, 'file://')) {
+            $body = @file_get_contents($url);
+            if ($body === false) {
+                $msg = error_get_last()['message'] ?? 'unknown error';
+                error_log("Updater::httpGet file: {$url} -> {$msg}");
+                return null;
+            }
+            return $body;
+        }
+
+        if (function_exists('curl_init')) {
+            $ch = curl_init($url);
+            $opts = [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_CONNECTTIMEOUT => $timeout,
+                CURLOPT_TIMEOUT        => $timeout,
+                CURLOPT_USERAGENT      => $ua,
+                CURLOPT_HTTPHEADER     => ["Accept: {$accept}"],
+            ];
+
+            // Many shared hosts (and Local Sites, which targets WordPress)
+            // ship a php.ini that points `openssl.cafile` at a non-existent
+            // path — `wp-includes/certificates/ca-bundle.crt` in Local's
+            // case. Curl then aborts the TLS handshake before any HTTP
+            // round-trip happens. Find a working CA bundle here so the
+            // updater is portable across hosts without users having to
+            // touch php.ini.
+            $cafile = self::findCaBundle();
+            if ($cafile !== null) {
+                $opts[CURLOPT_CAINFO] = $cafile;
+            } elseif (defined('CURLSSLOPT_NATIVE_CA')) {
+                // CURL 7.71+ on macOS/Windows can use the OS trust store
+                // directly — last-resort fallback when we couldn't find a
+                // PEM bundle on disk.
+                $opts[CURLOPT_SSL_OPTIONS] = CURLSSLOPT_NATIVE_CA;
+            }
+
+            curl_setopt_array($ch, $opts);
+            $body = curl_exec($ch);
+            $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $err  = curl_error($ch);
+            curl_close($ch);
+
+            if ($body === false || $code < 200 || $code >= 300) {
+                error_log("Updater::httpGet curl: {$url} -> HTTP {$code}" . ($err !== '' ? " ({$err})" : ''));
+                return null;
+            }
+            return (string)$body;
+        }
+
+        // file_get_contents fallback. Captures `$http_response_header`
+        // (populated by PHP on stream open) so we can log the status line
+        // alongside the body — without it a null return tells you nothing.
+        $ctx = stream_context_create(['http' => [
+            'header'        => "User-Agent: {$ua}\r\nAccept: {$accept}\r\n",
+            'timeout'       => $timeout,
+            'ignore_errors' => true,
+        ]]);
+        $body = @file_get_contents($url, false, $ctx);
+        if ($body === false) {
+            $msg = error_get_last()['message'] ?? 'unknown error';
+            error_log("Updater::httpGet stream: {$url} -> {$msg}");
+            return null;
+        }
+        // `$http_response_header` is auto-populated in the current scope on
+        // a successful stream open.
+        $status = isset($http_response_header[0]) ? $http_response_header[0] : '';
+        if (!preg_match('#\s2\d\d\s#', $status)) {
+            error_log("Updater::httpGet stream: {$url} -> {$status}");
+            return null;
+        }
+        return $body;
     }
 
     public function isUpdateAvailable(): bool
@@ -91,15 +246,24 @@ class Updater
         $cacheFile = $this->appRoot . '/site/cache/update-check.json';
         $now       = time();
 
+        // A failed check (network blip, GitHub rate-limit, …) is cached too
+        // — otherwise every /me would re-attempt the same failing call.
+        // But: caching `null` for the full 6h TTL would hide the banner for
+        // hours after a single transient blip. Use a much shorter TTL for
+        // negative results so we retry quickly while still rate-limiting
+        // ourselves.
+        $negativeTtl = 300; // 5 min.
+
         if (is_file($cacheFile)) {
             $raw    = (string)@file_get_contents($cacheFile);
             $cached = $raw ? json_decode($raw, true) : null;
-            if (is_array($cached)
-                && isset($cached['checked_at'])
-                && ($now - (int)$cached['checked_at']) < $ttlSeconds
-            ) {
-                $result = $cached['result'] ?? null;
-                return is_array($result) ? $result : null;
+            if (is_array($cached) && isset($cached['checked_at'])) {
+                $age      = $now - (int)$cached['checked_at'];
+                $result   = $cached['result'] ?? null;
+                $applyTtl = is_array($result) ? $ttlSeconds : $negativeTtl;
+                if ($age < $applyTtl) {
+                    return is_array($result) ? $result : null;
+                }
             }
         }
 
@@ -154,15 +318,17 @@ class Updater
             return ['ok' => false, 'error' => 'ZIP URL host not allowed'];
         }
 
-        // Download ZIP to temp file
+        // Download ZIP to temp file. Routed through httpGet() so the
+        // CA-bundle detection that fixes checkLatest() on misconfigured
+        // hosts (Local Sites and similar) also applies here — otherwise
+        // every release-zip download fails with the same opaque "Download
+        // failed" message right after the user clicks Update now.
+        // 120s timeout is generous: the zip is ~2 MB but shared hosts can
+        // be slow, and GitHub redirects through codeload.github.com which
+        // adds a handshake.
         $tmpZip = tempnam(sys_get_temp_dir(), 'fp_') . '.zip';
-        $ctx    = stream_context_create(['http' => [
-            'header'          => "User-Agent: FrontPressStudio\r\n",
-            'timeout'         => 60,
-            'follow_location' => true,
-        ]]);
-        $data = @file_get_contents($zipUrl, false, $ctx);
-        if (!$data) {
+        $data   = $this->httpGet($zipUrl, '*/*', 120);
+        if ($data === null) {
             return ['ok' => false, 'error' => 'Download failed'];
         }
         file_put_contents($tmpZip, $data);

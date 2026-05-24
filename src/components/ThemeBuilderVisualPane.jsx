@@ -3,8 +3,9 @@ import { moveBlock } from '../lib/themeBuilderBlocks.js';
 import ThemeBuilderOutline from './ThemeBuilderOutline.jsx';
 import ThemeBuilderPreview from './ThemeBuilderPreview.jsx';
 import ThemeBuilderComponentsPanel from './ThemeBuilderComponentsPanel.jsx';
+import ThemeBuilderFilesTab from './ThemeBuilderFilesTab.jsx';
 
-const TABS = ['List', 'Components'];
+const TABS = ['List', 'Components', 'Files'];
 
 export default function ThemeBuilderVisualPane({
   blocks,
@@ -16,9 +17,12 @@ export default function ThemeBuilderVisualPane({
   previewPath,
   previewKey,
   files,
+  theme,
+  dirty,
   onInsert,
   onSelectBlock,
   onChangeDraft,
+  onSelectFile,
   onPreviewPathChange,
 }) {
   const [tab, setTab] = useState('List');
@@ -53,7 +57,7 @@ export default function ThemeBuilderVisualPane({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-3">
-          {tab === 'List' ? (
+          {tab === 'List' && (
             <>
               <div className="mb-2 text-[11px] text-zinc-500">
                 {isTwig ? 'Twig visual map' : 'Code editor only'}
@@ -70,11 +74,21 @@ export default function ThemeBuilderVisualPane({
                   : undefined}
               />
             </>
-          ) : (
+          )}
+          {tab === 'Components' && (
             <ThemeBuilderComponentsPanel
               isTwig={isTwig}
               files={files}
               onInsert={onInsert}
+            />
+          )}
+          {tab === 'Files' && (
+            <ThemeBuilderFilesTab
+              theme={theme}
+              files={files}
+              selectedPath={filePath}
+              dirty={dirty}
+              onSelectFile={onSelectFile}
             />
           )}
         </div>
@@ -91,3 +105,4 @@ export default function ThemeBuilderVisualPane({
     </div>
   );
 }
+
