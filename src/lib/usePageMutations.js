@@ -21,6 +21,7 @@ export function usePageMutations({
   title,
   status,
   template,
+  date,
   taxValues,
   editorMode,
   edRef,
@@ -79,7 +80,7 @@ export function usePageMutations({
       // `path` is the *target* — for an update it doubles as the rename
       // request when it differs from the URL path; for a create it's the
       // location to write to.
-      const payload = { title, body, status, template, taxonomies: taxValues, path: relPath };
+      const payload = { title, body, status, template, date, taxonomies: taxValues, path: relPath };
       if (isNew) {
         return api.post('/pages', payload);
       }

@@ -19,6 +19,7 @@ export default function PagesList() {
 
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [sort, setSort] = useState('date-desc');
   // Bulk selection — tracks page paths the user has ticked. Cleared on
   // filter changes so what's "selected" always matches what's visible.
   const [selected, setSelected] = useState(() => new Set());
@@ -42,8 +43,24 @@ export default function PagesList() {
         (p.path  || '').toLowerCase().includes(q)
       );
     }
-    return list;
-  }, [data, folder, statusFilter, query]);
+    // Client-side re-sort so the user can pick the order. ISO `YYYY-MM-DD`
+    // dates sort lexicographically the same as chronologically; missing
+    // dates always go to the bottom so they don't poison either direction.
+    const sorted = [...list];
+    sorted.sort((a, b) => {
+      if (sort === 'title-asc' || sort === 'title-desc') {
+        const cmp = (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' });
+        return sort === 'title-asc' ? cmp : -cmp;
+      }
+      const ad = a.date || '';
+      const bd = b.date || '';
+      if (!ad && !bd) return 0;
+      if (!ad) return 1;
+      if (!bd) return -1;
+      return sort === 'date-asc' ? ad.localeCompare(bd) : bd.localeCompare(ad);
+    });
+    return sorted;
+  }, [data, folder, statusFilter, query, sort]);
 
   // Drop selections that aren't visible after a filter change so the bulk
   // toolbar count never lies about what "Delete selected" will affect.
@@ -169,6 +186,17 @@ export default function PagesList() {
             <option value="">All statuses</option>
             <option value="live">Live</option>
             <option value="draft">Draft</option>
+          </Select>
+          <Select
+            className="w-44"
+            value={sort}
+            onChange={e => setSort(e.target.value)}
+            aria-label="Sort"
+          >
+            <option value="date-desc">Date — newest</option>
+            <option value="date-asc">Date — oldest</option>
+            <option value="title-asc">Title — A→Z</option>
+            <option value="title-desc">Title — Z→A</option>
           </Select>
           {folder && (
             <>

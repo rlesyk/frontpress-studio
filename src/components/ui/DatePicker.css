@@ -1,0 +1,35 @@
+/* Tweaks on top of react-day-picker's default style.css so the calendar
+   matches the rest of the admin (zinc/black palette, sidebar-sized cells).
+   Scoped to .fp-datepicker so it doesn't leak to other DayPicker instances. */
+
+.fp-datepicker .rdp-month_caption {
+  font-size: 13px;
+  font-weight: 600;
+  height: 28px;
+}
+
+.fp-datepicker .rdp-chevron {
+  width: 14px;
+  height: 14px;
+  fill: var(--color-zinc-900, #18181b);
+}
+
+.fp-datepicker .rdp-selected {
+  font-size: inherit;
+  font-weight: 500;
+}
+
+.fp-datepicker .rdp-day_button:hover:not([disabled]) {
+  background-color: var(--rdp-accent-background-color);
+}
+
+.fp-datepicker .rdp-selected .rdp-day_button,
+.fp-datepicker .rdp-selected .rdp-day_button:hover {
+  background-color: var(--rdp-accent-color);
+  color: #fff;
+  border: 2px solid var(--rdp-accent-color);
+}
+
+.fp-datepicker .rdp-today:not(.rdp-selected) .rdp-day_button {
+  font-weight: 600;
+}

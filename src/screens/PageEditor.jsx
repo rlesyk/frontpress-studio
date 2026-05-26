@@ -40,6 +40,7 @@ export default function PageEditor() {
   const [slugTouched, setSlugTouched] = useState(false);
   const [status, setStatus] = useState('published');
   const [template, setTemplate] = useState('');
+  const [date, setDate] = useState('');
   const [taxValues, setTaxValues] = useState({});
 
   const [editorMode, setEditorMode] = useState(() => {
@@ -81,6 +82,9 @@ export default function PageEditor() {
       setSlugTouched(false);
       setStatus('published');
       setTemplate('');
+      // New posts default to today's date so they sort to the top of the
+      // archive immediately. User can change it in the sidebar before save.
+      setDate(new Date().toISOString().slice(0, 10));
       setTaxValues({});
     } else if (data) {
       const rest = (data.path || '').split('/').slice(1).join('/');
@@ -89,6 +93,7 @@ export default function PageEditor() {
       setSlugTouched(true);
       setStatus(data.meta?.draft ? 'draft' : 'published');
       setTemplate(data.meta?.template || '');
+      setDate(typeof data.meta?.date === 'string' ? data.meta.date : '');
       setTaxValues(data.meta || {});
     }
     setDirty(false);
@@ -156,7 +161,7 @@ export default function PageEditor() {
   }
 
   const { save, del } = usePageMutations({
-    isNew, path, folder, slug, title, status, template, taxValues,
+    isNew, path, folder, slug, title, status, template, date, taxValues,
     editorMode, edRef, htmlValue, setDirty,
   });
 
@@ -234,6 +239,8 @@ export default function PageEditor() {
         setSlugTouched={setSlugTouched}
         status={status}
         setStatus={setStatus}
+        date={date}
+        setDate={setDate}
         template={template}
         setTemplate={setTemplate}
         templates={templates}

@@ -1,5 +1,5 @@
 import { publicUrl } from '../lib/utils.js';
-import { Button, Field, Input, SegmentedControl, Select } from './ui/index.js';
+import { Button, DatePicker, Field, SegmentedControl, Select } from './ui/index.js';
 import FeaturedImageField from './FeaturedImageField.jsx';
 import PageFields from './PageFields.jsx';
 
@@ -22,6 +22,8 @@ export default function PageEditorSidebar({
   setSlugTouched,
   status,
   setStatus,
+  date,
+  setDate,
   template,
   setTemplate,
   templates,
@@ -109,6 +111,13 @@ export default function PageEditorSidebar({
               { value: 'published', label: 'Published' },
               { value: 'draft',     label: 'Draft' },
             ]}
+          />
+        </Field>
+
+        <Field label="Date">
+          <DatePicker
+            value={date || ''}
+            onChange={(v) => markDirty(setDate)(v)}
           />
         </Field>
 

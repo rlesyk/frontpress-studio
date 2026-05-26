@@ -171,6 +171,11 @@ class PagesController
         $incomingMeta = is_array($input['meta'] ?? null) ? $input['meta'] : [];
         $meta         = array_merge($existing, $incomingMeta, ['title' => $title]);
 
+        // `date` is the index sort key — stamp today on new posts so null-date entries don't sort last.
+        if ($isNew && empty($meta['date'])) $meta['date'] = date('Y-m-d');
+        $d = array_key_exists('date', $input) ? trim((string)$input['date']) : null;
+        if ($d === '') unset($meta['date']); elseif ($d !== null) $meta['date'] = $d;
+
         $status = (string)($input['status'] ?? 'published');
         if ($status === 'draft') {
             $meta['draft'] = true;
@@ -203,7 +208,7 @@ class PagesController
         // meta, which means a reserved key like `draft: true` would otherwise
         // come back through this loop and clobber the change the dedicated
         // `status` / `template` blocks above just made.
-        $reserved = ['title', 'draft', 'template', 'path'];
+        $reserved = ['title', 'draft', 'template', 'path', 'date'];
         if (is_array($input['taxonomies'] ?? null)) {
             foreach ($input['taxonomies'] as $taxSlug => $value) {
                 $taxSlug = (string)$taxSlug;

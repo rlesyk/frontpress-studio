@@ -17,6 +17,7 @@
     "emmet-monaco-es": "^5.7.0",
     "js-beautify": "^1.15.4",
     "react": "^18.3.1",
+    "react-day-picker": "^10.0.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.27.0"
   },
