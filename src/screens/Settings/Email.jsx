@@ -193,7 +193,7 @@ export default function EmailSettings() {
           <header>
             <h3 className="text-sm font-semibold text-zinc-900">SMTP</h3>
             <p className="mt-1 text-xs text-zinc-500">
-              Pick your provider and we'll pre-fill host / port / encryption — you only need to supply the username and password. Leave the host empty to fall back to PHP <code>mail()</code>.
+              Pick your provider and we'll pre-fill host / port / encryption — you only need to supply the username and password. Choose <strong>PHP mail()</strong> to skip SMTP entirely and let the server send mail.
             </p>
           </header>
 
@@ -210,34 +210,42 @@ export default function EmailSettings() {
           />
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Host">
-              <Input value={email.smtp_host} onChange={(e) => set({ smtp_host: e.target.value })} placeholder="smtp.postmarkapp.com" />
-            </Field>
-            <Field label="Port">
-              <Input type="number" min={1} max={65535} value={email.smtp_port} onChange={(e) => set({ smtp_port: Number(e.target.value) || 587 })} />
-            </Field>
-            <Field label="Encryption">
-              <Select value={email.smtp_encryption} onChange={(e) => set({ smtp_encryption: e.target.value })}>
-                <option value="tls">TLS (STARTTLS)</option>
-                <option value="ssl">SSL</option>
-                <option value="none">None</option>
-              </Select>
-            </Field>
-            <Field label="Username">
-              <Input value={email.smtp_user} onChange={(e) => set({ smtp_user: e.target.value })} autoComplete="off" placeholder="api token or login" />
-            </Field>
-            <Field label="Password">
-              <Input
-                type="password"
-                value={email.smtp_pass}
-                onChange={(e) => set({ smtp_pass: e.target.value })}
-                autoComplete="new-password"
-                placeholder={passwordIsStored ? '(unchanged — type to replace)' : ''}
-              />
-              <p className="mt-1 text-[11px] text-zinc-500">
-                Or set <code>MD_SMTP_PASS</code> in <code>config.php</code> and leave this empty — the server reads the env constant when the JSON value is blank.
-              </p>
-            </Field>
+            {/* SMTP credentials are only meaningful when smtp_host is set —
+                an empty host means PHP mail() is the transport, so we hide
+                host/port/encryption/user/pass entirely and only keep the
+                sender identity fields (From address / From name). */}
+            {email.smtp_host && (
+              <>
+                <Field label="Host">
+                  <Input value={email.smtp_host} onChange={(e) => set({ smtp_host: e.target.value })} placeholder="smtp.postmarkapp.com" />
+                </Field>
+                <Field label="Port">
+                  <Input type="number" min={1} max={65535} value={email.smtp_port} onChange={(e) => set({ smtp_port: Number(e.target.value) || 587 })} />
+                </Field>
+                <Field label="Encryption">
+                  <Select value={email.smtp_encryption} onChange={(e) => set({ smtp_encryption: e.target.value })}>
+                    <option value="tls">TLS (STARTTLS)</option>
+                    <option value="ssl">SSL</option>
+                    <option value="none">None</option>
+                  </Select>
+                </Field>
+                <Field label="Username">
+                  <Input value={email.smtp_user} onChange={(e) => set({ smtp_user: e.target.value })} autoComplete="off" placeholder="api token or login" />
+                </Field>
+                <Field label="Password">
+                  <Input
+                    type="password"
+                    value={email.smtp_pass}
+                    onChange={(e) => set({ smtp_pass: e.target.value })}
+                    autoComplete="new-password"
+                    placeholder={passwordIsStored ? '(unchanged — type to replace)' : ''}
+                  />
+                  <p className="mt-1 text-[11px] text-zinc-500">
+                    Or set <code>MD_SMTP_PASS</code> in <code>config.php</code> and leave this empty — the server reads the env constant when the JSON value is blank.
+                  </p>
+                </Field>
+              </>
+            )}
             <Field label="From address">
               <Input type="email" value={email.from_address} onChange={(e) => set({ from_address: e.target.value })} placeholder="noreply@yoursite.com" />
             </Field>
@@ -246,14 +254,16 @@ export default function EmailSettings() {
             </Field>
           </div>
 
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={!!email.fallback_to_mail}
-              onChange={(e) => set({ fallback_to_mail: e.target.checked })}
-            />
-            <span>Fall back to PHP <code>mail()</code> when SMTP fails. (Convenient on hobby hosts; deliverability suffers.)</span>
-          </label>
+          {email.smtp_host && (
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={!!email.fallback_to_mail}
+                onChange={(e) => set({ fallback_to_mail: e.target.checked })}
+              />
+              <span>Fall back to PHP <code>mail()</code> when SMTP fails. (Convenient on hobby hosts; deliverability suffers.)</span>
+            </label>
+          )}
 
           <hr className="border-zinc-200" />
 

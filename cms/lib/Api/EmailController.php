@@ -39,16 +39,14 @@ class EmailController
             \json_response(['ok' => false, 'error' => 'Recipient is not a valid email address.'], 400);
         }
 
+        // No isConfigured() gate: an empty smtp_host is a valid "use PHP
+        // mail()" setup, and Mailer::send() routes correctly in both modes.
+        // If PHP mail() also can't deliver (no MTA on the host), send()
+        // surfaces that error to the caller below.
         $mailer = ServiceFactory::mailer($config);
-        if (!$mailer->isConfigured()) {
-            \json_response([
-                'ok'    => false,
-                'error' => 'SMTP is not configured — fill in the host/port/user/password first and save.',
-            ], 400);
-        }
 
         $subject = 'FrontPress test email';
-        $bodyTxt = "If you're reading this, SMTP works.\n\nSent " . date(\DATE_ATOM);
+        $bodyTxt = "If you're reading this, mail delivery works.\n\nSent " . date(\DATE_ATOM);
         $res     = $mailer->send($to, $subject, $bodyTxt);
 
         ServiceFactory::audit($config)->record('email.test', $to, [
