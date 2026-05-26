@@ -1,5 +1,5 @@
 import { forwardRef } from 'react';
-import { baseControlCls } from './Input.jsx';
+import { baseControlCls, hasWidthClass } from './Input.jsx';
 
 // Native <select> with appearance stripped + an absolutely-positioned chevron.
 // Width comes from the consumer's className on the wrapper (e.g. `w-32`); the
@@ -8,11 +8,12 @@ const Select = forwardRef(function Select(
   { className = '', children, ...rest },
   ref
 ) {
+  const wrapperWidth = hasWidthClass(className) ? '' : 'w-full';
   return (
-    <span className={`relative block w-full ${className}`}>
+    <span className={`relative block ${wrapperWidth} ${className}`}>
       <select
         ref={ref}
-        className={`${baseControlCls} appearance-none pr-8`}
+        className={`${baseControlCls} w-full appearance-none pr-8`}
         {...rest}
       >
         {children}
