@@ -166,7 +166,7 @@ export default function PagesList() {
           </span>
         </h1>
 
-        <div className="ml-auto flex flex-nowrap items-center gap-2">
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
           <div className="relative">
             <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">
               {IconSearch}
@@ -188,7 +188,7 @@ export default function PagesList() {
             <option value="draft">Draft</option>
           </Select>
           <Select
-            className="w-44"
+            className="w-40"
             value={sort}
             onChange={e => setSort(e.target.value)}
             aria-label="Sort"
