@@ -157,8 +157,8 @@ export default function PagesList() {
   const title = folder ? cap(folder) : 'All Content';
 
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white shadow-card">
-      <header className="flex flex-wrap items-center gap-3 border-b border-zinc-100 px-6 py-5">
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-3">
         <h1 className="flex items-center gap-2 text-[20px] font-semibold tracking-tight">
           {title}
           <span className="inline-flex items-center rounded-full bg-zinc-100 px-2.5 py-0.5 text-[11px] font-semibold text-zinc-600">
@@ -166,58 +166,62 @@ export default function PagesList() {
           </span>
         </h1>
 
-        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-          <div className="relative">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">
-              {IconSearch}
-            </span>
-            <Input
-              className="w-56 pl-9"
-              placeholder="Search…"
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-            />
+        {folder && (
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+            <Button variant="secondary" onClick={exportPages}>
+              Download
+            </Button>
+            <Button
+              variant={importOpen ? 'primary' : 'secondary'}
+              onClick={() => { setImportOpen((v) => !v); setImportMsg(null); }}
+              aria-expanded={importOpen}
+              aria-controls="pages-import-region"
+            >
+              Import
+            </Button>
+            <Button onClick={() => navigate(`/new/${encodeURIComponent(folder)}`)}>
+              New page
+            </Button>
           </div>
-          <Select
-            className="w-36"
-            value={statusFilter}
-            onChange={e => setStatusFilter(e.target.value)}
-          >
-            <option value="">All statuses</option>
-            <option value="live">Live</option>
-            <option value="draft">Draft</option>
-          </Select>
-          <Select
-            className="w-40"
-            value={sort}
-            onChange={e => setSort(e.target.value)}
-            aria-label="Sort"
-          >
-            <option value="date-desc">Date — newest</option>
-            <option value="date-asc">Date — oldest</option>
-            <option value="title-asc">Title — A→Z</option>
-            <option value="title-desc">Title — Z→A</option>
-          </Select>
-          {folder && (
-            <>
-              <Button variant="secondary" onClick={exportPages}>
-                Download
-              </Button>
-              <Button
-                variant={importOpen ? 'primary' : 'secondary'}
-                onClick={() => { setImportOpen((v) => !v); setImportMsg(null); }}
-                aria-expanded={importOpen}
-                aria-controls="pages-import-region"
-              >
-                Import
-              </Button>
-              <Button onClick={() => navigate(`/new/${encodeURIComponent(folder)}`)}>
-                New page
-              </Button>
-            </>
-          )}
-        </div>
-      </header>
+        )}
+      </div>
+
+      <div className="rounded-lg border border-zinc-200 bg-white shadow-card">
+        <header className="border-b border-zinc-100 px-6 py-5">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative min-w-0 flex-1">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">
+                {IconSearch}
+              </span>
+              <Input
+                className="w-full pl-9"
+                placeholder="Search…"
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+              />
+            </div>
+            <Select
+              className="w-36"
+              value={statusFilter}
+              onChange={e => setStatusFilter(e.target.value)}
+            >
+              <option value="">All statuses</option>
+              <option value="live">Live</option>
+              <option value="draft">Draft</option>
+            </Select>
+            <Select
+              className="w-40"
+              value={sort}
+              onChange={e => setSort(e.target.value)}
+              aria-label="Sort"
+            >
+              <option value="date-desc">Date — newest</option>
+              <option value="date-asc">Date — oldest</option>
+              <option value="title-asc">Title — A→Z</option>
+              <option value="title-desc">Title — Z→A</option>
+            </Select>
+          </div>
+        </header>
 
       {folder && importOpen && (
         <div id="pages-import-region" className="space-y-3 border-b border-zinc-100 bg-zinc-50 px-6 py-5">
@@ -290,6 +294,7 @@ export default function PagesList() {
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }
