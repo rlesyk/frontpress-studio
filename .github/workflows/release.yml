@@ -9,6 +9,11 @@ on:
     tags:
       - '[0-9]+.[0-9]+.[0-9]+*'
       - 'v[0-9]+.[0-9]+.[0-9]+*'
+  # Manual fallback: `gh workflow run release.yml --ref <tag>`. Runs against
+  # the chosen tag ref, so GITHUB_REF stays `refs/tags/<tag>` and the
+  # tag-vs-VERSION guard below keeps working unchanged. Useful when a
+  # tag-push event silently fails to trigger (rare GitHub backend glitch).
+  workflow_dispatch: {}
 
 permissions:
   contents: write   # required to create the Release and upload assets
