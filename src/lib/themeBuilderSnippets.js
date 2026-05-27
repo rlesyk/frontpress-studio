@@ -212,7 +212,11 @@ export function buildPartialSnippets(files) {
  *     else just above the footer partial, else appended at the end.
  */
 export function insertSnippet(source, snippet, options = {}) {
-  const lines = String(source || '').trimEnd().split('\n');
+  // Don't trim the source — author-placed trailing blank lines are real,
+  // and the cursor may legitimately be inside them. Trimming made the
+  // cursor index point past EOF and the snippet was relocated next to
+  // the previous non-blank line, which read as "empty rows stripped."
+  const lines = String(source || '').split('\n');
   const chunk = snippet.lines;
 
   if (typeof options.line === 'number' && options.line > 0) {
@@ -230,31 +234,31 @@ export function insertSnippet(source, snippet, options = {}) {
     }
     const reindented = chunk.map((l) => (l.length ? indent + l : l));
     lines.splice(idx, 0, ...reindented);
-    return `${lines.join('\n')}\n`;
+    return lines.join('\n');
   }
 
   if (snippet.target === 'extra_head') {
     const extraHead = lines.findIndex((line) => /\{%\s*block\s+extra_head\b/.test(line));
     if (extraHead >= 0) {
       lines.splice(extraHead + 1, 0, ...chunk);
-      return `${lines.join('\n')}\n`;
+      return lines.join('\n');
     }
     const headClose = lines.findIndex((line) => /<\/head>/i.test(line));
     if (headClose >= 0) {
       lines.splice(headClose, 0, ...chunk);
-      return `${lines.join('\n')}\n`;
+      return lines.join('\n');
     }
   }
 
   const blockEnd = lines.findIndex((line) => /\{%\s*endblock\b/.test(line));
   if (blockEnd >= 0) {
     lines.splice(blockEnd, 0, ...chunk);
-    return `${lines.join('\n')}\n`;
+    return lines.join('\n');
   }
   const footerIndex = lines.findIndex((line) => /partial\(['"]footer['"]/.test(line));
   if (footerIndex >= 0) {
     lines.splice(footerIndex, 0, '', ...chunk, '');
-    return `${lines.join('\n')}\n`;
+    return lines.join('\n');
   }
-  return `${lines.join('\n')}\n\n${chunk.join('\n')}\n`;
+  return `${lines.join('\n')}\n${chunk.join('\n')}`;
 }

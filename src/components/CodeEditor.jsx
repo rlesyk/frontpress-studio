@@ -50,9 +50,19 @@ export default function CodeEditor({
   filename = null,
   className = '',
   focusLine = null,
+  // Snippet autocomplete. Caller passes a list of `{id, label, body, description?}`;
+  // typing `@<id>` in the editor surfaces them in Monaco's suggestion
+  // dropdown. Enter / Tab inserts `body` and replaces the `@<id>` prefix.
+  snippets = null,
 }) {
   const editorRef = useRef(null);
   const monacoRef = useRef(null);
+  const snippetsRef = useRef(snippets);
+  const providerDisposersRef = useRef([]);
+  // Mirror the latest snippets prop into a ref so the completion
+  // provider — registered once on mount — always reads fresh data
+  // without re-registering on every prop tick.
+  useEffect(() => { snippetsRef.current = snippets; }, [snippets]);
   const effectiveLanguage = filename ? languageFor(filename) || language : language;
 
   function handleMount(editor, monaco) {
@@ -63,7 +73,21 @@ export default function CodeEditor({
       editor.onDidChangeCursorPosition((e) => onCursorChange(e.position.lineNumber));
       onCursorChange(editor.getPosition()?.lineNumber || 1);
     }
+    // Register the `@<id>` snippet completion provider now that Monaco
+    // exists. Registering on a useEffect timed out — the effect runs
+    // before handleMount, so monacoRef was null and the provider was
+    // never installed.
+    if (snippetsRef.current !== null) {
+      providerDisposersRef.current = ['html', 'php'].map((lang) =>
+        monaco.languages.registerCompletionItemProvider(lang, makeSnippetProvider(monaco, snippetsRef)),
+      );
+    }
   }
+
+  useEffect(() => () => {
+    providerDisposersRef.current.forEach((d) => d?.dispose?.());
+    providerDisposersRef.current = [];
+  }, []);
 
   // Reveal + select the requested line. Bridges the outline-click in the
   // Theme Builder to "jump and highlight" in the code panel.
@@ -111,6 +135,48 @@ export default function CodeEditor({
       />
     </div>
   );
+}
+
+/**
+ * Build a Monaco completion provider for `@<id>` snippet shortcuts.
+ * Provider reads from a ref so the same registration always sees the
+ * caller's latest snippet list without us re-registering on every prop.
+ */
+function makeSnippetProvider(monaco, snippetsRef) {
+  return {
+    triggerCharacters: ['@'],
+    provideCompletionItems(model, position) {
+      // Walk backward on this line for the most recent `@`. If there
+      // isn't one within reach, the user isn't snippet-fishing.
+      const line = model.getLineContent(position.lineNumber);
+      const upto = line.slice(0, position.column - 1);
+      const atIdx = upto.lastIndexOf('@');
+      if (atIdx < 0) return { suggestions: [] };
+      // Anything after the `@` must be slug-shaped — bail on `user@host`.
+      const fragment = upto.slice(atIdx + 1);
+      if (fragment !== '' && !/^[a-zA-Z0-9_-]*$/.test(fragment)) {
+        return { suggestions: [] };
+      }
+      const range = {
+        startLineNumber: position.lineNumber,
+        startColumn:     atIdx + 1,
+        endLineNumber:   position.lineNumber,
+        endColumn:       position.column,
+      };
+      const list = snippetsRef.current || [];
+      return {
+        suggestions: list.map((s) => ({
+          label:           '@' + s.id,
+          kind:            monaco.languages.CompletionItemKind.Snippet,
+          insertText:      s.body,
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule?.InsertAsSnippet ?? 4,
+          documentation:   s.description || s.label || '',
+          detail:          s.label || '',
+          range,
+        })),
+      };
+    },
+  };
 }
 
 // Map a file path / name to a Monaco language id. Returns null when we

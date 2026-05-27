@@ -39,6 +39,14 @@ class ThemesController
             self::themeFileResponse(fn () => ServiceFactory::themeFiles($config)->read($theme, $path));
         }
 
+        if ($method === 'GET' && $action === 'snippets') {
+            $theme = isset($_GET['theme']) && $_GET['theme'] !== ''
+                ? (string)$_GET['theme']
+                : $themes->active();
+            $store = new \FrontPress\ThemeSnippets((string)$config['themesDir']);
+            \json_response(['ok' => true, 'theme' => $theme, 'snippets' => $store->list($theme)]);
+        }
+
         if ($method === 'GET' && $action === 'components') {
             // Falls back to the currently-active theme so the front-end
             // can omit the param when working on the live site.
@@ -137,6 +145,22 @@ class ThemesController
         if (in_array($action, ['components-add', 'components-update', 'components-delete'], true)) {
             self::handleComponentMutation($config, $action, $body, $themes);
             return;
+        }
+
+        if (in_array($action, ['snippets-add', 'snippets-delete'], true)) {
+            $theme = isset($body['theme']) && $body['theme'] !== ''
+                ? (string)$body['theme']
+                : $themes->active();
+            $store = new \FrontPress\ThemeSnippets((string)$config['themesDir']);
+            try {
+                if ($action === 'snippets-add') {
+                    $patch = is_array($body['snippet'] ?? null) ? $body['snippet'] : [];
+                    \json_response(['ok' => true, 'snippet' => $store->add($theme, $patch)]);
+                }
+                \json_response(['ok' => $store->delete($theme, (string)($body['id'] ?? ''))]);
+            } catch (\RuntimeException $e) {
+                \json_response(['ok' => false, 'error' => $e->getMessage()], 400);
+            }
         }
 
         if ($action === 'create-template') {

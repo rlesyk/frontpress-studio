@@ -2,10 +2,9 @@ import { useState } from 'react';
 import { moveBlock } from '../lib/themeBuilderBlocks.js';
 import ThemeBuilderOutline from './ThemeBuilderOutline.jsx';
 import ThemeBuilderPreview from './ThemeBuilderPreview.jsx';
-import ThemeBuilderComponentsPanel from './ThemeBuilderComponentsPanel.jsx';
 import ThemeBuilderFilesTab from './ThemeBuilderFilesTab.jsx';
 
-const TABS = ['List', 'Components', 'Files'];
+const TABS = ['List', 'Files'];
 
 export default function ThemeBuilderVisualPane({
   blocks,
@@ -19,7 +18,6 @@ export default function ThemeBuilderVisualPane({
   files,
   theme,
   dirty,
-  onInsert,
   onSelectBlock,
   onChangeDraft,
   onSelectFile,
@@ -74,13 +72,6 @@ export default function ThemeBuilderVisualPane({
                   : undefined}
               />
             </>
-          )}
-          {tab === 'Components' && (
-            <ThemeBuilderComponentsPanel
-              isTwig={isTwig}
-              files={files}
-              onInsert={onInsert}
-            />
           )}
           {tab === 'Files' && (
             <ThemeBuilderFilesTab

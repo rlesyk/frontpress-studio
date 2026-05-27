@@ -6,7 +6,11 @@ import {
   findElementByTag,
   parseThemeBlocks,
 } from '../lib/themeBuilderBlocks.js';
-import { insertSnippet } from '../lib/themeBuilderSnippets.js';
+import {
+  insertSnippet,
+  SNIPPETS as BUILTIN_SNIPPETS,
+  buildPartialSnippets,
+} from '../lib/themeBuilderSnippets.js';
 import { listTemplateFiles } from '../lib/themeBuilderTemplates.js';
 import { Alert } from '../components/ui/index.js';
 import TemplateAddDialog from '../components/TemplateAddDialog.jsx';
@@ -51,6 +55,29 @@ export default function ThemeBuilder() {
   });
 
   const files = filesData?.files || [];
+
+  // Theme snippets for Monaco autocomplete. The Snippets sidebar panel
+  // runs the same query — react-query dedupes by key so this is free.
+  // Built-ins + partials merge in for the same `@<id>` dropdown.
+  const { data: snippetsData } = useQuery({
+    queryKey: ['theme-snippets', theme],
+    queryFn:  () => api.get(`/themes/snippets?theme=${encodeURIComponent(theme)}`),
+    enabled:  !!theme,
+  });
+  const autocompleteSnippets = useMemo(() => {
+    const out = [];
+    for (const s of BUILTIN_SNIPPETS) {
+      out.push({ id: s.id, label: s.label, body: (s.lines || []).join('\n'), description: s.description });
+    }
+    for (const p of buildPartialSnippets(files)) {
+      out.push({ id: p.id, label: p.label, body: (p.lines || []).join('\n'), description: p.description });
+    }
+    for (const s of (snippetsData?.snippets || [])) {
+      out.push({ id: s.id, label: s.name, body: s.content || '', description: s.description });
+    }
+    return out;
+  }, [files, snippetsData]);
+
   useEffect(() => {
     if (!theme || path || !files.length) return;
     // Honor `?file=<path>` so "Open code" from the Pattern Library lands
@@ -225,9 +252,6 @@ export default function ThemeBuilder() {
           files={files}
           theme={theme}
           dirty={dirty}
-          onInsert={(snippet) =>
-            applyBlockChange(insertSnippet(draft, snippet, { line: cursorLine }))
-          }
           onSelectBlock={setSelectedBlockId}
           onChangeDraft={applyBlockChange}
           onSelectFile={chooseFile}
@@ -248,9 +272,16 @@ export default function ThemeBuilder() {
               blocks={blocks}
               cursorLine={cursorLine}
               selectedBlockId={selectedBlockId}
+              snippets={autocompleteSnippets}
+              isTwig={isTwig}
+              files={files}
+              theme={theme}
               onChange={updateDraft}
               onCursorChange={setCursorLine}
               onSelectBlock={setSelectedBlockId}
+              onInsertSnippet={(snippet) =>
+                applyBlockChange(insertSnippet(draft, snippet, { line: cursorLine }))
+              }
             />
           )}
         </div>
