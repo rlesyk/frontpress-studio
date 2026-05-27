@@ -26,6 +26,10 @@ export default function PatternFormDialog({ open, theme, editing, onClose, onSav
   const [template,    setTemplate]    = useState('');
   const [description, setDescription] = useState('');
   const [category,    setCategory]    = useState('layout');
+  // Sample is the JSON blob passed as Twig vars when rendering the preview.
+  // Stored as a string in form state so the user can have it in a half-typed
+  // / invalid state without us blowing up; parsed on submit.
+  const [sampleText, setSampleText] = useState('');
   const [busy,        setBusy]        = useState(false);
   const [error,       setError]       = useState(null);
 
@@ -37,9 +41,14 @@ export default function PatternFormDialog({ open, theme, editing, onClose, onSav
       setTemplate(editing.template || '');
       setDescription(editing.description || '');
       setCategory(editing.category || 'layout');
+      const s = editing.sample && Object.keys(editing.sample).length
+        ? JSON.stringify(editing.sample, null, 2)
+        : '';
+      setSampleText(s);
     } else {
       setId(''); setName(''); setTemplate('');
       setDescription(''); setCategory('layout');
+      setSampleText('');
     }
     setError(null);
   }, [open, editing]);
@@ -68,10 +77,34 @@ export default function PatternFormDialog({ open, theme, editing, onClose, onSav
       return;
     }
 
+    // Parse sample JSON. Empty is fine (means "no overrides"); anything
+    // else has to parse cleanly to an object or we won't send it.
+    let sample = {};
+    const sampleTrim = sampleText.trim();
+    if (sampleTrim !== '') {
+      try {
+        sample = JSON.parse(sampleTrim);
+      } catch (_) {
+        setError('Sample data must be valid JSON (or left blank).');
+        return;
+      }
+      if (sample === null || typeof sample !== 'object' || Array.isArray(sample)) {
+        setError('Sample data must be a JSON object, e.g. {"title": "Hello"}.');
+        return;
+      }
+    }
+
     setBusy(true);
     const payload = {
       theme: theme || undefined,
-      component: { id, name: name.trim(), template: template.trim(), description: description.trim(), category },
+      component: {
+        id,
+        name: name.trim(),
+        template: template.trim(),
+        description: description.trim(),
+        category,
+        sample,
+      },
     };
     try {
       const endpoint = editing ? '/themes/components-update' : '/themes/components-add';
@@ -150,6 +183,21 @@ export default function PatternFormDialog({ open, theme, editing, onClose, onSav
               onChange={(e) => setDescription(e.target.value)}
               placeholder="What is this component, and where is it used?"
             />
+          </Field>
+
+          <Field label="Sample data (JSON)">
+            <Textarea
+              rows={6}
+              value={sampleText}
+              onChange={(e) => setSampleText(e.target.value)}
+              placeholder={'{\n  "title": "Hello",\n  "items": [{"label": "Home"}]\n}'}
+              className="font-mono text-[12px]"
+              spellCheck={false}
+            />
+            <p className="mt-1 text-[11px] text-zinc-500">
+              Optional JSON object. Keys become Twig variables when this pattern is rendered in the preview.
+              Leave blank to use the neutral defaults.
+            </p>
           </Field>
 
           {error && (

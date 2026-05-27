@@ -134,7 +134,11 @@ export default function PatternLibraryModal({ open, theme, onClose, onOpenCode }
 function PreviewCard({ component, theme, onOpenCode, onEdit, onDelete }) {
   const [loaded, setLoaded] = useState(false);
   const stale = !component.template_exists;
-  const src = `/admin/themes/component-preview?theme=${encodeURIComponent(theme || '')}&id=${encodeURIComponent(component.id)}`;
+  // Cache-bust by hashing the component fields the preview depends on.
+  // Changes to sample/template force the iframe to reload; cosmetic edits
+  // (name, description) reload too but that's harmless.
+  const v = hashStr(JSON.stringify({ s: component.sample, t: component.template }));
+  const src = `/admin/themes/component-preview?theme=${encodeURIComponent(theme || '')}&id=${encodeURIComponent(component.id)}&v=${v}`;
 
   return (
     <div className="overflow-hidden rounded-md border border-zinc-200 bg-white">
@@ -215,4 +219,11 @@ function groupByCategory(components) {
   const out = {};
   for (const c of components) (out[c.category] ||= []).push(c);
   return out;
+}
+
+/** Tiny non-cryptographic hash — good enough to invalidate an iframe URL. */
+function hashStr(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  return h.toString(36);
 }
