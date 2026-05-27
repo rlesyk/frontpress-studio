@@ -18,7 +18,7 @@ spl_autoload_register(function ($class) use ($cmsRoot) {
     }
 });
 
-FrontPress\Env::load($appRoot . '/config.php');
+FrontPress\Env::load(FrontPress\Env::resolveConfigPath($appRoot));
 
 // First-run only: copy starter content / config / theme into /site if it's
 // empty. /site is gitignored — the defaults a user sees on a fresh install
@@ -74,7 +74,7 @@ if ($ADMIN_PASS_HASH === '') {
     $plain = (string)FrontPress\Env::get('ADMIN_PASS', '');
     if ($plain !== '') {
         $ADMIN_PASS_HASH = password_hash($plain, PASSWORD_BCRYPT);
-        if (!FrontPress\Env::upgradePlaintextPassword($appRoot . '/config.php', $ADMIN_PASS_HASH)) {
+        if (!FrontPress\Env::upgradePlaintextPassword(FrontPress\Env::ensureWritableConfig($appRoot), $ADMIN_PASS_HASH)) {
             // Couldn't write — the in-memory hash still works for this
             // request, but next request will re-hash the same plaintext.
             // Surface in the error log so a permissions issue is visible.
@@ -144,7 +144,12 @@ $ROUTER_CONFIG = [
     'config'          => $config,
     'ADMIN_USER'      => $ADMIN_USER,
     'ADMIN_PASS_HASH' => $ADMIN_PASS_HASH,
-    'ENV_FILE'        => $appRoot . '/config.php',
+    // AuthController routes that change creds (changeUsername /
+    // changePassword) write to ENV_FILE. Always config.php — the helper
+    // copies from sample.config.php first if config.php doesn't exist
+    // yet, so a fresh install's first credential change is the moment
+    // sample → config promotion happens.
+    'ENV_FILE'        => FrontPress\Env::ensureWritableConfig($appRoot),
 ];
 
 // JSON API

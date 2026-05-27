@@ -67,6 +67,47 @@ class Env
     }
 
     /**
+     * Pick which config file to LOAD. The install owns `config.php`; the
+     * release ships `sample.config.php` with default credentials. On a
+     * fresh install only the sample exists, so we fall through to it.
+     * Once the operator customizes anything, `config.php` is written and
+     * the sample is ignored on all subsequent requests.
+     */
+    public static function resolveConfigPath(string $appRoot): string
+    {
+        $primary = $appRoot . '/config.php';
+        if (is_file($primary)) return $primary;
+        $sample = $appRoot . '/sample.config.php';
+        return is_file($sample) ? $sample : $primary;
+    }
+
+    /**
+     * Pick which config file to WRITE to. Always `config.php` — if it
+     * doesn't exist yet, copy `sample.config.php` over as a starting
+     * point so credential rotation has a real file to edit. Updates
+     * never touch `config.php`, so this is also the only safe target
+     * for persistent customizations.
+     *
+     * Returns the path to `config.php`. Caller is responsible for any
+     * downstream write errors; this method best-effort-bootstraps the
+     * file but doesn't throw if the copy fails (an explicit write
+     * attempt at the same path will surface the real cause).
+     */
+    public static function ensureWritableConfig(string $appRoot): string
+    {
+        $primary = $appRoot . '/config.php';
+        if (is_file($primary)) return $primary;
+        $sample = $appRoot . '/sample.config.php';
+        if (is_file($sample)) {
+            $contents = (string)@file_get_contents($sample);
+            if ($contents !== '') {
+                Fs::atomicWrite($primary, $contents);
+            }
+        }
+        return $primary;
+    }
+
+    /**
      * Rewrite `config.php` so `FPS_ADMIN_PASS_HASH` holds the given bcrypt
      * hash and any plaintext `FPS_ADMIN_PASS` (or legacy `MD_ADMIN_PASS`)
      * define is removed. Used on first request when a fresh install was

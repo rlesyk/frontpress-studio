@@ -5,6 +5,7 @@
     "bootstrap.php",
     "index.php",
     "router.php",
+    "sample.config.php",
     "admin/index.php",
     "admin/assets/",
     "cms/VERSION",

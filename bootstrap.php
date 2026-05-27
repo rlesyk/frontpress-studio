@@ -31,8 +31,10 @@ $UPLOADS_DIR = $ROOT . '/site/uploads';
 
 // Load config.php once for both admin and public-site entry points so any
 // runtime-toggleable behaviour (e.g. APP_ENV-gated SCSS compilation) sees
-// the same values. Env::load is idempotent.
-FrontPress\Env::load($ROOT . '/config.php');
+// the same values. Fresh installs only have sample.config.php — the
+// resolver falls back to it until the operator's first credential change
+// writes a real config.php.
+FrontPress\Env::load(FrontPress\Env::resolveConfigPath($ROOT));
 
 // First-run only: copy starter content / config / theme into /site if it's
 // empty. /site is gitignored — the defaults a user sees on a fresh install

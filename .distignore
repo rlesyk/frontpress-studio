@@ -36,6 +36,10 @@ phpstan-baseline.neon
 # Excluded so a dev install's content/uploads doesn't ship in the zip.
 /site/
 
+# Dev-only `config.php` (operator-owned). Releases ship sample.config.php
+# instead — Env::resolveConfigPath() falls back to it on a fresh install.
+/config.php
+
 # Local Sites recreates this dir with a MySQL dump regardless of whether
 # the framework uses SQL. mdframework is flat-file only — never ship it.
 /sql/
