@@ -19,6 +19,7 @@ class ThemeServiceTest extends TestCase
         mkdir($this->appRoot . '/site/themes/default/assets', 0755, true);
         mkdir($this->appRoot . '/site/themes/fancy/templates', 0755, true);
         mkdir($this->appRoot . '/site/themes/fancy/assets', 0755, true);
+        file_put_contents($this->appRoot . '/site/themes/fancy/assets/style.css', 'body{}');
 
         file_put_contents(
             $this->appRoot . '/site/config.json',
@@ -54,7 +55,7 @@ class ThemeServiceTest extends TestCase
         $result = $this->svc->activate('fancy');
         $this->assertTrue($result['ok']);
         $this->assertSame('fancy', $this->svc->active());
-        $this->assertTrue(is_link($this->appRoot . '/assets'));
+        $this->assertFileExists($this->appRoot . '/assets/style.css');
     }
 
     public function testActivateRejectsMissingTheme(): void
@@ -67,6 +68,9 @@ class ThemeServiceTest extends TestCase
     public function testActivateLeavesConfigUntouchedWhenRelinkFails(): void
     {
         // Make the webroot read-only so symlink() fails; config must not change.
+        if (!function_exists('symlink')) {
+            $this->markTestSkipped('symlink() unavailable in this PHP build');
+        }
         $webroot = $this->appRoot;
         // Pre-create a link to 'default' so "fancy" would be the switch target.
         symlink('site/themes/default/assets', $webroot . '/assets');

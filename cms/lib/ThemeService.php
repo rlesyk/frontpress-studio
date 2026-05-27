@@ -11,13 +11,15 @@ class ThemeService
     private string $themesDir;
     private string $publicDir;
     private Config $config;
+    private ThemeAssets $assets;
 
     public function __construct(string $appRoot, Config $config)
     {
         $this->themesDir = $appRoot . '/site/themes';
-        // The framework root IS the webroot; `assets` is symlinked here.
+        // The framework root IS the webroot; `assets` is mirrored here.
         $this->publicDir = $appRoot;
         $this->config    = $config;
+        $this->assets    = new ThemeAssets($this->publicDir, $this->themesDir);
     }
 
     /** @return array<string, array<string, mixed>> */
@@ -111,38 +113,12 @@ class ThemeService
     }
 
     /**
-     * Ensure `<webroot>/assets` is a symlink to the active theme's assets dir.
-     * Idempotent and cheap — a couple of stat() calls when the link is
-     * already correct. Called from bootstrap.php on every public-site
-     * request so a fresh install (where `assets` was dereferenced by `unzip`
-     * into a real directory of stale files) self-heals on the first hit.
-     *
-     * Returns true when the link is correct on exit, false if the host
-     * disallows symlinks or the active theme has no assets directory.
+     * Ensure `<webroot>/assets` points at the active theme's assets. Uses a
+     * symlink when available, otherwise mirrors the directory for shared hosts.
      */
     public function ensureAssetsLink(): bool
     {
-        $slug   = $this->active();
-        $link   = $this->publicDir . '/assets';
-        $target = 'site/themes/' . $slug . '/assets';
-
-        // Active theme has no assets dir — nothing to link.
-        if (!is_dir($this->themesDir . '/' . $slug . '/assets')) {
-            return false;
-        }
-
-        // Fast path: already correctly linked.
-        if (is_link($link) && readlink($link) === $target) {
-            return true;
-        }
-        // Or already correctly copied — `assets/` is a real dir whose
-        // marker file points at the active theme. Hosts without symlink
-        // support land here.
-        if (is_dir($link) && !is_link($link) && self::readMarker($link) === $slug) {
-            return true;
-        }
-
-        return $this->relinkAssets($slug)['ok'];
+        return $this->assets->ensure($this->active());
     }
 
     /** @return array{ok: bool, error?: string} */
@@ -155,7 +131,7 @@ class ThemeService
         // Relink first so a filesystem failure (symlink/rename denied on
         // restricted hosts) leaves the previous theme intact instead of
         // pointing config at a theme whose assets aren't wired up.
-        $relink = $this->relinkAssets($slug);
+        $relink = $this->assets->relink($slug);
         if (!$relink['ok']) {
             return $relink;
         }
@@ -220,132 +196,9 @@ class ThemeService
         return ['ok' => true];
     }
 
-    /**
-     * Swap `<webroot>/assets` to point at the given theme's assets.
-     *
-     * Returns ok=false when the filesystem refuses the swap (restricted host,
-     * no symlink privilege on Windows, permission denied). On failure, any
-     * prior link/directory is restored so the caller can abort activation
-     * without leaving the site in a half-switched state.
-     *
-     * @return array{ok: bool, error?: string}
-     */
-    private function relinkAssets(string $slug): array
-    {
-        $link   = $this->publicDir . '/assets';
-        $target = 'site/themes/' . $slug . '/assets';
-
-        $assetsDir = $this->themesDir . '/' . $slug . '/assets';
-        if (!is_dir($assetsDir) && !@mkdir($assetsDir, 0755, true) && !is_dir($assetsDir)) {
-            return ['ok' => false, 'error' => "Could not create assets dir for theme '{$slug}'"];
-        }
-
-        $backup = null;
-        if (is_link($link)) {
-            if (!@unlink($link)) {
-                return ['ok' => false, 'error' => 'Could not remove previous assets symlink'];
-            }
-        } elseif (is_dir($link)) {
-            $backup = $link . '_bak_' . time();
-            if (!@rename($link, $backup)) {
-                return ['ok' => false, 'error' => 'Could not move previous assets directory aside'];
-            }
-        }
-
-        // Symlink first. On hosts where the function is missing entirely
-        // (some shared-host PHP builds compile without it) `function_exists`
-        // saves us from a fatal "Call to undefined function". On hosts
-        // that have it but disallow it, `@symlink` returns false silently.
-        if (function_exists('symlink') && @symlink($target, $link)) {
-            return ['ok' => true];
-        }
-
-        // Fall back to a recursive copy. Slower per-activation but the
-        // marker file lets ensureAssetsLink() short-circuit on subsequent
-        // requests, so the per-request cost is the same as the symlink path.
-        $copyOk = self::rcopy($assetsDir, $link);
-        if (!$copyOk) {
-            // Roll back so the previous theme keeps working.
-            @self::rrmdir($link);
-            if ($backup !== null && is_dir($backup)) {
-                @rename($backup, $link);
-            }
-            return ['ok' => false, 'error' => 'Could not copy theme assets (filesystem permissions?)'];
-        }
-        self::writeMarker($link, $slug);
-        // Backup directory can go now — we have a fresh copy in place.
-        if ($backup !== null && is_dir($backup)) {
-            @self::rrmdir($backup);
-        }
-        return ['ok' => true];
-    }
-
-    /**
-     * Refresh the public `assets/` mirror for the active theme. No-op
-     * when assets are symlinked (the link already reflects the latest
-     * file). Only meaningful on hosts that fell back to copy mode; called
-     * after theme file writes so edits to e.g. style.css show up live.
-     */
     public function refreshActiveAssets(): void
     {
-        $link = $this->publicDir . '/assets';
-        if (is_link($link)) return; // symlink already reflects edits
-        $slug = $this->active();
-        $assetsDir = $this->themesDir . '/' . $slug . '/assets';
-        if (!is_dir($assetsDir) || !is_dir($link)) return;
-        @self::rrmdir($link);
-        @mkdir($link, 0755, true);
-        self::rcopy($assetsDir, $link);
-        self::writeMarker($link, $slug);
-    }
-
-    /** Marker file at `assets/.fp-theme` recording which theme is mirrored. */
-    private const MARKER = '.fp-theme';
-
-    private static function readMarker(string $dir): ?string
-    {
-        $f = $dir . '/' . self::MARKER;
-        return is_file($f) ? trim((string)@file_get_contents($f)) : null;
-    }
-
-    private static function writeMarker(string $dir, string $slug): void
-    {
-        @file_put_contents($dir . '/' . self::MARKER, $slug);
-    }
-
-    /** Recursive copy of $src dir into $dst dir. Both must exist or $dst is created. */
-    private static function rcopy(string $src, string $dst): bool
-    {
-        if (!is_dir($src)) return false;
-        if (!is_dir($dst) && !@mkdir($dst, 0755, true) && !is_dir($dst)) return false;
-        $iter = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($src, \FilesystemIterator::SKIP_DOTS),
-            \RecursiveIteratorIterator::SELF_FIRST,
-        );
-        foreach ($iter as $item) {
-            $rel = substr($item->getPathname(), strlen($src) + 1);
-            $target = $dst . '/' . $rel;
-            if ($item->isDir()) {
-                if (!is_dir($target) && !@mkdir($target, 0755, true) && !is_dir($target)) return false;
-            } else {
-                if (!@copy($item->getPathname(), $target)) return false;
-            }
-        }
-        return true;
-    }
-
-    /** Recursive rmdir. Best-effort — partial deletes don't throw. */
-    private static function rrmdir(string $dir): bool
-    {
-        if (!is_dir($dir) || is_link($dir)) return @unlink($dir) || @rmdir($dir);
-        $iter = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS),
-            \RecursiveIteratorIterator::CHILD_FIRST,
-        );
-        foreach ($iter as $item) {
-            $item->isDir() ? @rmdir($item->getPathname()) : @unlink($item->getPathname());
-        }
-        return @rmdir($dir);
+        $this->assets->refresh($this->active());
     }
 
     /**
