@@ -59,6 +59,22 @@ class AuthController
         if ($method !== 'POST') {
             \json_response(['ok' => false, 'error' => 'Method not allowed'], 405);
         }
+
+        // Per-IP rate limit on failed-or-attempted logins. 5 tries / 15min
+        // is enough for fat-fingers, painful for credential stuffing. We
+        // check BEFORE the password compare so a guesser doesn't get
+        // unlimited timing oracle on the hash; we DON'T `record-on-success`
+        // because successful logins shouldn't punish a legit user who
+        // simply types fast.
+        $ip      = (string)($_SERVER['REMOTE_ADDR'] ?? 'unknown');
+        $limiter = ServiceFactory::rateLimiter($config);
+        if (!$limiter->check('login:' . $ip, 5, 900)) {
+            \json_response([
+                'ok'    => false,
+                'error' => 'Too many login attempts. Try again in 15 minutes.',
+            ], 429);
+        }
+
         $body     = Router::jsonBody();
         $username = trim((string)($body['username'] ?? ''));
         $password = (string)($body['password'] ?? '');

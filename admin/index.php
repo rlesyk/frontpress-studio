@@ -26,9 +26,16 @@ FrontPress\Env::load($appRoot . '/config.php');
 // requests (a few stat() calls when nothing's missing).
 FrontPress\Bootstrap::ensureSiteDefaults($appRoot);
 
+// `secure` only when the current request is HTTPS — setting it
+// unconditionally would silently drop the session cookie on local
+// `http://*.local` dev environments. In production behind HTTPS the
+// flag prevents the cookie from leaking over plain-HTTP redirects.
+$isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+    || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
 session_set_cookie_params([
     'lifetime' => 0,
     'path'     => '/',
+    'secure'   => $isHttps,
     'httponly' => true,
     'samesite' => 'Lax',
 ]);
