@@ -125,20 +125,35 @@ if ($ADMIN_PASS_HASH === '') {
 $uri    = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
 $method = $_SERVER['REQUEST_METHOD'];
 
+// Shared config bag used by both the JSON API and the GitHub OAuth
+// browser handlers below.
+$ROUTER_CONFIG = [
+    'appRoot'         => $appRoot,
+    'cmsRoot'         => $cmsRoot,
+    'contentDir'      => $CONTENT_DIR,
+    'uploadsDir'      => $UPLOADS_DIR,
+    'cacheDir'        => $CACHE_DIR,
+    'themesDir'       => $appRoot . '/site/themes',
+    'config'          => $config,
+    'ADMIN_USER'      => $ADMIN_USER,
+    'ADMIN_PASS_HASH' => $ADMIN_PASS_HASH,
+    'ENV_FILE'        => $appRoot . '/config.php',
+];
+
 // JSON API
 if (preg_match('#^/admin/api/(.*)$#', $uri, $apiMatch)) {
-    FrontPress\Api\Router::dispatch($apiMatch[1], $method, [
-        'appRoot'         => $appRoot,
-        'cmsRoot'         => $cmsRoot,
-        'contentDir'      => $CONTENT_DIR,
-        'uploadsDir'      => $UPLOADS_DIR,
-        'cacheDir'        => $CACHE_DIR,
-        'themesDir'       => $appRoot . '/site/themes',
-        'config'          => $config,
-        'ADMIN_USER'      => $ADMIN_USER,
-        'ADMIN_PASS_HASH' => $ADMIN_PASS_HASH,
-        'ENV_FILE'        => $appRoot . '/config.php',
-    ]);
+    FrontPress\Api\Router::dispatch($apiMatch[1], $method, $ROUTER_CONFIG);
+    exit;
+}
+
+// GitHub OAuth browser endpoints — they need to issue 302 redirects, not
+// JSON responses, so they sit outside the API router.
+if ($uri === '/admin/github/connect' && $method === 'GET') {
+    FrontPress\Api\GithubOAuth::start($ROUTER_CONFIG);
+    exit;
+}
+if ($uri === '/admin/github/receive' && $method === 'GET') {
+    FrontPress\Api\GithubOAuth::receive($ROUTER_CONFIG);
     exit;
 }
 

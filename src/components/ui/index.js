@@ -6,6 +6,7 @@ export { default as Card } from './Card.jsx';
 export { default as ConfirmDialog } from './ConfirmDialog.jsx';
 export { default as Dropzone } from './Dropzone.jsx';
 export { default as Checkbox } from './Checkbox.jsx';
+export { default as Combobox } from './Combobox.jsx';
 export { default as DatePicker } from './DatePicker.jsx';
 export { default as Field } from './Field.jsx';
 export { default as Input, baseControlCls } from './Input.jsx';

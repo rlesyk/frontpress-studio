@@ -19,9 +19,9 @@ export function ToastProvider({ children }) {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  const show = useCallback((message, { tone = 'success', duration = 2400, action } = {}) => {
+  const show = useCallback((message, { tone = 'success', duration = 2400, action, copyText } = {}) => {
     const id = ++idRef.current;
-    setToasts((prev) => [...prev, { id, message, tone, duration, action }]);
+    setToasts((prev) => [...prev, { id, message, tone, duration, action, copyText }]);
     if (duration > 0) {
       setTimeout(() => {
         setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -63,6 +63,7 @@ function ToastItem({ toast, onDismiss }) {
   // Two-step animation: render hidden (translate-x), then flip to visible on
   // the next frame so CSS picks up the transition.
   const [shown, setShown] = useState(false);
+  const [copied, setCopied] = useState(false);
   useEffect(() => {
     const raf = requestAnimationFrame(() => setShown(true));
     return () => cancelAnimationFrame(raf);
@@ -75,6 +76,10 @@ function ToastItem({ toast, onDismiss }) {
   };
 
   const hasAction = !!toast.action;
+  // Errors get copy-on-click so the user can paste long stack traces /
+  // API responses elsewhere. The toast stays visible after copy so the
+  // user can read it; a separate × button dismisses.
+  const copyable = toast.tone === 'error' && !hasAction;
 
   function handleAction(e) {
     e.stopPropagation();
@@ -84,18 +89,42 @@ function ToastItem({ toast, onDismiss }) {
     if (result !== false) onDismiss();
   }
 
+  async function handleBodyClick() {
+    if (copyable) {
+      // Prefer the explicit copyText if the caller supplied one (e.g. the
+      // full original GitHub error when we're showing a short summary).
+      const raw = toast.copyText ?? toast.message;
+      const text = typeof raw === 'string' ? raw : String(raw);
+      try {
+        await navigator.clipboard.writeText(text);
+        setCopied(true);
+        // Reset the "Copied ✓" label after a moment, but DON'T dismiss —
+        // the user wants the message visible so they can read or recopy.
+        setTimeout(() => setCopied(false), 1500);
+      } catch {
+        // Clipboard API can fail (insecure context, denied permissions).
+        // Don't dismiss either — the message is still useful on-screen.
+      }
+      return;
+    }
+    if (!hasAction) onDismiss();
+  }
+
+  function handleDismissClick(e) {
+    e.stopPropagation();
+    onDismiss();
+  }
+
   return (
     <div
-      // Without an action, clicking anywhere dismisses. With an action, the
-      // button is the only thing that consumes a click — the body still
-      // dismisses on the area outside the button.
-      onClick={hasAction ? undefined : onDismiss}
-      className={`pointer-events-auto flex max-w-sm items-center gap-3 rounded-md px-3.5 py-2 text-[13px] font-medium shadow-modal transition-all duration-200 ${
+      onClick={hasAction ? undefined : handleBodyClick}
+      title={copyable ? 'Click to copy details' : undefined}
+      className={`pointer-events-auto flex max-w-sm items-start gap-3 rounded-md px-3.5 py-2 text-[13px] font-medium shadow-modal transition-all duration-200 ${
         hasAction ? '' : 'cursor-pointer'
       } ${tones[toast.tone] || tones.success} ${shown ? 'translate-x-0 opacity-100' : 'translate-x-4 opacity-0'}`}
       role="status"
     >
-      <span className="min-w-0">{toast.message}</span>
+      <span className="min-w-0 flex-1">{copied ? 'Copied ✓' : toast.message}</span>
       {hasAction && (
         <button
           type="button"
@@ -103,6 +132,18 @@ function ToastItem({ toast, onDismiss }) {
           className="shrink-0 rounded px-2 py-1 text-[12px] font-semibold underline decoration-white/50 underline-offset-2 hover:bg-white/10 hover:decoration-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
         >
           {toast.action.label}
+        </button>
+      )}
+      {copyable && (
+        <button
+          type="button"
+          onClick={handleDismissClick}
+          aria-label="Dismiss"
+          className="shrink-0 rounded p-0.5 text-white/70 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M3.5 3.5l7 7M10.5 3.5l-7 7" />
+          </svg>
         </button>
       )}
     </div>

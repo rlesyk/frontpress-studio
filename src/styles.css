@@ -80,3 +80,14 @@ html, body, #root {
     cursor: pointer;
   }
 }
+
+/* Indeterminate progress bar — slides a short pill back and forth.
+   Used by long-running operations (GitHub push, etc.) where we have no
+   real percentage to show. Pair with `class="animate-fp-indeterminate"`. */
+@keyframes fp-indeterminate {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+.animate-fp-indeterminate {
+  animation: fp-indeterminate 1.2s ease-in-out infinite;
+}
