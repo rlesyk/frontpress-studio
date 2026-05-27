@@ -356,5 +356,10 @@ class ThemesController
         $cache->clearAllHtml();
         $cache->clearIndex();
         $cache->clearTwig();
+        // On no-symlink hosts the public assets/ dir is a copy of the
+        // active theme's assets/. Edits to `assets/style.css` in the
+        // Theme Builder won't show up until we re-copy. Cheap no-op
+        // when the install IS using symlinks (early return inside).
+        ServiceFactory::themes($config)->refreshActiveAssets();
     }
 }

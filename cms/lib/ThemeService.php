@@ -135,6 +135,12 @@ class ThemeService
         if (is_link($link) && readlink($link) === $target) {
             return true;
         }
+        // Or already correctly copied — `assets/` is a real dir whose
+        // marker file points at the active theme. Hosts without symlink
+        // support land here.
+        if (is_dir($link) && !is_link($link) && self::readMarker($link) === $slug) {
+            return true;
+        }
 
         return $this->relinkAssets($slug)['ok'];
     }
@@ -246,15 +252,100 @@ class ThemeService
             }
         }
 
-        if (!@symlink($target, $link)) {
+        // Symlink first. On hosts where the function is missing entirely
+        // (some shared-host PHP builds compile without it) `function_exists`
+        // saves us from a fatal "Call to undefined function". On hosts
+        // that have it but disallow it, `@symlink` returns false silently.
+        if (function_exists('symlink') && @symlink($target, $link)) {
+            return ['ok' => true];
+        }
+
+        // Fall back to a recursive copy. Slower per-activation but the
+        // marker file lets ensureAssetsLink() short-circuit on subsequent
+        // requests, so the per-request cost is the same as the symlink path.
+        $copyOk = self::rcopy($assetsDir, $link);
+        if (!$copyOk) {
             // Roll back so the previous theme keeps working.
+            @self::rrmdir($link);
             if ($backup !== null && is_dir($backup)) {
                 @rename($backup, $link);
             }
-            return ['ok' => false, 'error' => 'Could not create assets symlink (host may disallow symlinks)'];
+            return ['ok' => false, 'error' => 'Could not copy theme assets (filesystem permissions?)'];
         }
-
+        self::writeMarker($link, $slug);
+        // Backup directory can go now — we have a fresh copy in place.
+        if ($backup !== null && is_dir($backup)) {
+            @self::rrmdir($backup);
+        }
         return ['ok' => true];
+    }
+
+    /**
+     * Refresh the public `assets/` mirror for the active theme. No-op
+     * when assets are symlinked (the link already reflects the latest
+     * file). Only meaningful on hosts that fell back to copy mode; called
+     * after theme file writes so edits to e.g. style.css show up live.
+     */
+    public function refreshActiveAssets(): void
+    {
+        $link = $this->publicDir . '/assets';
+        if (is_link($link)) return; // symlink already reflects edits
+        $slug = $this->active();
+        $assetsDir = $this->themesDir . '/' . $slug . '/assets';
+        if (!is_dir($assetsDir) || !is_dir($link)) return;
+        @self::rrmdir($link);
+        @mkdir($link, 0755, true);
+        self::rcopy($assetsDir, $link);
+        self::writeMarker($link, $slug);
+    }
+
+    /** Marker file at `assets/.fp-theme` recording which theme is mirrored. */
+    private const MARKER = '.fp-theme';
+
+    private static function readMarker(string $dir): ?string
+    {
+        $f = $dir . '/' . self::MARKER;
+        return is_file($f) ? trim((string)@file_get_contents($f)) : null;
+    }
+
+    private static function writeMarker(string $dir, string $slug): void
+    {
+        @file_put_contents($dir . '/' . self::MARKER, $slug);
+    }
+
+    /** Recursive copy of $src dir into $dst dir. Both must exist or $dst is created. */
+    private static function rcopy(string $src, string $dst): bool
+    {
+        if (!is_dir($src)) return false;
+        if (!is_dir($dst) && !@mkdir($dst, 0755, true) && !is_dir($dst)) return false;
+        $iter = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($src, \FilesystemIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::SELF_FIRST,
+        );
+        foreach ($iter as $item) {
+            $rel = substr($item->getPathname(), strlen($src) + 1);
+            $target = $dst . '/' . $rel;
+            if ($item->isDir()) {
+                if (!is_dir($target) && !@mkdir($target, 0755, true) && !is_dir($target)) return false;
+            } else {
+                if (!@copy($item->getPathname(), $target)) return false;
+            }
+        }
+        return true;
+    }
+
+    /** Recursive rmdir. Best-effort — partial deletes don't throw. */
+    private static function rrmdir(string $dir): bool
+    {
+        if (!is_dir($dir) || is_link($dir)) return @unlink($dir) || @rmdir($dir);
+        $iter = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::CHILD_FIRST,
+        );
+        foreach ($iter as $item) {
+            $item->isDir() ? @rmdir($item->getPathname()) : @unlink($item->getPathname());
+        }
+        return @rmdir($dir);
     }
 
     /**
