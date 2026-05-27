@@ -39,6 +39,20 @@ class ThemesController
             self::themeFileResponse(fn () => ServiceFactory::themeFiles($config)->read($theme, $path));
         }
 
+        if ($method === 'GET' && $action === 'components') {
+            // Falls back to the currently-active theme so the front-end
+            // can omit the param when working on the live site.
+            $theme = isset($_GET['theme']) && $_GET['theme'] !== ''
+                ? (string)$_GET['theme']
+                : $themes->active();
+            $registry = new \FrontPress\ThemeComponentRegistry((string)$config['themesDir']);
+            \json_response([
+                'ok'         => true,
+                'theme'      => $theme,
+                'components' => $registry->list($theme),
+            ]);
+        }
+
         Router::requireCsrf();
 
         if ($method !== 'POST') {
@@ -120,6 +134,11 @@ class ThemesController
             ));
             return;
         }
+        if (in_array($action, ['components-add', 'components-update', 'components-delete'], true)) {
+            self::handleComponentMutation($config, $action, $body, $themes);
+            return;
+        }
+
         if ($action === 'create-template') {
             $theme   = isset($body['theme']) ? (string)$body['theme'] : null;
             $slug    = preg_replace('/[^a-z0-9_-]/', '', strtolower((string)($body['slug'] ?? '')));
@@ -147,6 +166,25 @@ class ThemesController
         }
 
         \json_response(['ok' => false, 'error' => 'Unknown theme action'], 404);
+    }
+
+    /** Dispatch `components-{add,update,delete}`. Body: `{theme, component, id?}`. */
+    private static function handleComponentMutation(array $config, string $action, array $body, $themes): void
+    {
+        $theme = isset($body['theme']) && $body['theme'] !== '' ? (string)$body['theme'] : $themes->active();
+        $reg   = new \FrontPress\ThemeComponentRegistry((string)$config['themesDir']);
+        $patch = is_array($body['component'] ?? null) ? $body['component'] : [];
+        $id    = (string)($body['id'] ?? '');
+        try {
+            $res = match ($action) {
+                'components-add'    => ['ok' => true, 'component' => $reg->add($theme, $patch)],
+                'components-update' => ['ok' => true, 'component' => $reg->update($theme, $id, $patch)],
+                'components-delete' => ['ok' => $reg->delete($theme, $id)],
+            };
+            \json_response($res);
+        } catch (\RuntimeException $e) {
+            \json_response(['ok' => false, 'error' => $e->getMessage()], 400);
+        }
     }
 
     /** @param array<string, mixed> $config */

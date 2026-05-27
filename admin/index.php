@@ -164,6 +164,13 @@ if ($uri === '/admin/github/receive' && $method === 'GET') {
     exit;
 }
 
+// Pattern Library — single-component HTML render for iframe previews.
+// Browser-facing (not JSON) so an `<iframe src=…>` can load it directly.
+if ($uri === '/admin/themes/component-preview' && $method === 'GET') {
+    FrontPress\Api\ComponentPreview::handle($ROUTER_CONFIG);
+    exit;
+}
+
 // Anything else under /admin/* renders the React SPA shell. React handles
 // auth gating internally by calling /admin/api/me at boot.
 require $TEMPLATE_DIR . '/spa.php';

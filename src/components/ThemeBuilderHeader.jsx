@@ -11,6 +11,7 @@ export default function ThemeBuilderHeader({
   layout,
   onChooseFile,
   onNewTemplate,
+  onOpenPatterns,
   onSave,
   onLayoutChange,
   canCreate,
@@ -34,6 +35,9 @@ export default function ThemeBuilderHeader({
           <option key={t.path} value={t.path}>{t.name}</option>
         ))}
       </Select>
+      <Button variant="secondary" size="sm" onClick={onOpenPatterns} disabled={!onOpenPatterns}>
+        Patterns
+      </Button>
       <Button variant="secondary" size="sm" onClick={onNewTemplate} disabled={!canCreate}>
         + New
       </Button>

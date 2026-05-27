@@ -10,6 +10,7 @@ import { insertSnippet } from '../lib/themeBuilderSnippets.js';
 import { listTemplateFiles } from '../lib/themeBuilderTemplates.js';
 import { Alert } from '../components/ui/index.js';
 import TemplateAddDialog from '../components/TemplateAddDialog.jsx';
+import PatternLibraryModal from '../components/PatternLibraryModal.jsx';
 import ThemeBuilderHeader from '../components/ThemeBuilderHeader.jsx';
 import ThemeBuilderVisualPane from '../components/ThemeBuilderVisualPane.jsx';
 import ThemeCodePanel from '../components/ThemeCodePanel.jsx';
@@ -25,6 +26,7 @@ export default function ThemeBuilder() {
   const [previewKey, setPreviewKey] = useState(Date.now());
   const [previewPath, setPreviewPath] = useState('/');
   const [newTemplateOpen, setNewTemplateOpen] = useState(false);
+  const [patternsOpen, setPatternsOpen] = useState(false);
   const [cursorLine, setCursorLine] = useState(1);
   const [layout, setLayout] = useState(() => readLayout());
   const previewPathTouched = useRef(false);
@@ -51,7 +53,15 @@ export default function ThemeBuilder() {
   const files = filesData?.files || [];
   useEffect(() => {
     if (!theme || path || !files.length) return;
-    setPath(preferredPath(files));
+    // Honor `?file=<path>` so "Open code" from the Pattern Library lands
+    // on the right template. Falls back to the usual preferred path
+    // (page.twig / first file) when the query is absent or invalid.
+    const requested = new URLSearchParams(window.location.search).get('file');
+    if (requested && files.some((f) => f.path === requested)) {
+      setPath(requested);
+    } else {
+      setPath(preferredPath(files));
+    }
   }, [theme, path, files]);
 
   const { data: fileData, isLoading: fileLoading, error: fileError } = useQuery({
@@ -188,6 +198,7 @@ export default function ThemeBuilder() {
         layout={layout}
         onChooseFile={chooseFile}
         onNewTemplate={() => setNewTemplateOpen(true)}
+        onOpenPatterns={() => setPatternsOpen(true)}
         onSave={() => save.mutate()}
         onLayoutChange={setLayout}
         canCreate={!!theme}
@@ -255,6 +266,13 @@ export default function ThemeBuilder() {
         theme={theme}
         files={files}
         defaultExt={defaultExt}
+      />
+
+      <PatternLibraryModal
+        open={patternsOpen}
+        theme={theme}
+        onClose={() => setPatternsOpen(false)}
+        onOpenCode={(p) => chooseFile(p)}
       />
     </main>
   );
