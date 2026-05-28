@@ -67,15 +67,18 @@ export function usePageMutations({
 
   const save = useMutation({
     mutationFn: async () => {
-      // Toast UI stores content as markdown internally regardless of which
-      // edit mode (wysiwyg / markdown) the user is in — `getMarkdown()` is
-      // always the source of truth. When the user is in our custom HTML view,
-      // push the textarea content back through `setHTML` so Toast UI's
-      // HTML→Markdown converter runs before we serialize.
-      if (editorMode === 'html') {
-        try { edRef.current?.setHTML?.(htmlValue); } catch { /* ignore */ }
-      }
-      const body = edRef.current?.getMarkdown?.() ?? '';
+      // Source-of-truth selection per editor mode:
+      //   - 'html'      → use the raw text from the Monaco code view.
+      //                   Round-tripping through setHTML → getMarkdown
+      //                   sends the content through ProseMirror, which
+      //                   silently drops iframe/script/video/audio/etc.
+      //                   The body file is markdown anyway, and CommonMark
+      //                   passes inline HTML through (html_input: allow),
+      //                   so writing the textarea verbatim is safe.
+      //   - 'wysiwyg' / 'markdown' → getMarkdown is the canonical source.
+      const body = editorMode === 'html'
+        ? (htmlValue || '')
+        : (edRef.current?.getMarkdown?.() ?? '');
       const relPath = [folder, slug].filter(Boolean).join('/');
       // `path` is the *target* — for an update it doubles as the rename
       // request when it differs from the URL path; for a create it's the

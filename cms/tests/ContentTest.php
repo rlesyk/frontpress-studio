@@ -140,4 +140,32 @@ class ContentTest extends TestCase
         $this->assertSame('Meta Only', $meta['title']);
         $this->assertArrayNotHasKey('body', $meta);
     }
+
+    public function testStandaloneYoutubeUrlRendersAsEmbed(): void
+    {
+        $this->write('pages/video.md', "---\ntitle: Video\n---\n\nBefore\n\nhttps://youtu.be/gbrQp1YnKsc?si=test\n\nAfter\n");
+        $data = $this->content->load('pages/video');
+
+        $this->assertStringContainsString('https://www.youtube-nocookie.com/embed/gbrQp1YnKsc', $data['html']);
+        $this->assertStringContainsString('class="fp-embed fp-embed-youtube"', $data['html']);
+        $this->assertStringContainsString('https://youtu.be/gbrQp1YnKsc?si=test', $data['body']);
+    }
+
+    public function testYoutubeUrlInsideCodeFenceIsNotEmbedded(): void
+    {
+        $this->write('pages/video-code.md', "```\nhttps://www.youtube.com/watch?v=gbrQp1YnKsc\n```\n");
+        $data = $this->content->load('pages/video-code');
+
+        $this->assertStringNotContainsString('youtube-nocookie.com/embed', $data['html']);
+        $this->assertStringContainsString('https://www.youtube.com/watch?v=gbrQp1YnKsc', $data['html']);
+    }
+
+    public function testYoutubeUrlInsideIndentedCodeIsNotEmbedded(): void
+    {
+        $this->write('pages/video-indented-code.md', "    https://www.youtube.com/watch?v=gbrQp1YnKsc\n");
+        $data = $this->content->load('pages/video-indented-code');
+
+        $this->assertStringNotContainsString('youtube-nocookie.com/embed', $data['html']);
+        $this->assertStringContainsString('https://www.youtube.com/watch?v=gbrQp1YnKsc', $data['html']);
+    }
 }

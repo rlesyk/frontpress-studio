@@ -119,7 +119,11 @@ export default function PageEditor() {
     const ed = edRef.current;
     if (!ed) return;
     try {
-      const raw = ed.getHTML() || '';
+      // Seed the HTML textarea from the markdown source, NOT getHTML.
+      // getHTML re-renders through ProseMirror and drops iframes /
+      // scripts / videos, which the user sees as "embed disappears in
+      // HTML view." The markdown source preserves them verbatim.
+      const raw = ed.getMarkdown() || '';
       setHtmlValue(beautifyHtml(raw, {
         indent_size: 2,
         wrap_line_length: 100,

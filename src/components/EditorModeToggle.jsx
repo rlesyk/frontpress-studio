@@ -41,21 +41,26 @@ export function switchEditorMode(next, current, edRef, htmlValue, setHtmlValue, 
     return;
   }
 
-  // Leaving HTML view → push the textarea contents back through Toast UI's
-  // HTML→Markdown converter so the markdown/wysiwyg surfaces reflect the edit.
+  // Leaving HTML view → push the textarea contents back into Toast UI
+  // as MARKDOWN (not setHTML). The body is canonically markdown; raw
+  // HTML inside it survives both the markdown source and the public
+  // renderer (CommonMark `html_input: allow`). setHTML would re-parse
+  // through ProseMirror and drop iframes / scripts / videos.
   if (current === 'html') {
-    try { ed.setHTML(htmlValue); } catch { /* ignore */ }
+    try { ed.setMarkdown(htmlValue, false); } catch { /* ignore */ }
   }
 
   if (next === 'files') {
     // Files view is a sibling surface, not an editor mode. No Toast UI
     // call needed — the parent hides the editor and shows FilesPanel.
   } else if (next === 'html') {
-    // Entering HTML view → seed the editor from Toast UI's current HTML,
-    // pretty-printed via js-beautify. Toast UI emits everything on one line,
-    // which is unreadable for anything past a paragraph or two.
+    // Entering HTML view → seed the textarea from the markdown source
+    // (NOT getHTML, which would re-render through ProseMirror and lose
+    // any non-schema elements). The source already contains any raw
+    // HTML the author wrote. js-beautify still cleans up HTML blocks
+    // inside the markdown without harming plain text / heading lines.
     try {
-      const raw = ed.getHTML() || '';
+      const raw = ed.getMarkdown() || '';
       setHtmlValue(beautifyHtml(raw, {
         indent_size: 2,
         wrap_line_length: 100,

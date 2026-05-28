@@ -82,7 +82,7 @@ class Content
             }
         }
 
-        $html = $this->md->convert($body)->getContent();
+        $html = $this->md->convert(MarkdownEmbeds::expand($body))->getContent();
         $html = $this->annotator->annotate($html);
 
         return [

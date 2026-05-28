@@ -55,13 +55,23 @@ export function useToastUiEditor({
     imageButton.setAttribute('type', 'button');
     imageButton.addEventListener('click', () => onOpenMediaPickerRef.current());
 
+    // If the saved body contains tags that Toast UI's ProseMirror schema
+    // can't represent (iframe, script, video, audio, object, embed), open
+    // the editor in markdown mode so the source survives. Opening in
+    // WYSIWYG would parse the markdown, drop those tags from the editor
+    // state, and silently destroy them on the very next save.
+    const initialEditType =
+      !isNew && /<(iframe|script|video|audio|object|embed)\b/i.test(initialBody || '')
+        ? 'markdown'
+        : 'wysiwyg';
+
     const ed = new Editor({
       el: editorElRef.current,
       // `100%` lets the editor fill its flex parent (the wrapper sets a
       // bounded height with `flex-1 min-h-0`). Hard-coded 600px would leave
       // the bottom of the page empty on tall viewports.
       height: '100%',
-      initialEditType: 'wysiwyg',
+      initialEditType,
       previewStyle: 'vertical',
       usageStatistics: false,
       hideModeSwitch: true,
@@ -70,7 +80,9 @@ export function useToastUiEditor({
         ['heading', 'bold', 'italic', 'strike'],
         ['hr', 'quote'],
         ['ul', 'ol', 'task', 'indent', 'outdent'],
-        ['table', 'link', { name: 'image', tooltip: 'Insert image', el: imageButton }],
+        ['table', 'link',
+          { name: 'image', tooltip: 'Insert image', el: imageButton },
+        ],
         ['code', 'codeblock'],
         ['scrollSync'],
       ],

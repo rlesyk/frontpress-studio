@@ -20,6 +20,11 @@ src/dist/
 # ──────────────────────────────────────────────────────────────────
 site/
 
+# Per-install runtime config. The framework ships `sample.config.php` as
+# a template; the live `config.php` is generated/edited locally and
+# may contain secrets, so it must never be tracked.
+config.php
+
 
 # Local Sites recreates a MySQL dump at /sql/local.sql for any site it
 # manages, regardless of whether the framework uses SQL. mdframework is
