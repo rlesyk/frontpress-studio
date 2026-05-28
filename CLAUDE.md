@@ -20,3 +20,18 @@ adopted:
 
 If a split would obscure something cohesive, mention it in the PR description
 rather than silently shipping a 400-line file.
+
+## Docs sync
+
+Every new feature, feature change, or removed feature must land with a matching
+docs update in the same patch — not "later." The public docs at
+https://frontpress.studio/docs are how users discover and use the framework;
+shipping code without updating them silently breaks the contract.
+
+The docs site is itself a FrontPress Studio install; pages live as plain
+Markdown files under `site/content/docs/*.md` in the marketing-website
+checkout. When working on a change here, edit the corresponding doc page
+(or add a new one) before considering the work done.
+
+If the docs site isn't available in the current environment, surface the
+required doc edit explicitly in the PR / chat summary so it isn't forgotten.
