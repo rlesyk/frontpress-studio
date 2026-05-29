@@ -23,16 +23,10 @@ export default function MediaPickerLibraryTab({ onPick, pagePath }) {
     );
   }
   const files = (data?.files || []).filter(isImageFile);
-  if (files.length === 0) {
-    return (
-      <div
-        role="status"
-        className="rounded-lg border border-dashed border-zinc-300 bg-white p-10 text-center text-sm text-zinc-500"
-      >
-        No images yet. Switch to <strong>Upload</strong> to add some.
-      </div>
-    );
-  }
+  // No empty-state copy here: the dropzone directly above the library
+  // already communicates "drop something to start." A redundant banner
+  // would just push the dropzone up and add visual noise.
+  if (files.length === 0) return null;
 
   return (
     <ul role="list" className="grid list-none grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">

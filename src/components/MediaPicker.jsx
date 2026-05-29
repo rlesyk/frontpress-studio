@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from './ui/index.js';
 import useFocusTrap from '../lib/useFocusTrap.js';
@@ -6,21 +6,23 @@ import MediaPickerLibraryTab from './MediaPickerLibraryTab.jsx';
 import MediaPickerUploadTab from './MediaPickerUploadTab.jsx';
 
 /**
- * WordPress-style media picker. Two tabs (Library / Upload) live in their own
- * files; this component is just the modal shell + tab switcher. Portal-mounted
- * on `document.body` so it sits above the Toast UI editor without z-index
- * gymnastics. Closing happens via Esc, the backdrop click, or the Cancel button.
+ * WordPress-style media picker. Previously had Library/Upload tabs; both
+ * surfaces are now stacked in a single view (upload on top, library grid
+ * below) so the common path — "drop a file" or "pick an existing one" —
+ * doesn't require choosing a tab first. The two child components live in
+ * their own files; this is just the modal shell.
+ *
+ * Portal-mounted on `document.body` so it sits above the Toast UI editor
+ * without z-index gymnastics. Closing happens via Esc, the backdrop click,
+ * or the Close button.
  *
  * Accessibility: announced as `role="dialog" aria-modal="true"`, labelled by
  * the header title. Focus is trapped while open and restored to the opener on
  * close (via `useFocusTrap`).
  */
 export default function MediaPicker({ open, onClose, onPick, pagePath = '' }) {
-  const [tab, setTab] = useState('library');
   const dialogRef = useRef(null);
   const titleId = useId();
-
-  useEffect(() => { if (open) setTab('library'); }, [open]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -46,36 +48,20 @@ export default function MediaPicker({ open, onClose, onPick, pagePath = '' }) {
         className="flex h-[80vh] w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-white shadow-modal"
       >
         <header className="flex items-center justify-between border-b border-zinc-100 px-5 py-3">
-          <h2 id={titleId} className="sr-only">Media picker</h2>
-          <div className="flex items-center gap-1 rounded-md border border-zinc-200 bg-white p-1" role="tablist" aria-label="Media picker tabs">
-            <TabButton active={tab === 'library'} onClick={() => setTab('library')}>Library</TabButton>
-            <TabButton active={tab === 'upload'}  onClick={() => setTab('upload')}>Upload</TabButton>
-          </div>
+          <h2 id={titleId} className="text-sm font-medium text-zinc-900">Media</h2>
           <Button variant="ghost" onClick={onClose}>Close</Button>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-5">
-          {tab === 'library' && <MediaPickerLibraryTab onPick={onPick} pagePath={pagePath} />}
-          {tab === 'upload'  && <MediaPickerUploadTab  onPick={onPick} pagePath={pagePath} />}
+        {/* Upload stays pinned at the top; the library scrolls below so a
+            large grid can never push the dropzone off-screen. */}
+        <div className="flex flex-1 flex-col gap-4 overflow-hidden p-5">
+          <MediaPickerUploadTab onPick={onPick} pagePath={pagePath} />
+          <div className="flex-1 overflow-y-auto">
+            <MediaPickerLibraryTab onPick={onPick} pagePath={pagePath} />
+          </div>
         </div>
       </div>
     </div>,
     document.body,
-  );
-}
-
-function TabButton({ active, children, ...rest }) {
-  return (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={active}
-      {...rest}
-      className={`rounded px-2.5 py-1 text-[12px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900/20 ${
-        active ? 'bg-zinc-900 text-white' : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900'
-      }`}
-    >
-      {children}
-    </button>
   );
 }
