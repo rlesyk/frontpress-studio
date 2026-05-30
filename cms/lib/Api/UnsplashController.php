@@ -240,12 +240,33 @@ class UnsplashController
         \json_response($res);
     }
 
-    /** @param array<string, mixed> $config */
+    /**
+     * Resolve the Access Key, in priority order:
+     *
+     *   1. `site/config.json` → `integrations.unsplash.access_key`
+     *      (per-install, set via Settings → Integrations UI).
+     *   2. `FPS_UNSPLASH_ACCESS_KEY` constant from `config.php`
+     *      (per-server, set once when the operator runs multiple installs
+     *      and doesn't want to click through Settings UI on each one).
+     *      `config.php` is gitignored, so this never ships in releases.
+     *
+     * UI-entered key wins so installs that did configure via the admin
+     * don't get silently shadowed by a server-wide fallback.
+     *
+     * @param array<string, mixed> $config
+     */
     private static function accessKey(array $config): string
     {
         /** @var Config $cfg */
         $cfg = $config['config'];
         $u   = (array)$cfg->get('integrations', []);
-        return trim((string)($u['unsplash']['access_key'] ?? ''));
+        $key = trim((string)($u['unsplash']['access_key'] ?? ''));
+        if ($key !== '') {
+            return $key;
+        }
+        if (defined('FPS_UNSPLASH_ACCESS_KEY')) {
+            return trim((string)\FPS_UNSPLASH_ACCESS_KEY);
+        }
+        return '';
     }
 }
