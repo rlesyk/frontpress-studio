@@ -23,6 +23,7 @@ export function useUpdate() {
   const { update, refresh } = useAuth();
   const toast = useToast();
   const [applying, setApplying] = useState(false);
+  const [checking, setChecking] = useState(false);
 
   const apply = useCallback(async () => {
     if (applying) return false;
@@ -64,6 +65,27 @@ export function useUpdate() {
   // info even right after a release lands.
   const recheck = useCallback(() => { refresh(); }, [refresh]);
 
+  // Force-bust the 6h disk cache and refetch from GitHub. The local /me
+  // banner is driven by the same cache, so we also call refresh() after
+  // to repaint the sidebar with whatever the fresh check returned.
+  // Returns the new check result so the caller can show a one-shot
+  // "you're on the latest" / "vX.Y.Z available" status next to its button.
+  const recheckNow = useCallback(async () => {
+    if (checking) return null;
+    setChecking(true);
+    try {
+      const res = await api.post('/update/check');
+      await refresh();
+      return res;
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : 'Update check failed.';
+      toast.show(msg, { tone: 'error', duration: 4000 });
+      return null;
+    } finally {
+      setChecking(false);
+    }
+  }, [checking, refresh, toast]);
+
   return {
     available: !!update?.available,
     current:   update?.current ?? null,
@@ -72,5 +94,7 @@ export function useUpdate() {
     applying,
     apply,
     recheck,
+    recheckNow,
+    checking,
   };
 }

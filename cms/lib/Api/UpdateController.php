@@ -43,6 +43,24 @@ class UpdateController
             \json_response(['ok' => true]);
         }
 
+        // /admin/api/update/check — drop the 6h disk cache and re-fetch from
+        // GitHub. The sidebar banner reads from that cache via /me, so this
+        // is the "force check" button on Settings → Site for users who don't
+        // want to wait out the TTL after a release just shipped.
+        if (($rest[0] ?? '') === 'check') {
+            $updater->clearUpdateCheckCache();
+            $latest  = $updater->checkLatest();
+            $current = $updater->currentVersion();
+            \json_response([
+                'ok'        => true,
+                'current'   => $current,
+                'latest'    => $latest['version'] ?? null,
+                'available' => $latest
+                    ? version_compare($latest['version'], $current, '>')
+                    : false,
+            ]);
+        }
+
         // /admin/api/update — apply latest release. The ZIP URL is taken from
         // GitHub's release metadata, not from the client, and is host-checked
         // again inside Updater::apply().

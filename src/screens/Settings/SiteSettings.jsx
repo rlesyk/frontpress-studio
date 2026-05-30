@@ -2,11 +2,27 @@ import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api.js';
 import { useAuth } from '../../lib/auth.jsx';
+import { useUpdate } from '../../lib/useUpdate.js';
 import { Alert, Button, Card, Field, Input } from '../../components/ui/index.js';
 
 export default function SiteSettings() {
   const qc = useQueryClient();
   const { update } = useAuth();
+  const { checking, recheckNow } = useUpdate();
+  // One-shot status line under the button after a manual recheck.
+  // Cleared automatically a few seconds later so it doesn't linger
+  // and become noise.
+  const [checkResult, setCheckResult] = useState(null);
+
+  async function onCheckUpdates() {
+    const res = await recheckNow();
+    if (res) {
+      setCheckResult(res.available
+        ? `v${res.latest} available`
+        : `You're on the latest version.`);
+      setTimeout(() => setCheckResult(null), 5000);
+    }
+  }
   const { data, isLoading } = useQuery({
     queryKey: ['settings'],
     queryFn: () => api.get('/settings'),
@@ -144,16 +160,32 @@ export default function SiteSettings() {
           lives in the sidebar banner so we don't render the same control
           twice and have to keep two copies of the apply state in sync. */}
       <Card title="Version">
-        <div className="flex items-baseline gap-2 text-[13px]">
-          <span className="text-zinc-500">FrontPress Studio</span>
-          <span className="font-mono font-medium text-zinc-900">
-            v{update?.current ?? '—'}
-          </span>
-          {update?.available && update.latest && (
-            <span className="text-xs text-zinc-500">
-              · update available: <span className="font-mono text-zinc-700">v{update.latest}</span>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-baseline gap-2 text-[13px]">
+            <span className="text-zinc-500">FrontPress Studio</span>
+            <span className="font-mono font-medium text-zinc-900">
+              v{update?.current ?? '—'}
             </span>
-          )}
+            {update?.available && update.latest && (
+              <span className="text-xs text-zinc-500">
+                · update available: <span className="font-mono text-zinc-700">v{update.latest}</span>
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-3 text-xs">
+            {checkResult && <span className="text-zinc-500">{checkResult}</span>}
+            {/* Force-bust the 6h disk cache that backs the sidebar banner —
+                without this, users who already saw "no update" have to
+                wait out the TTL even after we ship a release. */}
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={onCheckUpdates}
+              disabled={checking}
+            >
+              {checking ? 'Checking…' : 'Check for updates'}
+            </Button>
+          </div>
         </div>
       </Card>
     </div>
