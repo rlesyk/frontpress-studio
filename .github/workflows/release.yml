@@ -58,8 +58,18 @@ jobs:
           cache-dependency-path: src/package-lock.json
 
       - name: Composer install (no dev)
+        # NOTE: deliberately NOT --classmap-authoritative. With that flag the
+        # generated autoload_static.php sets classMapAuthoritative=true, which
+        # tells Composer's autoloader to NEVER fall back to PSR-4 filesystem
+        # lookup. Combined with PHP-FPM opcache caching the autoload_static.php
+        # bytecode, every release that adds a new class would 500 on hosts
+        # where opcache hasn't revalidated yet — until the operator manually
+        # restarts PHP-FPM or busts opcache. With `--optimize-autoloader`
+        # alone we still get the static classmap as a fast path AND a PSR-4
+        # filesystem fallback for any class missing from the cached classmap.
+        # Tiny stat() cost on cache misses, full self-healing on updates.
         working-directory: cms
-        run: composer install --no-dev --optimize-autoloader --classmap-authoritative --no-interaction --no-progress
+        run: composer install --no-dev --optimize-autoloader --no-interaction --no-progress
 
       - name: NPM install
         working-directory: src

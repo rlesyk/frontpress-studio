@@ -24,7 +24,12 @@ OUT="release/${PKG}"
 echo "→ Building ${PKG}"
 
 # 1. Production composer install (no dev deps, optimized autoloader).
-( cd cms && composer install --no-dev --optimize-autoloader --classmap-authoritative --no-interaction --no-progress )
+#    Deliberately NOT --classmap-authoritative — see the matching note in
+#    .github/workflows/release.yml. Authoritative-mode caching combined with
+#    PHP-FPM opcache caching makes new classes invisible after in-admin
+#    updates until opcache is reset (which we can't do without server
+#    access). PSR-4 fallback fixes the whole class of bugs.
+( cd cms && composer install --no-dev --optimize-autoloader --no-interaction --no-progress )
 
 # 2. Production admin SPA build.
 ( cd src && npm ci --no-audit --no-fund && npm run build )
