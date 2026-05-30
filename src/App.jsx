@@ -22,6 +22,7 @@ const Security     = lazy(() => import('./screens/Settings/Security.jsx'));
 const ThemeReference = lazy(() => import('./screens/Settings/ThemeReference.jsx'));
 const SeoSettings    = lazy(() => import('./screens/Settings/SeoSettings.jsx'));
 const EmailSettings  = lazy(() => import('./screens/Settings/Email.jsx'));
+const Integrations   = lazy(() => import('./screens/Settings/Integrations.jsx'));
 
 export default function App() {
   const { status, user } = useAuth();
@@ -50,6 +51,7 @@ export default function App() {
               <Route path="reference" element={<Lazy><ThemeReference /></Lazy>} />
               <Route path="seo"          element={<Lazy><SeoSettings /></Lazy>} />
               <Route path="email"        element={<Lazy><EmailSettings /></Lazy>} />
+              <Route path="integrations" element={<Lazy><Integrations /></Lazy>} />
               <Route path="security"     element={<Lazy><Security /></Lazy>} />
             </Route>
             <Route path="/:folder" element={<PagesList />} />

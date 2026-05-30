@@ -58,7 +58,7 @@ export default function PostTypeList() {
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Search…"
-            className={`${baseControlCls} pl-9`}
+            className={`${baseControlCls} w-full pl-9`}
           />
         </div>
       </div>

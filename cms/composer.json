@@ -8,7 +8,8 @@
         "symfony/yaml": "^6.4",
         "enshrined/svg-sanitize": "^0.22.0",
         "twig/twig": "^3.10",
-        "scssphp/scssphp": "^2.1"
+        "scssphp/scssphp": "^2.1",
+        "composer/ca-bundle": "^1.5"
     },
     "autoload": {
         "psr-4": {

@@ -3,7 +3,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api.js';
 import { useFileUpload, useConfirmDialog } from '../lib/hooks.js';
 import { encodePath } from '../lib/utils.js';
-import { Alert, ConfirmDialog, Dropzone } from './ui/index.js';
+import { Alert, ConfirmDialog, Dropzone, SegmentedControl } from './ui/index.js';
+import MediaPickerUnsplash from './MediaPickerUnsplash.jsx';
+
+const SOURCES = [
+  { value: 'local',    label: 'Local'    },
+  { value: 'unsplash', label: 'Unsplash' },
+];
 
 /**
  * Per-post attachments view shown in the page-editor sidebar. Lists every
@@ -17,6 +23,9 @@ export default function FilesPanel({ pagePath }) {
   const qc = useQueryClient();
   const { confirm, dialogProps } = useConfirmDialog();
   const [hoverName, setHoverName] = useState(null);
+  // "Add new" source toggle. The already-uploaded tile grid below
+  // ignores this — it's not part of the "add" flow.
+  const [source, setSource] = useState('local');
 
   const { data, isLoading } = useQuery({
     queryKey: ['media', pagePath || 'all'],
@@ -58,18 +67,37 @@ export default function FilesPanel({ pagePath }) {
     <div className="space-y-3">
       {uploadError && <Alert tone="error">{uploadError}</Alert>}
 
-      {/* Dropzone is on top because file lists grow — keeping the
-          upload target above the fold means the user doesn't have to
-          scroll back up to drag images in. */}
-      <Dropzone
-        accept="image/*"
-        multiple
-        disabled={busy}
-        label="Drop images here"
-        hint="Files land in this post's folder."
-        buttonLabel={busy ? 'Uploading…' : 'Choose files'}
-        onFiles={uploadFiles}
+      {/* "Add image" zone — Local dropzone and Unsplash search are
+          mutually exclusive, so they sit behind a toggle. The
+          already-uploaded grid further down ignores this state. */}
+      <SegmentedControl
+        ariaLabel="Add image source"
+        value={source}
+        onChange={setSource}
+        options={SOURCES}
       />
+
+      {source === 'local' && (
+        <Dropzone
+          accept="image/*"
+          multiple
+          disabled={busy}
+          label="Drop images here"
+          hint="Files land in this post's folder."
+          buttonLabel={busy ? 'Uploading…' : 'Choose files'}
+          onFiles={uploadFiles}
+        />
+      )}
+
+      {source === 'unsplash' && (
+        // Same Unsplash search the editor's image picker uses. `onPick`
+        // here just invalidates the media list — there's no editor body
+        // to insert into, the user is just attaching files to the post.
+        <MediaPickerUnsplash
+          pagePath={pagePath}
+          onPick={() => qc.invalidateQueries({ queryKey: ['media'] })}
+        />
+      )}
 
       {isLoading ? (
         <div

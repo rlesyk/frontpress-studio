@@ -7,6 +7,7 @@ import { useDirty } from '../lib/dirty.jsx';
 import { html as beautifyHtml } from 'js-beautify';
 import { Alert, Button, Input } from '../components/ui/index.js';
 import { deleteImage, replaceImageUrl } from '../lib/editorBody.js';
+import { buildUnsplashCreditHtml, buildUnsplashCreditMarkdown } from '../lib/unsplashCredit.js';
 import { usePageMutations } from '../lib/usePageMutations.js';
 import { useToastUiEditor } from '../lib/useToastUiEditor.js';
 import CodeEditor from '../components/CodeEditor.jsx';
@@ -260,8 +261,12 @@ export default function PageEditor() {
         open={pickerOpen}
         pagePath={path}
         onClose={() => { setPickerOpen(false); setReplacingImage(null); }}
-        onPick={({ url, alt }) => {
+        onPick={({ url, alt, attribution }) => {
           if (replacingImage) {
+            // Replace-flow swaps the URL in place — no caption insertion
+            // even for Unsplash, since the surrounding markup is the
+            // author's existing structure (which may already carry their
+            // own credit). Avoids accidental double-attribution.
             replaceImageInBody(replacingImage.url, url, alt);
             setReplacingImage(null);
             setPickerOpen(false);
@@ -269,11 +274,24 @@ export default function PageEditor() {
           }
           if (editorMode === 'html') {
             const tag = `<img src="${url}" alt="${alt || ''}">`;
-            setHtmlValue((v) => (v ? `${v}\n${tag}` : tag));
+            const credit = attribution?.author_name ? buildUnsplashCreditHtml(attribution) : '';
+            setHtmlValue((v) => {
+              const next = v ? `${v}\n${tag}` : tag;
+              return credit ? `${next}\n${credit}` : next;
+            });
             setDirty(true);
           } else {
             try {
               edRef.current?.exec('addImage', { altText: alt || '', imageUrl: url });
+              // Unsplash compliance: drop a "Photo by … on Unsplash"
+              // line right after the image. Markdown-emphasis form keeps
+              // it portable and themes can style figcaption-style if they
+              // want. Insert via insertText so it lands at the cursor's
+              // current position (just past the image).
+              if (attribution?.author_name) {
+                const md = buildUnsplashCreditMarkdown(attribution);
+                try { edRef.current?.insertText(`\n\n${md}\n`); } catch { /* ignore */ }
+              }
               setDirty(true);
             } catch { /* ignore */ }
           }

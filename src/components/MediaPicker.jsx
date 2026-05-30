@@ -1,16 +1,29 @@
-import { useEffect, useId, useRef } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Button } from './ui/index.js';
+import { Button, SegmentedControl } from './ui/index.js';
 import useFocusTrap from '../lib/useFocusTrap.js';
 import MediaPickerLibraryTab from './MediaPickerLibraryTab.jsx';
 import MediaPickerUploadTab from './MediaPickerUploadTab.jsx';
+import MediaPickerUnsplash from './MediaPickerUnsplash.jsx';
+
+const SOURCES = [
+  { value: 'local',    label: 'Local'    },
+  { value: 'unsplash', label: 'Unsplash' },
+];
 
 /**
- * WordPress-style media picker. Previously had Library/Upload tabs; both
- * surfaces are now stacked in a single view (upload on top, library grid
- * below) so the common path — "drop a file" or "pick an existing one" —
- * doesn't require choosing a tab first. The two child components live in
- * their own files; this is just the modal shell.
+ * WordPress-style media picker. Layout has two zones:
+ *
+ *   1. The "add new" zone at the top — a Local/Unsplash segmented
+ *      toggle picks the source, then renders either the local dropzone
+ *      or the Unsplash search inline. Only one is visible at a time
+ *      because they're alternative ways to add a brand-new image.
+ *
+ *   2. The library grid below — every image already in `site/uploads/`
+ *      (plus this post's per-post folder when `pagePath` is set).
+ *      Always visible regardless of the active "add new" tab; you don't
+ *      have to flip back to a "Library" tab to pick something you've
+ *      already uploaded.
  *
  * Portal-mounted on `document.body` so it sits above the Toast UI editor
  * without z-index gymnastics. Closing happens via Esc, the backdrop click,
@@ -23,6 +36,7 @@ import MediaPickerUploadTab from './MediaPickerUploadTab.jsx';
 export default function MediaPicker({ open, onClose, onPick, pagePath = '' }) {
   const dialogRef = useRef(null);
   const titleId = useId();
+  const [source, setSource] = useState('local');
 
   useEffect(() => {
     if (!open) return undefined;
@@ -52,10 +66,19 @@ export default function MediaPicker({ open, onClose, onPick, pagePath = '' }) {
           <Button variant="ghost" onClick={onClose}>Close</Button>
         </header>
 
-        {/* Upload stays pinned at the top; the library scrolls below so a
-            large grid can never push the dropzone off-screen. */}
         <div className="flex flex-1 flex-col gap-4 overflow-hidden p-5">
-          <MediaPickerUploadTab onPick={onPick} pagePath={pagePath} />
+          <div className="flex items-center justify-between">
+            <SegmentedControl
+              ariaLabel="Add image source"
+              value={source}
+              onChange={setSource}
+              options={SOURCES}
+            />
+          </div>
+
+          {source === 'local'    && <MediaPickerUploadTab onPick={onPick} pagePath={pagePath} />}
+          {source === 'unsplash' && <MediaPickerUnsplash  onPick={onPick} pagePath={pagePath} />}
+
           <div className="flex-1 overflow-y-auto">
             <MediaPickerLibraryTab onPick={onPick} pagePath={pagePath} />
           </div>
