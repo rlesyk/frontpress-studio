@@ -402,11 +402,25 @@ class Updater
                     mkdir($dir, 0755, true);
                 }
                 file_put_contents($dest, $content);
+                $this->invalidateOpcache($dest);
             }
         }
 
         $zip->close();
         unlink($tmpZip);
+
+        // Belt-and-braces opcache reset. Per-file `opcache_invalidate` calls
+        // above cover every PHP file we just wrote, but `opcache_reset`
+        // also nukes any stale entry for files we *deleted* in this update
+        // (e.g. a class moved between releases). Without it, hosts running
+        // with `opcache.validate_timestamps=0` would keep serving the old
+        // bytecode for the autoloader's static classmap — fataling on
+        // every "Class not found" for newly-added classes (the exact bug
+        // 0.3.7 shipped). `clearstatcache` flushes the stat cache too.
+        clearstatcache(true);
+        if (function_exists('opcache_reset')) {
+            @opcache_reset();
+        }
 
         // Invalidate the cached check so the sidebar banner disappears on
         // the next /me round-trip instead of waiting out the TTL while
@@ -470,7 +484,23 @@ class Updater
                 mkdir($dir, 0755, true);
             }
             file_put_contents($dest, $content);
+            $this->invalidateOpcache($dest);
         }
+    }
+
+    /**
+     * Drop the freshly-written file out of opcache so the next request
+     * recompiles it instead of serving stale bytecode. No-op on hosts
+     * without opcache (CLI, hardened production setups). The `@` on the
+     * call silences "Zend OPcache API is restricted by 'restrict_api'"
+     * warnings — some shared hosts disable invalidation from PHP code,
+     * and we can't do anything about it from inside the request.
+     */
+    private function invalidateOpcache(string $absPath): void
+    {
+        if (!str_ends_with($absPath, '.php')) return;
+        if (!function_exists('opcache_invalidate')) return;
+        @opcache_invalidate($absPath, true);
     }
 
     /** @return list<string> */
