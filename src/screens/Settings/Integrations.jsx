@@ -49,8 +49,15 @@ export default function Integrations() {
 
   if (isLoading) return <div className="text-sm text-zinc-500">Loading…</div>;
 
-  const configured = !!data?.configured;
-  const masked     = data?.masked || '';
+  // `source` tells us *where* the active key came from:
+  //   - 'own'         : entered via this UI, lives in site/config.json
+  //   - 'config_php'  : FPS_UNSPLASH_ACCESS_KEY constant in config.php
+  //   - 'default'     : bundled with FrontPress (shared by every install)
+  //   - 'none'        : no key anywhere; integration is disabled
+  const source      = data?.source || 'none';
+  const configured  = !!data?.configured;
+  const usingOwnKey = source === 'own' || source === 'config_php';
+  const masked      = data?.masked || '';
 
   return (
     <div className="space-y-6">
@@ -65,39 +72,63 @@ export default function Integrations() {
       {error && <Alert tone="error">{error}</Alert>}
 
       <Card title="Unsplash">
-        <p className="text-xs text-zinc-500">
-          Lets the editor's Media picker search Unsplash and import photos
-          directly into <code className="rounded bg-zinc-100 px-1 py-0.5 font-mono text-[12px]">site/uploads/</code>. Create a free developer app at{' '}
-          <a
-            href="https://unsplash.com/oauth/applications"
-            target="_blank"
-            rel="noreferrer noopener"
-            className="text-zinc-900 underline decoration-zinc-300 underline-offset-4 hover:decoration-zinc-900"
-          >unsplash.com/oauth/applications</a>{' '}
-          and paste the <strong>Access Key</strong> below.
-        </p>
-
-        {configured && (
-          <div className="mt-3 flex items-center justify-between rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-[13px] text-emerald-900">
-            <span>
-              Connected. Stored key ends in{' '}
-              <code className="rounded bg-white/60 px-1 py-0.5 font-mono text-[12px]">{masked}</code>.
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => disconnect.mutate()}
-              disabled={disconnect.isPending}
-            >
-              {disconnect.isPending ? 'Disconnecting…' : 'Disconnect'}
-            </Button>
+        {configured ? (
+          <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-[13px] text-emerald-900">
+            {source === 'own' && (
+              <div className="flex items-center justify-between gap-3">
+                <span>
+                  Connected with your own Access Key (ends in{' '}
+                  <code className="rounded bg-white/60 px-1 py-0.5 font-mono text-[12px]">{masked}</code>
+                  ).
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => disconnect.mutate()}
+                  disabled={disconnect.isPending}
+                >
+                  {disconnect.isPending ? 'Disconnecting…' : 'Disconnect'}
+                </Button>
+              </div>
+            )}
+            {source === 'config_php' && (
+              <span>
+                Connected via <code className="rounded bg-white/60 px-1 py-0.5 font-mono text-[12px]">FPS_UNSPLASH_ACCESS_KEY</code> in <code className="rounded bg-white/60 px-1 py-0.5 font-mono text-[12px]">config.php</code> (ends in <code className="rounded bg-white/60 px-1 py-0.5 font-mono text-[12px]">{masked}</code>).
+              </span>
+            )}
+            {source === 'default' && (
+              <span>
+                Connected using the Access Key bundled with FrontPress. Shared with every other install — fine for casual use, swap in your own key below for higher rate limits or your own Unsplash TOS scope.
+              </span>
+            )}
+          </div>
+        ) : (
+          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-[13px] text-amber-900">
+            No Access Key available. Paste one below to enable Unsplash search.
           </div>
         )}
 
+        <p className="mt-4 text-xs text-zinc-500">
+          {usingOwnKey
+            ? 'This install talks to Unsplash directly under your own quota and TOS scope.'
+            : (
+              <>
+                Want higher rate limits, your own Unsplash TOS scope, or to opt out of the shared key? Create a free developer app at{' '}
+                <a
+                  href="https://unsplash.com/oauth/applications"
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="text-zinc-900 underline decoration-zinc-300 underline-offset-4 hover:decoration-zinc-900"
+                >unsplash.com/oauth/applications</a>{' '}
+                and paste the <strong>Access Key</strong> below.
+              </>
+            )}
+        </p>
+
         <Field
-          label={configured ? 'Replace Access Key' : 'Access Key'}
+          label={usingOwnKey ? 'Replace Access Key' : 'Use your own Access Key (optional)'}
           hint="Free tier allows 50 requests/hour. Apply for the production tier inside the Unsplash dashboard for 5,000/hour."
-          className="mt-4"
+          className="mt-3"
         >
           <Input
             value={draft}
@@ -111,7 +142,7 @@ export default function Integrations() {
 
         <div className="mt-3 flex items-center gap-3">
           <Button onClick={() => save.mutate()} disabled={save.isPending || draft.trim() === ''}>
-            {save.isPending ? 'Saving…' : (configured ? 'Replace' : 'Save')}
+            {save.isPending ? 'Saving…' : (usingOwnKey ? 'Replace' : 'Save')}
           </Button>
           {saved && <span className="text-xs text-emerald-600">Saved</span>}
         </div>
@@ -124,8 +155,7 @@ export default function Integrations() {
             rel="noreferrer noopener"
             className="underline decoration-zinc-300 underline-offset-4 hover:decoration-zinc-900"
           >API Terms</a>
-          . FrontPress automatically credits the photographer and pings
-          Unsplash's download endpoint on every pick, as required.
+          . FrontPress automatically credits the photographer and pings Unsplash's download endpoint on every pick, as required.
         </p>
       </Card>
     </div>

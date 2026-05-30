@@ -41,11 +41,14 @@ const ORDERS = [
  */
 export default function MediaPickerUnsplash({ onPick, pagePath }) {
   const qc = useQueryClient();
-  const { data: keyData, isLoading: keyLoading } = useQuery({
+  // Cheap status probe. The integration is normally on (FrontPress ships
+  // a default Access Key), but operators can clear it — in which case we
+  // show a single setup hint instead of letting search 400.
+  const { data: keyData } = useQuery({
     queryKey: ['unsplash', 'key'],
     queryFn: () => api.get('/unsplash/key'),
   });
-  const configured = !!keyData?.configured;
+  const configured = keyData?.configured !== false; // default true while loading
 
   const [q, setQ] = useState('');
   const [submitted, setSubmitted] = useState('');
@@ -66,7 +69,7 @@ export default function MediaPickerUnsplash({ onPick, pagePath }) {
     // page 1 of a fresh result set rather than appending mismatched
     // pages onto the old query.
     queryKey: ['unsplash', 'search', submitted, orientation, orderBy],
-    enabled:  configured && submitted.length > 0,
+    enabled:  submitted.length > 0,
     initialPageParam: 1,
     queryFn: ({ pageParam }) => {
       const qs = new URLSearchParams({
@@ -91,21 +94,18 @@ export default function MediaPickerUnsplash({ onPick, pagePath }) {
   // Reset any stale error when the user starts a fresh search.
   useEffect(() => { if (q) setError(''); }, [q]);
 
-  if (keyLoading) return null;
-
+  // Only path where Unsplash isn't usable: operator stripped the bundled
+  // default AND neither config.php nor Settings UI has a key. Surface a
+  // direct setup hint instead of a vague 400 from /unsplash/search.
   if (!configured) {
-    // The parent surfaces (MediaPicker, FilesPanel) render this inside
-    // a tab the user explicitly chose, so the previous collapsed
-    // <details> shell would have hidden the call-to-action. Show the
-    // setup hint inline instead.
     return (
       <div className="rounded-md border border-dashed border-zinc-300 bg-zinc-50 p-6 text-center text-[13px] text-zinc-600">
-        Add a free Unsplash Access Key under{' '}
+        Add an Unsplash Access Key under{' '}
         <a
           href="/admin/#/settings/integrations"
           className="text-zinc-900 underline decoration-zinc-300 underline-offset-4 hover:decoration-zinc-900"
         >Settings → Integrations</a>{' '}
-        to search and import photos directly here.
+        to enable photo search here.
       </div>
     );
   }

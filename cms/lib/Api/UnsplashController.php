@@ -36,6 +36,27 @@ use FrontPress\UnsplashImporter;
 class UnsplashController
 {
     /**
+     * Default Unsplash Access Key bundled with FrontPress so the integration
+     * works out of the box. Operators who want their own quota / TOS scope
+     * override it via Settings → Integrations (writes to site/config.json)
+     * or by defining `FPS_UNSPLASH_ACCESS_KEY` in config.php.
+     *
+     * ⚠ This key sits in public source. Trade-offs you've accepted by
+     * shipping it this way:
+     *   - Unsplash's bot scanners may flag and revoke leaked keys; if that
+     *     happens, ship a new release with a fresh key (and rotate the old
+     *     one on https://unsplash.com/oauth/applications).
+     *   - The 50 req/hour free-tier quota is shared by every install. Apply
+     *     for the production tier (5,000/hour) to make this less painful.
+     *   - As the app owner you're responsible under Unsplash's TOS for what
+     *     installs do with this key. Abusive usage gets the key (and your
+     *     Unsplash account) suspended.
+     * If any of these matter, replace this with an empty string and switch
+     * back to "per-install setup" via the Settings UI.
+     */
+    private const DEFAULT_ACCESS_KEY = 'byCToi14SRXrvzZ7wNTdS3c2qnrjagagn93AlhRdcAA';
+
+    /**
      * @param string[] $pathParts
      * @param array<string, mixed> $config
      */
@@ -72,13 +93,18 @@ class UnsplashController
     /** @param array<string, mixed> $config */
     private static function keyStatus(array $config): void
     {
-        $key = self::accessKey($config);
+        $key    = self::accessKey($config);
+        $source = self::accessKeySource($config);
         \json_response([
             'ok'         => true,
             'configured' => $key !== '',
-            // Last 4 chars only — enough for the operator to recognise the key
-            // they pasted, not enough to reconstruct it from a screen-share.
-            'masked'     => $key !== '' ? '••••' . substr($key, -4) : '',
+            'source'     => $source,
+            // Mask only the user-supplied keys. The bundled default key is
+            // public in source already, but echoing it from a privileged
+            // endpoint would still make it the obvious thing to grep for.
+            'masked'     => ($source === 'own' || $source === 'config_php') && $key !== ''
+                ? '••••' . substr($key, -4)
+                : '',
         ]);
     }
 
@@ -246,12 +272,13 @@ class UnsplashController
      *   1. `site/config.json` → `integrations.unsplash.access_key`
      *      (per-install, set via Settings → Integrations UI).
      *   2. `FPS_UNSPLASH_ACCESS_KEY` constant from `config.php`
-     *      (per-server, set once when the operator runs multiple installs
-     *      and doesn't want to click through Settings UI on each one).
-     *      `config.php` is gitignored, so this never ships in releases.
+     *      (per-server fallback; `config.php` is gitignored).
+     *   3. `DEFAULT_ACCESS_KEY` baked into this class
+     *      (ships with FrontPress so the integration works out of the
+     *      box; see the warning above for the trade-offs).
      *
      * UI-entered key wins so installs that did configure via the admin
-     * don't get silently shadowed by a server-wide fallback.
+     * don't get silently shadowed by a server-wide or bundled fallback.
      *
      * @param array<string, mixed> $config
      */
@@ -265,8 +292,37 @@ class UnsplashController
             return $key;
         }
         if (defined('FPS_UNSPLASH_ACCESS_KEY')) {
-            return trim((string)\FPS_UNSPLASH_ACCESS_KEY);
+            $env = trim((string)\FPS_UNSPLASH_ACCESS_KEY);
+            if ($env !== '') {
+                return $env;
+            }
         }
-        return '';
+        return trim(self::DEFAULT_ACCESS_KEY);
+    }
+
+    /**
+     * Identify which of the three sources produced the active key.
+     * Surfaced by `keyStatus()` so the Settings UI can render an
+     * accurate "Connected via ..." message + show a "Use your own key"
+     * affordance when the install is currently riding the bundled key.
+     *
+     * @param array<string, mixed> $config
+     * @return 'own'|'config_php'|'default'|'none'
+     */
+    private static function accessKeySource(array $config): string
+    {
+        /** @var Config $cfg */
+        $cfg = $config['config'];
+        $u   = (array)$cfg->get('integrations', []);
+        if (trim((string)($u['unsplash']['access_key'] ?? '')) !== '') {
+            return 'own';
+        }
+        if (defined('FPS_UNSPLASH_ACCESS_KEY') && trim((string)\FPS_UNSPLASH_ACCESS_KEY) !== '') {
+            return 'config_php';
+        }
+        if (trim(self::DEFAULT_ACCESS_KEY) !== '') {
+            return 'default';
+        }
+        return 'none';
     }
 }
