@@ -1,5 +1,13 @@
 ---
-title: Blog
+title: 'Welcome To My Blog'
+image:
+  - /uploads/blog/_index/ed272558d053b49551e84a2f.jpg
+  - 'aerial photo of green trees'
 ---
 
-This is your blog archive. Edit this intro from the admin, or delete `_index.md` to remove it entirely.
+![aerial photo of green trees](/uploads/blog/_index/ed272558d053b49551e84a2f.jpg)
+
+<br>
+This is my blog page and I am so excited to have you here!
+
+<br>

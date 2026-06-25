@@ -37,10 +37,24 @@
             ]
         }
     },
-    "active_theme": "blank",
+    "active_theme": "blank-twig",
     "uploads": {
         "max_mb": 5,
         "max_width": 0,
         "max_height": 0
-    }
+    },
+    "seo": {
+        "enabled": true,
+        "opengraph": true,
+        "twitter_card": true,
+        "json_ld": true,
+        "indexable": true,
+        "twitter_handle": "@rlesyk",
+        "default_image": "",
+        "locale": "en_US"
+    },
+    "email": {
+        "smtp_pass": ""
+    },
+    "forms": []
 }
